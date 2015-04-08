@@ -19,9 +19,9 @@ void solve(const real_t g[M+1][M+1][M+1][N+1], real_t x[M+1][M+1][M+1][N+1], con
           for (int p = 0; p <= M; p++)
           {
             res += 
-              matf[a][p]*x[p][b][c][d] + 
-              matf[b][p]*x[a][p][c][d] + 
-              matf[c][p]*x[a][b][p][d];
+              matf[a][p]*(x[p][b][c][d]) + 
+              matf[b][p]*(x[a][p][c][d]) + 
+              matf[c][p]*(x[a][b][p][d]);
           }
           y[d] = g[a][b][c][d] - res;
         }
@@ -82,7 +82,7 @@ int main(int argc, char * argv[])
     solve(g,x,matf,matu);
   const auto t1 = Clock::now();
   auto ms = std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0);
-  cout << "Time per solve: " << ms.count()*1.0/nrep<< endl;
+  cout << "Time per solve: " << ms.count()*1e-3/nrep<<  " us" <<  endl;
 
 
   return 0;
