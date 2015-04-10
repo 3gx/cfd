@@ -19,11 +19,13 @@ struct LegendrePoly
       return ((2*N-1)*(x*eval<N-1>(x)) - (N-1)*eval<N-2>(x))/N;
     }
 
+  template<int P, typename T>
+    static real_t eval(T x)  { return eval<P>(x); }
 
-  template<int P, int Q, int R>
-    static real_t Poly3D(const real_t x, const real_t y, const real_t z)
+  template<int Pfirst, int... P, typename Tfirst, typename... T>
+    static real_t eval(Tfirst x, T... args)
     {
-      return eval<P>(x)*eval<Q>(y)*eval<R>(z);
+      return eval<Pfirst>(x)*eval<P...>(args...);
     }
 };
 
@@ -91,7 +93,7 @@ struct GenerateMatrix
       void eval()
       {
         static_assert(idx < _size, "Buffer overflow");
-        result[idx] = LegendrePoly<real_t>::template Poly3D<a,b,c>(x,y,z);
+        result[idx] = LegendrePoly<real_t>::template eval<a,b,c>(x,y,z);
       }
   };
 
@@ -265,6 +267,6 @@ int main(int argc, char *argv[])
 
 
   verify(g.getMatrix(), Ainv, g.size());
-
+  
   return 0;
 }
