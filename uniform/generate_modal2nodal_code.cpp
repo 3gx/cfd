@@ -30,6 +30,109 @@ struct LegendrePoly
     }
 };
 
+  template<int V, int... Vs>
+constexpr typename std::enable_if<(sizeof...(Vs)==0),int>::type sum()
+{
+  return V;
+}
+  template<int V, int... Vs>
+constexpr typename std::enable_if<(sizeof...(Vs)>0),int>::type sum()
+{
+  return V + sum<Vs...>();
+}
+
+template<int M, typename F>
+struct static_loop
+{
+  /* template meta-program for  this type of loop
+   int count = 0;
+   for (int a = 0; a <= M; a++)
+    for (int b = 0; b <= M-a; b++)
+      for (int c = 0; c <= M-a-b; c++)
+        ...
+      {
+        f(count,c,b,a);
+        count++;
+      }
+   */
+
+  /* basic loop */
+  template<int COUNT, int B, int... As>
+    static typename std::enable_if<(B<=M-sum<As...>())>::type 
+    eval(F &f)
+    {
+      f.template eval<COUNT, B, As...>();  /* call function */
+      eval<COUNT+1,B+1,As...>(f);
+    }
+  template<int COUNT, int B, int... As>
+    static typename std::enable_if<(B>M-sum<As...>())>::type 
+    eval(F &f)
+    {
+      incr<1, COUNT, As...>(f);
+    }
+
+  /* increment */
+  template<int K, int COUNT, int B, int... As>
+    static typename std::enable_if<(B<M-sum<As...>())>::type 
+    incr(F &f)
+    {
+      launch<K,COUNT,B+1,As...>(f);
+    }
+  template<int K, int COUNT, int B, int... As>
+    static typename std::enable_if<(B>=M-sum<As...>()) && (sizeof...(As) > 1)>::type 
+    incr(F &f)
+    {
+      incr<K+1,COUNT,As...>(f);
+    }
+  template<int K, int COUNT, int B, int A>
+    static typename std::enable_if<(B>=M-A && A<M)>::type 
+    incr(F &f)
+    {
+      launch<K,COUNT,0,A+1>(f);
+    }
+  template<int K, int COUNT, int B, int A>
+    static typename std::enable_if<(B>=M-A && A>=M)>::type 
+    incr(F &f)
+    {
+    }
+
+
+  /* launch */
+  template<int K, int COUNT, int... As>
+    static typename std::enable_if<(K>0)>::type 
+    launch(F &f)
+    {
+      launch<K-1,COUNT,0,As...>(f);
+    }
+  template<int K, int COUNT, int... As>
+    static typename std::enable_if<(K==0)>::type 
+    launch(F &f)
+    {
+      eval<COUNT, As...>(f);
+    }
+
+  /* execute loop */ 
+  template<int DIM, int... ZERO>
+    static typename std::enable_if<(DIM>0)>::type 
+    execR(F& f)
+    {
+      execR<DIM-1,0,ZERO...>(f);
+    } 
+  template<int DIM, int... ZERO>
+    static typename std::enable_if<(DIM==0)>::type 
+    execR(F& f)
+    {
+      eval<DIM,ZERO...>(f);
+    } 
+  template<typename... Ts>
+    static F exec(Ts... args)
+    {
+      F f(args...);
+      execR<sizeof...(Ts)>(f);
+      return f;
+    }
+};
+
 template<int M, typename F>
 struct static_loop3
 {
@@ -42,24 +145,24 @@ struct static_loop3
       }
    */
   template<int a, int b, int c,int COUNT>
-    static typename std::enable_if<(a>M),void>::type eval(F &f)
+    static typename std::enable_if<(a>M)>::type eval(F &f)
     {
     }
   template<int a, int b, int c, int COUNT>
-    static typename std::enable_if<(a<=M && b>M-a),void>::type eval(F &f)
+    static typename std::enable_if<(a<=M && b>M-a)>::type eval(F &f)
     {
       eval<a+1,0,0,COUNT>(f);
     }
   template<int a, int b, int c, int COUNT>
-    static typename std::enable_if<(a<=M && b<= M-a && c>M-b-a),void>::type eval(F &f)
+    static typename std::enable_if<(a<=M && b<= M-a && c>M-b-a)>::type eval(F &f)
     {
       eval<a,b+1,0,COUNT>(f);
     }
 
   template<int a, int b, int c, int COUNT = 0>
-    static typename std::enable_if<(a<=M && b<= M-a  && c<=M-b-a),void>::type eval(F& f)
+    static typename std::enable_if<(a<=M && b<= M-a  && c<=M-b-a)>::type eval(F& f)
     {
-      f. template eval<a,b,c,COUNT>();
+      f. template eval<COUNT, c,b,a>();
       eval<a,b,c+1,COUNT+1>(f);
     }
 
@@ -90,9 +193,10 @@ struct GenerateMatrix
     constexpr int size() const {return result.size();}
     real_t operator[](const int i) const {return result[i];}
 
-    template<int a,int b,int c, int idx>
+    template<int idx, int c,int b,int a>
       void eval()
       {
+        fprintf(stderr, "idx= %d M= %d : a= %d b= %d c= %d\n", idx, M, a,b,c);
         static_assert(idx < _size, "Buffer overflow");
         result[idx] = LegendrePoly<real_t>::template eval<a,b,c>(x,y,z);
       }
@@ -167,38 +271,6 @@ std::string generateMatmulCode(const real_t *matrix, const int size)
   return code;
 };
 
-#if 0
-  Main(int argc, char *argv[])
-  {
-    using real_t = double;
-    using P = LegendrePoly<real_t>;
-    using std::cout;
-    using std::endl;
-
-    assert(argc > 1);
-    const real_t x = atof(argv[1]);
-
-    constexpr int N = 7;
-
-    cout << "LP(" << N << ", x=" << x << ")= " <<  P::eval<N>(x) << endl;
-    cout << "Root " << P::root<N>() << endl;
-
-    cout << endl;
-
-    const real_t xval=0.5;
-    const real_t yval=0.5;
-    const real_t zval=0.5;
-    constexpr int M = 3;
-    using loop1 = static_loop3<M,Expansion3D<M,real_t>>;
-    int count = 0;
-    const auto f = loop1::loop(xval,yval,zval);
-
-    const int size = f.size();
-    for (int i = 0; i < size; i++)
-      fprintf(stderr, " P[%2d]= %g \n", i,f[i]);
-  }
-#endif
-
 
 extern "C" 
 {
@@ -253,11 +325,30 @@ bool verify(const double *A, const double *B, const int N)
 }
 
 
+template<int N>
+void foo() { std::cout << N << std::endl; }
+
+template<int N>
+void bar() { std::cout << "--1--" << std::endl; }
+template<int... N>
+typename std::enable_if<(sizeof...(N) > 1)>::type bar() { std::cout << sizeof...(N) << std::endl; }
+
 int main(int argc, char *argv[])
 {
-  constexpr int M = 4;
+  using std::cout;
+  using std::endl;
+  constexpr int M = 3;
   using real_t = double;
+
+#if 1  
+  static_loop3<M,GenerateMatrix<M,real_t>::Expansion3D>::loop(0.3,0.4,0.5);
+  cout << "---------------\n";
+  static_loop<M,GenerateMatrix<M,real_t>::Expansion3D>::exec(0.3,0.4,0.5);
+
+  return 0;
+#endif
   GenerateMatrix<M,real_t> g;
+
 
 //  g.printMatrix(g.getMatrix());
 
@@ -280,8 +371,6 @@ int main(int argc, char *argv[])
 
   if (verify(g.getMatrix(), Ainv, g.size()))
     fprintf(stderr , " -- Matrix verified -- \n");
-  using std::cout;
-  using std::endl;
   cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
   cout << LegendrePoly<real_t>::template eval<2>(0.0) << endl;
 
