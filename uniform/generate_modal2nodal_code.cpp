@@ -173,11 +173,11 @@ struct static_loop
     {
       eval<DIM,ZERO...>(f);
     } 
-  template<typename... Ts>
+  template<int DIM, typename... Ts>
     static F exec(Ts... args)
     {
       F f(args...);
-      execR<sizeof...(Ts)>(f);
+      execR<DIM>(f);
       return f;
     }
 };
@@ -392,7 +392,7 @@ int main(int argc, char *argv[])
 #if 1  
   static_loop3<M,GenerateMatrix<M,real_t>::Expansion3D>::loop(0.3,0.4,0.5);
   cout << "---------------\n";
-  static_loop<M,GenerateMatrix<M,real_t>::Expansion3D>::exec(0.3,0.4,0.5);
+  static_loop<M,GenerateMatrix<M,real_t>::Expansion3D>::exec<3>(0.3,0.4,0.5);
 
   return 0;
 #endif
