@@ -3,6 +3,7 @@
 #include <cassert>
 #include <array>
 #include <cmath>
+#include <algorithm>
 
 template<typename real_t>
 struct LegendrePoly
@@ -239,7 +240,7 @@ struct GenerateMatrix
     real_t x,y,z;
     Expansion3D(real_t _x, real_t _y, real_t _z) : x(_x), y(_y), z(_z) {};
 
-    constexpr int size() const {return result.size();}
+    constexpr int size() const {return _size;}
     real_t operator[](const int i) const {return result[i];}
 
     template<int idx, int c,int b,int a>
@@ -434,8 +435,8 @@ int main(int argc, char *argv[])
   fprintf(stderr, " matrix size= [ %d x %d ]\n", g.size(), g.size());
   fprintf(stderr, " number of non-zero elements= %d [ %g %c ]\n", non_zero, non_zero*100.0/(g.size()*g.size()), '%' );
 
-  real_t Ainv[g.size()*g.size()];
-  inverse<g.size()>(g.getMatrix(), Ainv);
+  real_t Ainv[g._size*g._size];
+  inverse<g._size>(g.getMatrix(), Ainv);
   
 //  g.printMatrix(Ainv);
   const int non_zero_inv =
