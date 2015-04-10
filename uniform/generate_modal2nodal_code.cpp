@@ -30,6 +30,20 @@ struct LegendrePoly
     }
 };
 
+/******* sum *******/
+template<size_t...> struct Sum;
+template<size_t V, size_t ...Vs>
+struct Sum<V, Vs...>
+{
+  static constexpr auto value = V + Sum<Vs...>::value;
+};
+template<>
+struct Sum<>
+{
+  static constexpr size_t value = 0;
+};
+/*********************/
+#if 0
   template<int V, int... Vs>
 constexpr typename std::enable_if<(sizeof...(Vs)==0),int>::type sum()
 {
@@ -40,6 +54,7 @@ constexpr typename std::enable_if<(sizeof...(Vs)>0),int>::type sum()
 {
   return V + sum<Vs...>();
 }
+#endif
 
 template<int M, typename F>
 struct static_loop
@@ -58,14 +73,14 @@ struct static_loop
 
   /* basic loop */
   template<int COUNT, int B, int... As>
-    static typename std::enable_if<(B<=M-sum<As...>())>::type 
+    static typename std::enable_if<(B<=M-Sum<As...>::value)>::type 
     eval(F &f)
     {
       f.template eval<COUNT, B, As...>();  /* call function */
       eval<COUNT+1,B+1,As...>(f);
     }
   template<int COUNT, int B, int... As>
-    static typename std::enable_if<(B>M-sum<As...>())>::type 
+    static typename std::enable_if<(B>M-Sum<As...>::value)>::type 
     eval(F &f)
     {
       incr<1, COUNT, As...>(f);
@@ -73,13 +88,13 @@ struct static_loop
 
   /* increment */
   template<int K, int COUNT, int B, int... As>
-    static typename std::enable_if<(B<M-sum<As...>())>::type 
+    static typename std::enable_if<(B<M-Sum<As...>::value)>::type 
     incr(F &f)
     {
       launch<K,COUNT,B+1,As...>(f);
     }
   template<int K, int COUNT, int B, int... As>
-    static typename std::enable_if<(B>=M-sum<As...>()) && (sizeof...(As) > 1)>::type 
+    static typename std::enable_if<(B>=M-Sum<As...>::value) && (sizeof...(As) > 1)>::type 
     incr(F &f)
     {
       incr<K+1,COUNT,As...>(f);
