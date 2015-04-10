@@ -159,6 +159,14 @@ struct GenerateMatrix
 
 };
 
+template<typename real_t>
+std::string generateMatmulCode(const real_t *matrix, const int size)
+{
+  std::string code;
+
+  return code;
+};
+
 #if 0
   Main(int argc, char *argv[])
   {
@@ -276,6 +284,10 @@ int main(int argc, char *argv[])
   using std::endl;
   cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
   cout << LegendrePoly<real_t>::template eval<2>(0.0) << endl;
+
+  const auto m2n = generateMatmulCode(g.getMatrix(), g.size());
+
+  cout << m2n << endl;
   
   return 0;
 }
