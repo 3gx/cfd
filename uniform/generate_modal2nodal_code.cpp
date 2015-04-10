@@ -71,6 +71,7 @@ struct static_loop
       }
    */
 
+#if 1
   /* basic loop */
   template<int COUNT, int B, int... As>
     static typename std::enable_if<(B<=M-Sum<As...>::value)>::type 
@@ -85,6 +86,39 @@ struct static_loop
     {
       incr<1, COUNT, As...>(f);
     }
+#else
+  template<int... Vs>
+    struct Eval;
+
+  template<int COUNT, int B, int... As>
+    struct Eval<COUNT, B, As...>
+    {
+      static void exec(F &f)
+      {
+        f.template eval<COUNT,B,As...>();
+        eval<COUNT+1,B+1,As...>(f);
+      }
+    };
+
+  /* generates error:
+     generate_modal2nodal_code.cpp:88:24: error: non-type template argument depends on a template parameter of the partial specialization
+     struct Eval<COUNT, 3-Sum<As...>::value, As...>
+     */
+  template<int COUNT, int... As>
+    struct Eval<COUNT, M-Sum<As...>::value, As...>
+    {
+      static void exec(F &f)
+      {
+        incr<1, COUNT, As...>(f);
+      }
+    };
+  template<int... Vs>
+    static void
+    eval(F &f)
+    {
+      Eval<Vs...>::exec(f);
+    }
+#endif
 
   /* increment */
   template<int K, int COUNT, int B, int... As>
