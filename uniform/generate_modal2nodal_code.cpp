@@ -220,8 +220,9 @@ void inverse(const double* A, double *Ainv)
   dgetri_(&NN,Ainv,&NN,IPIV,WORK,&LLWORK,&INFO);
 }
 
-void verify(const double *A, const double *B, const int N)
+bool verify(const double *A, const double *B, const int N)
 {
+  bool success = true;
   constexpr double eps = 1.0e-13;
   for (int i = 0; i < N; i++)
   {
@@ -236,9 +237,11 @@ void verify(const double *A, const double *B, const int N)
          )
       {
         printf(" (%2d,%2d) = %5.2f \n", i,j, res);
+        success = false;
       }
     }
   }
+  return success;
 }
 
 
@@ -267,7 +270,8 @@ int main(int argc, char *argv[])
       non_zero + non_zero_inv, (non_zero + non_zero_inv)*50.0/(g.size()*g.size()), '%');
 
 
-  verify(g.getMatrix(), Ainv, g.size());
+  if (verify(g.getMatrix(), Ainv, g.size()))
+    fprintf(stderr , " -- Matrix verified -- \n");
   using std::cout;
   using std::endl;
   cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
