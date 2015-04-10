@@ -382,17 +382,46 @@ void bar() { std::cout << "--1--" << std::endl; }
 template<int... N>
 typename std::enable_if<(sizeof...(N) > 1)>::type bar() { std::cout << sizeof...(N) << std::endl; }
 
+
+template<int M>
+struct Foo
+{
+  template<int A, int... As>
+    typename std::enable_if<(sizeof...(As)>0)>::type
+    evalR()
+    {
+      fprintf(stderr, "%c= %d ", static_cast<char>('a'+sizeof...(As)), A);
+      evalR<As...>();
+    }
+  
+  template<int A, int... As>
+    typename std::enable_if<(sizeof...(As)==0)>::type
+    evalR()
+    {
+      fprintf(stderr, "%c= %d \n", 'a', A);
+    }
+
+    template<int count, int... As>
+      void eval()
+      {
+        fprintf(stderr, "idx= %d M= %d : ", count, M);
+        evalR<As...>();
+      }
+};
+
 int main(int argc, char *argv[])
 {
   using std::cout;
   using std::endl;
-  constexpr int M = 3;
+  constexpr int M = 4;
   using real_t = double;
 
 #if 1  
   static_loop3<M,GenerateMatrix<M,real_t>::Expansion3D>::loop(0.3,0.4,0.5);
   cout << "---------------\n";
   static_loop<M,GenerateMatrix<M,real_t>::Expansion3D>::exec<3>(0.3,0.4,0.5);
+  cout << "---------------\n";
+  static_loop<M,Foo<M>>::exec<4>();
 
   return 0;
 #endif
