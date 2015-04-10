@@ -153,6 +153,7 @@ struct GenerateMatrix
       printf("\n");
     }
   }
+
 };
 
 #if 0
@@ -216,14 +217,35 @@ void inverse(const double* A, double *Ainv)
   dgetri_(&NN,Ainv,&NN,IPIV,WORK,&LLWORK,&INFO);
 }
 
+void verify(const double *A, const double *B, const int N)
+{
+  constexpr double eps = 1.0e-13;
+  for (int i = 0; i < N; i++)
+  {
+    for (int j = 0; j < N; j++)
+    {
+      double res = 0;
+      for (int k = 0; k < N; k++)
+        res += A[i*N+k]*B[k*N+j];
+      if (
+          ((i==j) && std::abs(res - 1.0) > eps) ||
+          ((i!=j) && std::abs(res)       > eps)
+         )
+      {
+        printf(" (%2d,%2d) = %5.2f \n", i,j, res);
+      }
+    }
+  }
+}
+
 
 int main(int argc, char *argv[])
 {
-  constexpr int M = 3;
+  constexpr int M = 4;
   using real_t = double;
   GenerateMatrix<M,real_t> g;
 
-  g.printMatrix(g.getMatrix());
+//  g.printMatrix(g.getMatrix());
 
   const int non_zero =
     std::count_if(g.getMatrix(), g.getMatrix()+g.size()*g.size(), [](const real_t val) {return std::abs(val) > 1.0e-10;});
@@ -233,10 +255,16 @@ int main(int argc, char *argv[])
   real_t Ainv[g.size()*g.size()];
   inverse<g.size()>(g.getMatrix(), Ainv);
   
-  g.printMatrix(Ainv);
+//  g.printMatrix(Ainv);
   const int non_zero_inv =
     std::count_if(Ainv, Ainv+g.size()*g.size(), [](const real_t val) {return std::abs(val) > 1.0e-10;});
   fprintf(stderr, " number of non-zero-inv elements= %d [ %g %c ]\n", non_zero_inv, non_zero_inv*100.0/(g.size()*g.size()), '%' );
+
+  fprintf(stderr, " -- tota number of non-zeros= %d [ %g %c ] \n",
+      non_zero + non_zero_inv, (non_zero + non_zero_inv)*50.0/(g.size()*g.size()), '%');
+
+
+  verify(g.getMatrix(), Ainv, g.size());
 
   return 0;
 }
