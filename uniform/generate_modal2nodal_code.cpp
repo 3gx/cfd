@@ -423,7 +423,6 @@ int main(int argc, char *argv[])
   cout << "---------------\n";
   static_loop<M,Foo<M>>::exec<4>();
 
-  return 0;
 #endif
   GenerateMatrix<M,real_t> g;
 
