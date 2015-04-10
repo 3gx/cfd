@@ -20,12 +20,13 @@ struct LegendrePoly
     }
 
   template<int P, typename T>
-    static real_t eval(T x)  { return eval<P>(x); }
+    static typename std::enable_if<std::is_floating_point<T>::value,real_t>::type eval(T x)  
+    { return eval<P>(static_cast<real_t>(x)); }
 
   template<int Pfirst, int... P, typename Tfirst, typename... T>
     static real_t eval(Tfirst x, T... args)
     {
-      return eval<Pfirst>(x)*eval<P...>(args...);
+      return eval<Pfirst,Tfirst>(x)*eval<P...>(args...);
     }
 };
 
@@ -267,6 +268,9 @@ int main(int argc, char *argv[])
 
 
   verify(g.getMatrix(), Ainv, g.size());
+  using std::cout;
+  using std::endl;
+  cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0f,3.0) << endl;
   
   return 0;
 }
