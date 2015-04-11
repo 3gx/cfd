@@ -97,9 +97,7 @@ struct static_loop
     }
   template<int K, int COUNT, int B, int... As, typename F>
     static eIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
-    incr(F&& f)
-    {
-    }
+    incr(F&& f) {}
 
 
   /************/
