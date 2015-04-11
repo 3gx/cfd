@@ -132,9 +132,10 @@ struct static_loop
    * entry point *
    ***************/
   template<typename F>
-    static void exec(F&& f)
+    static F& exec(F&& f)
     {
       warmup<DIM>(f);
+      return f;
     }
 };
 
@@ -264,13 +265,11 @@ struct GenerateMatrix
     };
     static_assert(M>=0 && M<13, "M-value is out of range");
 
-    Indices indices;
-    static_loop<M,DIM>::exec(indices);
+    const auto& indices = static_loop<M,DIM>::exec(Indices{});
     for (int i = 0; i < _size; i++)
     {
       const auto& idx = indices[i];
-      Expansion f(nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]);
-      static_loop<M,DIM>::exec(f);
+      const auto& f = static_loop<M,DIM>::exec(Expansion(nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]));
       matrix[i] = f.result;
     }
 
