@@ -466,6 +466,8 @@ int main(int argc, char *argv[])
     fprintf(stderr , " -- Matrix verified -- \n");
 //  cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
 //  cout << LegendrePoly<real_t>::template eval<2>(0.0) << endl;
+//
+  fprintf(stderr, " M= %d  DIM= %d \n", M, DIM);
 
   const auto m2n = generateMatmulCode(g.getMatrix(), g.size);
 
