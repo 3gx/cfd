@@ -26,7 +26,7 @@ struct Unpack<0,S...>
 };
 // C++14
 template<typename F, typename X, size_t... I>
-auto unpack(F&& f, X&& x, std::index_sequence<I...>)
+static auto unpack(F&& f, X&& x, std::index_sequence<I...>)
 {
   return f(x[I]...);
 }
