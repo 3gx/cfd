@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <algorithm>
+#include <utility>
 
 template< bool B, class T = void >
 using eIf = typename std::enable_if<B,T>::type;
@@ -27,12 +28,35 @@ struct LegendrePoly
   template<int P, typename T>
     static real_t evalR(T x)  
     { return eval<P>(static_cast<real_t>(x)); }
-
   template<int Pfirst, int... P, typename Tfirst, typename... T>
     static real_t eval(Tfirst x, T... args)
     {
       return evalR<Pfirst,Tfirst>(x)*eval<P...>(args...);
     }
+
+#if 1
+  template<int Pfirst, int... Ps>
+    static real_t eval(const std::initializer_list<real_t>& arg)
+    {
+      return eval<Pfirst>(*(arg.end() - sizeof...(Ps)-1))*eval<Ps...>(arg);
+    }
+
+  template<int... Ps>
+    static auto eval(const std::initializer_list<real_t>& arg) -> eIf<sizeof...(Ps)==0,real_t>
+    { return 1.0;}
+#endif
+
+#if 1
+  template<int Pfirst, int... Ps, typename Arg>
+    static real_t eval(Arg&& arg)
+    {
+      return eval<Pfirst>(*(arg.end() - sizeof...(Ps)-1))*eval<Ps...>(std::forward<Arg>(arg));
+    }
+
+  template<int... Ps, typename Arg>
+    static auto eval(Arg&& arg) -> eIf<sizeof...(Ps)==0,real_t>
+    { return 1.0;}
+#endif
 };
 
 template<int M, int DIM>
@@ -175,10 +199,23 @@ struct static_loop3
 };
 #endif
 
-template<int M, typename real_t>
+template<size_t N, size_t... S>
+struct Unpack : Unpack<N-1,N-1,S...>{};
+
+template<size_t... S>
+struct Unpack<0,S...>
+{
+  template<typename F, typename X>
+  static auto eval(F&& f, X&& x) -> decltype(f(x[S]...))
+  {
+    return f(x[S]...);
+  }
+};
+
+template<int M, int DIM, typename real_t>
 struct GenerateMatrix
 {
-  static constexpr int DIM = 3;
+//  static constexpr int DIM = 3;
   static constexpr int factorial(int n)
   {
     return n > 0 ? n*factorial(n-1) : 1;
@@ -193,11 +230,13 @@ struct GenerateMatrix
 
   const real_t* getMatrix() const {return &matrix[0][0];}
 
+
   struct Expansion
   {
     std::array<real_t,DIM > node;
     std::array<real_t,size> result;
-    Expansion(real_t x, real_t y, real_t z) : node({x, y, z}) {};
+
+    Expansion(const std::array<real_t,DIM>& v) : node(v) { std::reverse(node.begin(), node.end()); }
 
     real_t operator[](const int i) const {return result[i];}
 
@@ -205,7 +244,10 @@ struct GenerateMatrix
       void eval()
       {
         static_assert(count < size, "Buffer overflow");
-        result[count] = LegendrePoly<real_t>::template eval<Vs...>(node[2],node[1],node[0]);
+        result[count] = LegendrePoly<real_t>::template eval<Vs...>(node); 
+//        auto arg = {node[0], node[1], node[2]};
+//        result[count] = LegendrePoly<real_t>::template eval<Vs...>(arg);
+//         Unpack<DIM>::template eval(LegendrePoly<real_t>::template eval<Vs...>,node);
       }
   };
 
@@ -258,7 +300,10 @@ struct GenerateMatrix
     for (int i = 0; i < size; i++)
     {
       const auto& idx = indices[i];
-      const auto f = static_loop<M,DIM>::exec(Expansion{nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]});
+      std::array<real_t,DIM> node;
+      for (int k = 0; k < DIM; k++)
+        node[k] = nodes[idx[DIM-k-1]];
+      const auto f = static_loop<M,DIM>::exec(Expansion{node}); //nodes[idx[3]], nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]});
       matrix[i] = f.result;
     }
   }
@@ -322,7 +367,9 @@ void inverse(const double* A, double *Ainv)
   int LLWORK = LWORK;
 
   dgetrf_(&NN,&NN,Ainv,&NN,IPIV,&INFO);
+  assert(INFO == 0);
   dgetri_(&NN,Ainv,&NN,IPIV,WORK,&LLWORK,&INFO);
+  assert(INFO == 0);
 }
 
 bool verify(const double *A, const double *B, const int N)
@@ -377,22 +424,103 @@ struct Foo
 };
 
 
+
+#if 0
+template<size_t S0, size_t... S, typename Func, typename Arg>
+auto unpack(Func&& f, Arg&& arg) -> eIf<S0==0, decltype(f(arg[S0],arg[S]...))> 
+{
+  return f(arg[S0],arg[S]...);
+}
+template<size_t S0, size_t... S, typename Func, typename Arg>
+auto unpack(Func&& f, Arg&& arg) -> eIf<(S0>0),decltype(unpack<S0-1,S0,S...>(f,arg))>
+{
+  return unpack<S0-1,S0,S...>(f,arg);
+}
+#endif
+
+
+  template<size_t...>
+    struct seq
+    {
+    };
+
+  template<size_t N, size_t... S>
+    struct make_seq
+    : make_seq<N - 1, N - 1, S...>
+    {
+    };
+
+  template<size_t... S>
+    struct make_seq<0, S...>
+    {
+      typedef seq<S...> type;
+    };
+
+template<typename V>
+struct Car
+{
+  template<int W>
+    static V foo(int x, int y, int z, int v, int w)
+    {
+      using std::cout;
+      using std::endl;
+      cout << x << endl;
+      cout << y << endl;
+      cout << z << endl;
+      cout << v << endl;
+      cout << w << endl;
+      return V(100.3)+W+x+y+z+w+v+w;
+    }
+};
+
+template<typename V, int W>
+struct Mar
+{
+  static void foo()
+  {
+    std::array<int,5> var = {1,2,3,4,5};
+    std::cout << Unpack<5>::template eval(Car<V>::template foo<W>,var) << std::endl;
+  }
+};
+
 int main(int argc, char *argv[])
 {
   using std::cout;
   using std::endl;
   constexpr int M = 4;
+  constexpr int DIM = 3;
   using real_t = double;
 
+  std::array<int,5> var = {1,2,3,4,5};
+  auto f = [&](int x, int y, int z, int v, int w) -> int
+  {
+    cout << x << endl;
+    cout << y << endl;
+    cout << z << endl;
+    cout << v << endl;
+    cout << w << endl;
+    return x+y+z+w+v+w;
+  };
+  cout << Unpack<5>::template eval(f,var) << endl;
+//  cout << Unpack<5>::template eval(Car<100>::template foo<1000>,var) << endl;
+  Mar<float,1000>::foo();
+//  cout << unpack<4>(f,var) << endl;
+  cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
+  cout << LegendrePoly<real_t>::template eval<1,2,3>({1.0,2.0,3.0}) << endl;
+  
+
+
+//  return 0;
+
 #if 1  
-  static_loop<M,3>::exec(GenerateMatrix<M,real_t>::Expansion(0.3,0.4,0.5));
+  static_loop<M,DIM>::exec(GenerateMatrix<M,DIM,real_t>::Expansion({0.3,0.4,0.5}));
   cout << "---------------\n";
   static_loop<M,4>::exec(Foo<M>{});
 
 //  cout << product(4,0,3)/factorial(3) << endl;
 
 #endif
-  GenerateMatrix<M,real_t> g;
+  GenerateMatrix<M,DIM,real_t> g;
 
 
 //  g.printMatrix(g.getMatrix());
@@ -410,14 +538,14 @@ int main(int argc, char *argv[])
     std::count_if(Ainv, Ainv+g.size*g.size, [](const real_t val) {return std::abs(val) > 1.0e-10;});
   fprintf(stderr, " number of non-zero-inv elements= %d [ %g %c ]\n", non_zero_inv, non_zero_inv*100.0/(g.size*g.size), '%' );
 
-  fprintf(stderr, " -- tota number of non-zeros= %d [ %g %c ] \n",
+  fprintf(stderr, " -- total number of non-zeros= %d [ %g %c ] \n",
       non_zero + non_zero_inv, (non_zero + non_zero_inv)*50.0/(g.size*g.size), '%');
 
 
   if (verify(g.getMatrix(), Ainv, g.size))
     fprintf(stderr , " -- Matrix verified -- \n");
-  cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
-  cout << LegendrePoly<real_t>::template eval<2>(0.0) << endl;
+//  cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
+//  cout << LegendrePoly<real_t>::template eval<2>(0.0) << endl;
 
   const auto m2n = generateMatmulCode(g.getMatrix(), g.size);
 
