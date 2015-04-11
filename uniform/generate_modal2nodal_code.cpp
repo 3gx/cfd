@@ -100,33 +100,33 @@ struct static_loop
   /**************/
   /* basic loop */
   /**************/
-  template<size_t COUNT, size_t B, size_t... As, typename F>
-    static auto eval(F&& f) -> enableIf<(B<=M-sum<As...>())> 
+  template<size_t COUNT=0, size_t B, size_t... As, typename F>
+    static auto eval(F&& f, std::index_sequence<B,As...>) -> enableIf<(B<=M-sum<As...>())> 
     {
       f.template eval<COUNT, B, As...>();  /* call function */
-      eval<COUNT+1,B+1,As...>(f);
+      eval<COUNT+1>(f,std::index_sequence<B+1,As...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F>
-    static auto eval(F&& f) -> enableIf<(B>M-sum<As...>())> 
+    static auto eval(F&& f, std::index_sequence<B,As...>) -> enableIf<(B>M-sum<As...>())> 
     {
-      incr<COUNT, As...>(f, std::index_sequence<0>());
+      incr<COUNT>(f, std::index_sequence<As...>(), std::index_sequence<0>());
     }
 
   /*************/
   /* increment */
   /*************/
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B<M-sum<As...>())>
+    static auto incr(F&& f, std::index_sequence<B,As...>, std::index_sequence<I...>) -> enableIf<(B<M-sum<As...>())>
     {
-      eval<COUNT,I...,B+1,As...>(f);
+      eval<COUNT>(f,std::index_sequence<I...,B+1,As...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
+    static auto incr(F&& f, std::index_sequence<B,As...>, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
     {
-      incr<COUNT,As...>(f, std::index_sequence<0,I...>());
+      incr<COUNT>(f, std::index_sequence<As...>(), std::index_sequence<0,I...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
+    static auto incr(F&& f, std::index_sequence<B,As...>, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
     {}
 
   /***********/
@@ -140,11 +140,11 @@ struct static_loop
   template<size_t D, size_t... ZEROs, typename F>
     static auto warmup(F&& f, std::index_sequence<ZEROs...>) -> enableIf<D==0> 
     {
-      eval<D,ZEROs...>(f);
+      eval(f, std::index_sequence<ZEROs...>());
     } 
 
   /***************
-   * entry posize_t *
+   * entry point *
    ***************/
   template<typename F>
     static F& exec(F&& f)
