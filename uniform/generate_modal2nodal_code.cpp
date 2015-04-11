@@ -187,7 +187,16 @@ struct static_loop3
 template<int M, typename real_t>
 struct GenerateMatrix
 {
-  static constexpr int _size = (M+1)*(M+2)*(M+3)/6;
+  static constexpr int factorial(int n)
+  {
+    return n > 0 ? n*factorial(n-1) : 1;
+  }
+  static constexpr int product (int m, int i, int d)
+  {
+    return i < d ? (m+i+1)*product(m, i+1, d) : 1;
+  }
+  
+  static constexpr int _size = product(M,0,3)/factorial(3);
   std::array<real_t,_size> matrix[_size];
 
   constexpr int size() const {return _size;}
@@ -361,6 +370,7 @@ struct Foo
       }
 };
 
+
 int main(int argc, char *argv[])
 {
   using std::cout;
@@ -372,6 +382,8 @@ int main(int argc, char *argv[])
   static_loop<M,3>::exec(GenerateMatrix<M,real_t>::Expansion(0.3,0.4,0.5));
   cout << "---------------\n";
   static_loop<M,4>::exec(Foo<M>{});
+
+//  cout << product(4,0,3)/factorial(3) << endl;
 
 #endif
   GenerateMatrix<M,real_t> g;
