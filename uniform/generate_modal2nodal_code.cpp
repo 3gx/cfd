@@ -12,6 +12,7 @@ using enableIf = typename std::enable_if<B,T>::type;
 /***************************************
  * Unpack parameter list from an array *
  ***************************************/
+// C++11
 template<size_t N, size_t... S>
 struct Unpack : Unpack<N-1,N-1,S...>{};
 template<size_t... S>
@@ -23,6 +24,12 @@ struct Unpack<0,S...>
     return f(x[S]...);
   }
 };
+// C++14
+template<typename F, typename X, size_t... I>
+auto unpack(F&& f, X&& x, std::index_sequence<I...>)
+{
+  return f(x[I]...);
+}
 /**************************************/
 
 template<typename real_t>
@@ -100,33 +107,33 @@ struct static_loop
   /**************/
   /* basic loop */
   /**************/
-  template<size_t COUNT=0, size_t B, size_t... As, typename F>
-    static auto eval(F&& f, std::index_sequence<B,As...>) -> enableIf<(B<=M-sum<As...>())> 
+  template<size_t COUNT, size_t B, size_t... As, typename F>
+    static auto eval(F&& f) -> enableIf<(B<=M-sum<As...>())> 
     {
       f.template eval<COUNT, B, As...>();  /* call function */
-      eval<COUNT+1>(f,std::index_sequence<B+1,As...>());
+      eval<COUNT+1,B+1,As...>(f);
     }
   template<size_t COUNT, size_t B, size_t... As, typename F>
-    static auto eval(F&& f, std::index_sequence<B,As...>) -> enableIf<(B>M-sum<As...>())> 
+    static auto eval(F&& f) -> enableIf<(B>M-sum<As...>())> 
     {
-      incr<COUNT>(f, std::index_sequence<As...>(), std::index_sequence<0>());
+      incr<COUNT,As...>(f, std::index_sequence<0>());
     }
 
   /*************/
   /* increment */
   /*************/
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<B,As...>, std::index_sequence<I...>) -> enableIf<(B<M-sum<As...>())>
+    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B<M-sum<As...>())>
     {
-      eval<COUNT>(f,std::index_sequence<I...,B+1,As...>());
+      eval<COUNT,I...,B+1,As...>(f);
     }
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<B,As...>, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
+    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
     {
-      incr<COUNT>(f, std::index_sequence<As...>(), std::index_sequence<0,I...>());
+      incr<COUNT,As...>(f, std::index_sequence<0,I...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<B,As...>, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
+    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
     {}
 
   /***********/
@@ -140,7 +147,7 @@ struct static_loop
   template<size_t D, size_t... ZEROs, typename F>
     static auto warmup(F&& f, std::index_sequence<ZEROs...>) -> enableIf<D==0> 
     {
-      eval(f, std::index_sequence<ZEROs...>());
+      eval<0,ZEROs...>(f);
     } 
 
   /***************
@@ -182,11 +189,13 @@ struct GenerateMatrix
 
     real_t operator[](const int i) const {return result[i];}
 
+
     template<int count, int... Vs>
       void eval()
       {
         static_assert(count < size, "Buffer overflow");
-        result[count] = Unpack<DIM>::template eval(LegendrePoly<real_t>::template eval<Vs...>,node);
+//        result[count] = Unpack<DIM>::eval(LegendrePoly<real_t>::template eval<Vs...>,node);
+        result[count] = unpack(LegendrePoly<real_t>::template eval<Vs...>,node,std::make_index_sequence<DIM>());
       }
   };
 
