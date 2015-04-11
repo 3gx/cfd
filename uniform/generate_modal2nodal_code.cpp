@@ -201,7 +201,7 @@ struct GenerateMatrix
       {
         static_assert(count < size, "Buffer overflow");
         result[count] = LegendrePoly<real_t>::template eval<Vs...>(node); 
-//         Unpack<DIM>::template eval(LegendrePoly<real_t>::template eval<Vs...>,node);
+//        Unpack<DIM>::template eval(LegendrePoly<real_t>::template eval<Vs...>,node);
       }
   };
 
@@ -410,8 +410,8 @@ int main(int argc, char *argv[])
 {
   using std::cout;
   using std::endl;
-  constexpr int M = 4;
-  constexpr int DIM = 3;
+  constexpr int M = 3;
+  constexpr int DIM = 4;
   using real_t = double;
 
   std::array<int,5> var = {1,2,3,4,5};
@@ -433,8 +433,6 @@ int main(int argc, char *argv[])
 //  return 0;
 
 #if 1  
-  static_loop<M,DIM>::exec(GenerateMatrix<M,DIM,real_t>::Expansion({0.3,0.4,0.5}));
-  cout << "---------------\n";
   static_loop<M,4>::exec(Foo<M>{});
 
 //  cout << product(4,0,3)/factorial(3) << endl;
