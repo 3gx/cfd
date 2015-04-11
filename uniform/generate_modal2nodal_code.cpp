@@ -43,25 +43,6 @@ struct LegendrePoly
     }
 };
 
-/******* sum *******/
-template<size_t...> struct Sum;
-template<size_t V, size_t ...Vs>
-struct Sum<V, Vs...>
-{
-  static constexpr auto value = V + Sum<Vs...>::value;
-};
-template<>
-struct Sum<>
-{
-  static constexpr size_t value = 0;
-};
-
-/*********************/
-template<size_t... Vs> 
-constexpr eIf<sizeof...(Vs)==0,size_t> sum()  { return 0; }
-template<size_t V, size_t... Vs> 
-constexpr size_t sum() { return V + sum<Vs...>(); }
-
 template<int M, int DIM>
 struct static_loop
 {
@@ -77,7 +58,17 @@ struct static_loop
       }
    */
 
+  /******************/
+  /* helper methods */
+  /******************/
+  template<int... Vs> 
+    static constexpr eIf<sizeof...(Vs)==0,int> sum()  { return 0; }
+  template<int V, int... Vs> 
+    static constexpr int sum() { return V + sum<Vs...>(); }
+
+  /**************/
   /* basic loop */
+  /**************/
   template<int COUNT, int B, int... As, typename F>
     static eIf<(B<=M-sum<As...>())> eval(F&& f)
     {
@@ -90,11 +81,13 @@ struct static_loop
       incr<1, COUNT, As...>(f);
     }
 
+  /*************/
   /* increment */
+  /*************/
   template<int K, int COUNT, int B, int... As, typename F>
     static eIf<(B<M-sum<As...>())> incr(F&& f)
     {
-      launch<K,COUNT,B+1,As...>(f);
+      cont<K,COUNT,B+1,As...>(f);
     }
   template<int K, int COUNT, int B, int... As, typename F>
     static eIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
@@ -103,39 +96,47 @@ struct static_loop
       incr<K+1,COUNT,As...>(f);
     }
   template<int K, int COUNT, int B, int... As, typename F>
-    static eIf<(B>=M-Sum<As...>::value) && (sizeof...(As) == 0)> 
+    static eIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
     incr(F&& f)
     {
     }
 
 
-  /* launch */
+  /************/
+  /* continue */
+  /************/
   template<int K, int COUNT, int... As, typename F>
-    static eIf<(K>0)> launch(F&& f)
+    static eIf<(K>0)> cont(F&& f)
     {
-      launch<K-1,COUNT,0,As...>(f);
+      cont<K-1,COUNT,0,As...>(f);
     }
   template<int K, int COUNT, int... As, typename F>
-    static eIf<K==0> launch(F&& f)
+    static eIf<K==0> cont(F&& f)
     {
       eval<COUNT, As...>(f);
     }
 
-  /* execute loop */ 
+  /***********/
+  /* warm-up */ 
+  /***********/
   template<int D, int... ZERO, typename F>
-    static eIf<(D>0)> execR(F&& f)
+    static eIf<(D>0)> warmup(F&& f)
     {
-      execR<D-1,0,ZERO...>(f);
+      warmup<D-1,0,ZERO...>(f);
     } 
   template<int D, int... ZERO, typename F>
-    static eIf<D==0> execR(F&& f)
+    static eIf<D==0> warmup(F&& f)
     {
       eval<D,ZERO...>(f);
     } 
+
+  /***************
+   * entry point *
+   ***************/
   template<typename F>
     static void exec(F&& f)
     {
-      execR<DIM>(f);
+      warmup<DIM>(f);
     }
 };
 
