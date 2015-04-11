@@ -8,14 +8,6 @@
 template< bool B, class T = void >
 using eIf = typename std::enable_if<B,T>::type;
 
-template<typename... Ts>
-struct IsEmptyBase
-{
-  bool value = sizeof...(Ts);
-};
-
-template<typename... Ts>
-using IsEmpty = typename IsEmptyBase<Ts...>::value;
 
 template<typename real_t>
 struct LegendrePoly
@@ -191,39 +183,37 @@ struct GenerateMatrix
   {
     return n > 0 ? n*factorial(n-1) : 1;
   }
-  static constexpr int product (int m, int i, int d)
+  static constexpr int product (int m, int d, int i = 0)
   {
-    return i < d ? (m+i+1)*product(m, i+1, d) : 1;
+    return i < d ? (m+i+1)*product(m, d, i+1) : 1;
   }
   
-  static constexpr int _size = product(M,0,3)/factorial(3);
-  std::array<real_t,_size> matrix[_size];
+  static constexpr int size = product(M,DIM,0)/factorial(DIM);
+  std::array<real_t,size> matrix[size];
 
-  constexpr int size() const {return _size;}
   const real_t* getMatrix() const {return &matrix[0][0];}
 
   struct Expansion
   {
-    std::array<real_t,_size> result;
+    std::array<real_t,size> result;
     real_t x,y,z;
     Expansion(real_t _x, real_t _y, real_t _z) : x(_x), y(_y), z(_z) {};
 
-    constexpr int size() const {return _size;}
     real_t operator[](const int i) const {return result[i];}
 
-    template<int idx, int c,int b,int a>
+    template<int count, int c,int b,int a>
       void eval()
       {
 //        fprintf(stderr, "idx= %d M= %d : a= %d b= %d c= %d\n", idx, M, a,b,c);
-        static_assert(idx < _size, "Buffer overflow");
-        result[idx] = LegendrePoly<real_t>::template eval<a,b,c>(x,y,z);
+        static_assert(count < size, "Buffer overflow");
+        result[count] = LegendrePoly<real_t>::template eval<a,b,c>(x,y,z);
       }
   };
 
   struct Indices
   {
     using index_t = std::array<int,DIM>;
-    std::array<index_t,_size> indices;
+    std::array<index_t,size> indices;
 
     const index_t& operator[](const int i) const {return indices[i];}
 
@@ -239,7 +229,7 @@ struct GenerateMatrix
     template<int count, int... Vs>
       void eval()
       {
-        static_assert(count < _size, "Buffer overflow");
+        static_assert(count < size, "Buffer overflow");
         fill<count, Vs...>();
       }
 
@@ -265,21 +255,20 @@ struct GenerateMatrix
     };
     static_assert(M>=0 && M<13, "M-value is out of range");
 
-    const auto& indices = static_loop<M,DIM>::exec(Indices{});
-    for (int i = 0; i < _size; i++)
+    const auto indices = static_loop<M,DIM>::exec(Indices{});
+    for (int i = 0; i < size; i++)
     {
       const auto& idx = indices[i];
-      const auto& f = static_loop<M,DIM>::exec(Expansion{nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]});
+      const auto f = static_loop<M,DIM>::exec(Expansion{nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]});
       matrix[i] = f.result;
     }
-
   }
 
   void printMatrix() const
   {
-    for (int j = 0; j < _size; j++)
+    for (int j = 0; j < size; j++)
     {
-      for (int i = 0; i < _size; i++)
+      for (int i = 0; i < size; i++)
       {
         printf("%5.2f ", matrix[j][i]);
       }
@@ -288,11 +277,11 @@ struct GenerateMatrix
   }
   void printMatrix(const real_t *matrix) const
   {
-    for (int j = 0; j < _size; j++)
+    for (int j = 0; j < size; j++)
     {
-      for (int i = 0; i < _size; i++)
+      for (int i = 0; i < size; i++)
       {
-        printf("%5.2f ", matrix[j*_size + i]);
+        printf("%5.2f ", matrix[j*size + i]);
       }
       printf("\n");
     }
@@ -410,28 +399,28 @@ int main(int argc, char *argv[])
 //  g.printMatrix(g.getMatrix());
 
   const int non_zero =
-    std::count_if(g.getMatrix(), g.getMatrix()+g.size()*g.size(), [](const real_t val) {return std::abs(val) > 1.0e-10;});
-  fprintf(stderr, " matrix size= [ %d x %d ]\n", g.size(), g.size());
-  fprintf(stderr, " number of non-zero elements= %d [ %g %c ]\n", non_zero, non_zero*100.0/(g.size()*g.size()), '%' );
+    std::count_if(g.getMatrix(), g.getMatrix()+g.size*g.size, [](const real_t val) {return std::abs(val) > 1.0e-10;});
+  fprintf(stderr, " matrix size= [ %d x %d ]\n", g.size, g.size);
+  fprintf(stderr, " number of non-zero elements= %d [ %g %c ]\n", non_zero, non_zero*100.0/(g.size*g.size), '%' );
 
-  real_t Ainv[g._size*g._size];
-  inverse<g._size>(g.getMatrix(), Ainv);
+  real_t Ainv[g.size*g.size];
+  inverse<g.size>(g.getMatrix(), Ainv);
   
 //  g.printMatrix(Ainv);
   const int non_zero_inv =
-    std::count_if(Ainv, Ainv+g.size()*g.size(), [](const real_t val) {return std::abs(val) > 1.0e-10;});
-  fprintf(stderr, " number of non-zero-inv elements= %d [ %g %c ]\n", non_zero_inv, non_zero_inv*100.0/(g.size()*g.size()), '%' );
+    std::count_if(Ainv, Ainv+g.size*g.size, [](const real_t val) {return std::abs(val) > 1.0e-10;});
+  fprintf(stderr, " number of non-zero-inv elements= %d [ %g %c ]\n", non_zero_inv, non_zero_inv*100.0/(g.size*g.size), '%' );
 
   fprintf(stderr, " -- tota number of non-zeros= %d [ %g %c ] \n",
-      non_zero + non_zero_inv, (non_zero + non_zero_inv)*50.0/(g.size()*g.size()), '%');
+      non_zero + non_zero_inv, (non_zero + non_zero_inv)*50.0/(g.size*g.size), '%');
 
 
-  if (verify(g.getMatrix(), Ainv, g.size()))
+  if (verify(g.getMatrix(), Ainv, g.size))
     fprintf(stderr , " -- Matrix verified -- \n");
   cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
   cout << LegendrePoly<real_t>::template eval<2>(0.0) << endl;
 
-  const auto m2n = generateMatmulCode(g.getMatrix(), g.size());
+  const auto m2n = generateMatmulCode(g.getMatrix(), g.size);
 
   cout << m2n << endl;
   
