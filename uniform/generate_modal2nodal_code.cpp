@@ -74,14 +74,14 @@ struct LegendrePoly
 
 };
 
-template<int M, int DIM>
+template<size_t M, size_t DIM>
 struct static_loop
 {
   /* template meta-program for  this type of loop
-   int count = 0;
-   for (int a = 0; a <= M; a++)
-    for (int b = 0; b <= M-a; b++)
-      for (int c = 0; c <= M-a-b; c++)
+   size_t count = 0;
+   for (size_t a = 0; a <= M; a++)
+    for (size_t b = 0; b <= M-a; b++)
+      for (size_t c = 0; c <= M-a-b; c++)
         ...
       {
         f(count,c,b,a);
@@ -92,74 +92,59 @@ struct static_loop
   /******************/
   /* helper methods */
   /******************/
-  template<int... Vs> 
-    static constexpr auto sum() -> enableIf<sizeof...(Vs)==0,int> { return 0; }
-  template<int V, int... Vs> 
-    static constexpr auto sum() -> int { return V + sum<Vs...>(); }
+  template<size_t... Vs> 
+    static constexpr auto sum() -> enableIf<sizeof...(Vs)==0,size_t> { return 0; }
+  template<size_t V, size_t... Vs> 
+    static constexpr auto sum() -> size_t { return V + sum<Vs...>(); }
 
   /**************/
   /* basic loop */
   /**************/
-  template<int COUNT, int B, int... As, typename F>
+  template<size_t COUNT, size_t B, size_t... As, typename F>
     static auto eval(F&& f) -> enableIf<(B<=M-sum<As...>())> 
     {
       f.template eval<COUNT, B, As...>();  /* call function */
       eval<COUNT+1,B+1,As...>(f);
     }
-  template<int COUNT, int B, int... As, typename F>
+  template<size_t COUNT, size_t B, size_t... As, typename F>
     static auto eval(F&& f) -> enableIf<(B>M-sum<As...>())> 
     {
-      incr<1, COUNT, As...>(f);
+      incr<COUNT, As...>(f, std::index_sequence<0>());
     }
 
   /*************/
   /* increment */
   /*************/
-  template<int K, int COUNT, int B, int... As, typename F>
-    static auto incr(F&& f) -> enableIf<(B<M-sum<As...>())>
+  template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
+    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B<M-sum<As...>())>
     {
-      cont<K,COUNT,B+1,As...>(f);
+      eval<COUNT,I...,B+1,As...>(f);
     }
-  template<int K, int COUNT, int B, int... As, typename F>
-    static auto incr(F&& f) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
+  template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
+    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
     {
-      incr<K+1,COUNT,As...>(f);
+      incr<COUNT,As...>(f, std::index_sequence<0,I...>());
     }
-  template<int K, int COUNT, int B, int... As, typename F>
-    static auto incr(F&& f) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
+  template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
+    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
     {}
-
-
-  /************/
-  /* continue */
-  /************/
-  template<int K, int COUNT, int... As, typename F>
-    static auto cont(F&& f) -> enableIf<(K>0)> 
-    {
-      cont<K-1,COUNT,0,As...>(f);
-    }
-  template<int K, int COUNT, int... As, typename F>
-    static auto cont(F&& f) -> enableIf<K==0> 
-    {
-      eval<COUNT, As...>(f);
-    }
 
   /***********/
   /* warm-up */ 
   /***********/
-  template<int D, int... ZERO, typename F>
+  template<size_t D, size_t... ZERO, typename F>
     static auto warmup(F&& f) -> enableIf<(D>0)> 
     {
       warmup<D-1,0,ZERO...>(f);
     } 
-  template<int D, int... ZERO, typename F>
+  template<size_t D, size_t... ZERO, typename F>
     static auto warmup(F&& f) -> enableIf<D==0> 
     {
       eval<D,ZERO...>(f);
     } 
 
   /***************
-   * entry point *
+   * entry posize_t *
    ***************/
   template<typename F>
     static F& exec(F&& f)
