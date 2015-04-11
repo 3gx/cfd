@@ -155,50 +155,6 @@ struct static_loop
     }
 };
 
-#if 0
-template<int M, typename F>
-struct static_loop3
-{
-  /*
-   for (int a = 0; a <= M; a++)
-    for (int b = 0; b <= M-a; b++)
-      for (int c = 0; c <= M-a-b; c++)
-      {
-        ..
-      }
-   */
-  template<int a, int b, int c,int COUNT>
-    static eIf<(a>M)> eval(F &f)
-    {
-    }
-  template<int a, int b, int c, int COUNT>
-    static eIf<(a<=M && b>M-a)> eval(F &f)
-    {
-      eval<a+1,0,0,COUNT>(f);
-    }
-  template<int a, int b, int c, int COUNT>
-    static eIf<(a<=M && b<= M-a && c>M-b-a)> eval(F &f)
-    {
-      eval<a,b+1,0,COUNT>(f);
-    }
-
-  template<int a, int b, int c, int COUNT = 0>
-    static eIf<(a<=M && b<= M-a  && c<=M-b-a)> eval(F& f)
-    {
-      f. template eval<COUNT, c,b,a>();
-      eval<a,b,c+1,COUNT+1>(f);
-    }
-
-  template<typename... T>
-  static F loop(T... args)
-  {
-    F f(args...);
-    eval<0,0,0>(f);
-    return f;
-  }
-};
-#endif
-
 template<size_t N, size_t... S>
 struct Unpack : Unpack<N-1,N-1,S...>{};
 
@@ -245,8 +201,6 @@ struct GenerateMatrix
       {
         static_assert(count < size, "Buffer overflow");
         result[count] = LegendrePoly<real_t>::template eval<Vs...>(node); 
-//        auto arg = {node[0], node[1], node[2]};
-//        result[count] = LegendrePoly<real_t>::template eval<Vs...>(arg);
 //         Unpack<DIM>::template eval(LegendrePoly<real_t>::template eval<Vs...>,node);
       }
   };
@@ -297,13 +251,14 @@ struct GenerateMatrix
     static_assert(M>=0 && M<13, "M-value is out of range");
 
     const auto indices = static_loop<M,DIM>::exec(Indices{});
+    std::array<real_t,DIM> node;
+
     for (int i = 0; i < size; i++)
     {
       const auto& idx = indices[i];
-      std::array<real_t,DIM> node;
       for (int k = 0; k < DIM; k++)
         node[k] = nodes[idx[DIM-k-1]];
-      const auto f = static_loop<M,DIM>::exec(Expansion{node}); //nodes[idx[3]], nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]});
+      const auto f = static_loop<M,DIM>::exec(Expansion{node});
       matrix[i] = f.result;
     }
   }
@@ -424,38 +379,6 @@ struct Foo
 };
 
 
-
-#if 0
-template<size_t S0, size_t... S, typename Func, typename Arg>
-auto unpack(Func&& f, Arg&& arg) -> eIf<S0==0, decltype(f(arg[S0],arg[S]...))> 
-{
-  return f(arg[S0],arg[S]...);
-}
-template<size_t S0, size_t... S, typename Func, typename Arg>
-auto unpack(Func&& f, Arg&& arg) -> eIf<(S0>0),decltype(unpack<S0-1,S0,S...>(f,arg))>
-{
-  return unpack<S0-1,S0,S...>(f,arg);
-}
-#endif
-
-
-  template<size_t...>
-    struct seq
-    {
-    };
-
-  template<size_t N, size_t... S>
-    struct make_seq
-    : make_seq<N - 1, N - 1, S...>
-    {
-    };
-
-  template<size_t... S>
-    struct make_seq<0, S...>
-    {
-      typedef seq<S...> type;
-    };
-
 template<typename V>
 struct Car
 {
@@ -501,10 +424,7 @@ int main(int argc, char *argv[])
     cout << w << endl;
     return x+y+z+w+v+w;
   };
-  cout << Unpack<5>::template eval(f,var) << endl;
-//  cout << Unpack<5>::template eval(Car<100>::template foo<1000>,var) << endl;
   Mar<float,1000>::foo();
-//  cout << unpack<4>(f,var) << endl;
   cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
   cout << LegendrePoly<real_t>::template eval<1,2,3>({1.0,2.0,3.0}) << endl;
   
