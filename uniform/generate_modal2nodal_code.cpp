@@ -185,6 +185,7 @@ struct static_loop3
 template<int M, typename real_t>
 struct GenerateMatrix
 {
+  static constexpr int DIM = 3;
   static constexpr int factorial(int n)
   {
     return n > 0 ? n*factorial(n-1) : 1;
@@ -218,6 +219,31 @@ struct GenerateMatrix
       }
   };
 
+  struct Indices
+  {
+    using index_t = std::array<int,DIM>;
+    std::array<index_t,_size> indices;
+
+    const index_t& operator[](const int i) const {return indices[i];}
+
+    template<int count, int V, int... Vs>
+      void fill()
+      {
+        indices[count][sizeof...(Vs)] = V;
+        fill<count, Vs...>();
+      }
+    template<int count, int... Vs>
+      eIf<sizeof...(Vs)==0> fill() {}
+
+    template<int count, int... Vs>
+      void eval()
+      {
+        static_assert(count < _size, "Buffer overflow");
+        fill<count, Vs...>();
+      }
+
+  };
+
   GenerateMatrix()
   {
     real_t nodes[] = 
@@ -238,24 +264,16 @@ struct GenerateMatrix
     };
     static_assert(M>=0 && M<13, "M-value is out of range");
 
-    int DIM = 3;
+    Indices indices;
+    static_loop<M,DIM>::exec(indices);
+    for (int i = 0; i < _size; i++)
+    {
+      const auto& idx = indices[i];
+      Expansion f(nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]);
+      static_loop<M,DIM>::exec(f);
+      matrix[i] = f.result;
+    }
 
-    int count = 0;
-    for (int a = 0; a <= M; a++)
-      for (int b = 0; b <= M-a; b++)
-        for (int c = 0; c <= M-a-b; c++)
-        {
-          assert(count < _size);
-          const real_t x = nodes[c];
-          const real_t y = nodes[b];
-          const real_t z = nodes[a];
-          Expansion f(x,y,z);
-          asm("#evg1");
-          static_loop<M,3>::exec(f);
-          asm("#evg2");
-          matrix[count] = f.result;
-          count++;
-        }
   }
 
   void printMatrix() const
