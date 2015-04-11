@@ -195,18 +195,17 @@ struct GenerateMatrix
 
   struct Expansion
   {
+    std::array<real_t,DIM > node;
     std::array<real_t,size> result;
-    real_t x,y,z;
-    Expansion(real_t _x, real_t _y, real_t _z) : x(_x), y(_y), z(_z) {};
+    Expansion(real_t x, real_t y, real_t z) : node({x, y, z}) {};
 
     real_t operator[](const int i) const {return result[i];}
 
-    template<int count, int c,int b,int a>
+    template<int count, int... Vs>
       void eval()
       {
-//        fprintf(stderr, "idx= %d M= %d : a= %d b= %d c= %d\n", idx, M, a,b,c);
         static_assert(count < size, "Buffer overflow");
-        result[count] = LegendrePoly<real_t>::template eval<a,b,c>(x,y,z);
+        result[count] = LegendrePoly<real_t>::template eval<Vs...>(node[2],node[1],node[0]);
       }
   };
 
