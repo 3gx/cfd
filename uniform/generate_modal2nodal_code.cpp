@@ -6,6 +6,11 @@
 #include <algorithm>
 #include <utility>
 
+/* 
+ * Code to generate code to compute modal-to-nodal and nodal-to-modal transform
+ * Requires: C++14, lapack to compute inverse
+ */
+
 template< bool B, class T = void >
 using enableIf = typename std::enable_if<B,T>::type;
 
@@ -30,8 +35,10 @@ static auto unpack(F&& f, X&& x, std::index_sequence<I...>)
 {
   return f(x[I]...);
 }
+
 /**************************************/
 
+/* Compute Legendre Polynomials Pn(x) */
 template<typename real_t>
 struct LegendrePoly
 {
@@ -78,7 +85,6 @@ struct LegendrePoly
       return eval<P1>(x)*eval<P2>(y);
     }
 #endif
-
 };
 
 template<size_t M, size_t DIM>
@@ -91,7 +97,7 @@ struct static_loop
       for (size_t c = 0; c <= M-a-b; c++)
         ...
       {
-        f(count,c,b,a);
+        f(count,a,b,c,...);
         count++;
       }
    */
@@ -161,7 +167,6 @@ struct static_loop
     }
 };
 
-
 template<int M, int DIM, typename real_t>
 struct GenerateMatrix
 {
@@ -179,7 +184,7 @@ struct GenerateMatrix
 
   const real_t* getMatrix() const {return &matrix[0][0];}
 
-
+  /* Helper to compute matrix raw for a given node */
   struct Expansion
   {
     std::array<real_t,DIM > node;
@@ -188,7 +193,6 @@ struct GenerateMatrix
     Expansion(const std::array<real_t,DIM>& v) : node(v) { std::reverse(node.begin(), node.end()); }
 
     real_t operator[](const int i) const {return result[i];}
-
 
     template<int count, int... Vs>
       void eval()
@@ -199,6 +203,7 @@ struct GenerateMatrix
       }
   };
 
+  /* Help that computes a map between a linear index and (abc..) indices */
   struct Indices
   {
     using index_t = std::array<int,DIM>;
@@ -222,9 +227,9 @@ struct GenerateMatrix
         static_assert(count < size, "Buffer overflow");
         fill<count, Vs...>();
       }
-
   };
 
+  /* Compute matrix transformation from modal to nodal expansion */
   GenerateMatrix()
   {
     real_t nodes[] = 
@@ -258,17 +263,6 @@ struct GenerateMatrix
     }
   }
 
-  void printMatrix() const
-  {
-    for (int j = 0; j < size; j++)
-    {
-      for (int i = 0; i < size; i++)
-      {
-        printf("%5.2f ", matrix[j][i]);
-      }
-      printf("\n");
-    }
-  }
   void printMatrix(const real_t *matrix) const
   {
     for (int j = 0; j < size; j++)
@@ -280,7 +274,12 @@ struct GenerateMatrix
       printf("\n");
     }
   }
-
+  
+  /* prints matrix */
+  void printMatrix() const
+  {
+    printMatrix(getMatrix());
+  }
 };
 
 template<typename real_t>
@@ -290,7 +289,6 @@ std::string generateMatmulCode(const real_t *matrix, const int size)
 
   return code;
 };
-
 
 extern "C" 
 {
