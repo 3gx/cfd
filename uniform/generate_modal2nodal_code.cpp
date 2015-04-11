@@ -29,7 +29,7 @@ struct LegendrePoly
   template<int N>
     static eIf<(N>1),real_t> eval(const real_t x)
     {
-      return ((2*N-1)*(x*eval<N-1>(x)) - (N-1)*eval<N-2>(x))/N;
+      return ((2*N-1)*(x*eval<N-1>(x)) - (N-1)*eval<N-2>(x))*(1.0/N);
     }
 
   template<int P, typename T>
@@ -240,6 +240,7 @@ struct GenerateMatrix
     };
     static_assert(M>=0 && M<13, "M-value is out of range");
 
+    int DIM = 3;
 
     int count = 0;
     for (int a = 0; a <= M; a++)
@@ -251,7 +252,9 @@ struct GenerateMatrix
           const real_t y = nodes[b];
           const real_t z = nodes[a];
           Expansion f(x,y,z);
+          asm("#evg1");
           static_loop<M,3>::exec(f);
+          asm("#evg2");
           matrix[count] = f.result;
           count++;
         }
