@@ -193,11 +193,11 @@ struct GenerateMatrix
   constexpr int size() const {return _size;}
   const real_t* getMatrix() const {return &matrix[0][0];}
 
-  struct Expansion3D
+  struct Expansion
   {
     std::array<real_t,_size> result;
     real_t x,y,z;
-    Expansion3D(real_t _x, real_t _y, real_t _z) : x(_x), y(_y), z(_z) {};
+    Expansion(real_t _x, real_t _y, real_t _z) : x(_x), y(_y), z(_z) {};
 
     constexpr int size() const {return _size;}
     real_t operator[](const int i) const {return result[i];}
@@ -241,7 +241,7 @@ struct GenerateMatrix
           const real_t x = nodes[c];
           const real_t y = nodes[b];
           const real_t z = nodes[a];
-          Expansion3D f(x,y,z);
+          Expansion f(x,y,z);
           static_loop<M,3>::exec(f);
           matrix[count] = f.result;
           count++;
@@ -369,9 +369,7 @@ int main(int argc, char *argv[])
   using real_t = double;
 
 #if 1  
-//  static_loop3<M,GenerateMatrix<M,real_t>::Expansion3D>::loop(0.3,0.4,0.5);
-  cout << "---------------\n";
-  static_loop<M,3>::exec(GenerateMatrix<M,real_t>::Expansion3D(0.3,0.4,0.5));
+  static_loop<M,3>::exec(GenerateMatrix<M,real_t>::Expansion(0.3,0.4,0.5));
   cout << "---------------\n";
   static_loop<M,4>::exec(Foo<M>{});
 
