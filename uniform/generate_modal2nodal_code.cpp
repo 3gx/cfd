@@ -349,24 +349,23 @@ template<int M>
 struct Printer
 {
   template<int A, int... As>
-    auto evalR() -> enableIf<(sizeof...(As)>0)>
+    auto evalR() -> void
     {
-      fprintf(stderr, "%c= %d ", static_cast<char>('a'+sizeof...(As)), A);
       evalR<As...>();
-    }
-  
-  template<int A, int... As>
-    auto evalR() -> enableIf<(sizeof...(As)==0)>
-    {
-      fprintf(stderr, "%c= %d \n", 'a', A);
+      fprintf(stderr, "%c= %d ", static_cast<char>('a'+sizeof...(As)), A);
     }
 
-    template<int count, int... As>
-      void eval()
-      {
-        fprintf(stderr, "idx= %d M= %d : ", count, M);
-        evalR<As...>();
-      }
+  template<int... As>
+    auto evalR() -> enableIf<(sizeof...(As)==0)>
+    {}
+
+  template<int count, int... As>
+    void eval()
+    {
+      fprintf(stderr, "idx= %d M= %d : ", count, M);
+      evalR<As...>();
+      fprintf(stderr, " \n");
+    }
 };
 
 int main(int argc, char *argv[])
