@@ -132,15 +132,15 @@ struct static_loop
   /***********/
   /* warm-up */ 
   /***********/
-  template<size_t D, size_t... ZERO, typename F>
-    static auto warmup(F&& f) -> enableIf<(D>0)> 
+  template<size_t D, size_t... ZEROs, typename F>
+    static auto warmup(F&& f,std::index_sequence<ZEROs...>) -> enableIf<(D>0)> 
     {
-      warmup<D-1,0,ZERO...>(f);
+      warmup<D-1>(f,std::index_sequence<0,ZEROs...>());
     } 
-  template<size_t D, size_t... ZERO, typename F>
-    static auto warmup(F&& f) -> enableIf<D==0> 
+  template<size_t D, size_t... ZEROs, typename F>
+    static auto warmup(F&& f, std::index_sequence<ZEROs...>) -> enableIf<D==0> 
     {
-      eval<D,ZERO...>(f);
+      eval<D,ZEROs...>(f);
     } 
 
   /***************
@@ -149,7 +149,7 @@ struct static_loop
   template<typename F>
     static F& exec(F&& f)
     {
-      warmup<DIM>(f);
+      warmup<DIM-1>(f,std::index_sequence<0>());
       return f;
     }
 };
