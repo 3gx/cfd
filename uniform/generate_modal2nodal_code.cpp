@@ -7,56 +7,71 @@
 #include <utility>
 
 template< bool B, class T = void >
-using eIf = typename std::enable_if<B,T>::type;
+using enableIf = typename std::enable_if<B,T>::type;
 
+/***************************************
+ * Unpack parameter list from an array *
+ ***************************************/
+template<size_t N, size_t... S>
+struct Unpack : Unpack<N-1,N-1,S...>{};
+template<size_t... S>
+struct Unpack<0,S...>
+{
+  template<typename F, typename X>
+  static auto eval(F&& f, X&& x) -> decltype(f(x[S]...))
+  {
+    return f(x[S]...);
+  }
+};
+/**************************************/
 
 template<typename real_t>
 struct LegendrePoly
 {
   template<int N>
-    static eIf<(N==1),real_t> eval(const real_t x) { return x; }
+    static auto eval(const real_t x) -> enableIf<(N==1),real_t> 
+    { return x; }
 
   template<int N>
-    static eIf<(N==0),real_t> eval(const real_t x) { return 1; }
+    static auto eval(const real_t x) -> enableIf<(N==0),real_t>
+    { return 1; }
 
   template<int N>
-    static eIf<(N>1),real_t> eval(const real_t x)
+    static auto eval(const real_t x) -> enableIf<(N>1),real_t>
     {
       return ((2*N-1)*(x*eval<N-1>(x)) - (N-1)*eval<N-2>(x))*(1.0/N);
     }
 
-  template<int P, typename T>
-    static real_t evalR(T x)  
-    { return eval<P>(static_cast<real_t>(x)); }
+
+#if 0  /* this won't work with type deduction. need explicit specilaization */
   template<int Pfirst, int... P, typename Tfirst, typename... T>
-    static real_t eval(Tfirst x, T... args)
+    static auto eval(Tfirst x, T... args) -> enableIf<(sizeof...(P)>0),real_t>
     {
-      return evalR<Pfirst,Tfirst>(x)*eval<P...>(args...);
+      return eval<Pfirst>(x)*eval<P...>(args...);
     }
-
-#if 1
-  template<int Pfirst, int... Ps>
-    static real_t eval(const std::initializer_list<real_t>& arg)
+  template<int Pfirst, typename Tfirst>
+    static auto eval(Tfirst x) -> real_t
     {
-      return eval<Pfirst>(*(arg.end() - sizeof...(Ps)-1))*eval<Ps...>(arg);
+      return eval<Pfirst>(x);
     }
-
-  template<int... Ps>
-    static auto eval(const std::initializer_list<real_t>& arg) -> eIf<sizeof...(Ps)==0,real_t>
-    { return 1.0;}
+#else
+  template<int P1, int P2, int P3, int P4>
+    static real_t eval(real_t x, real_t y, real_t z, real_t w)
+    {
+      return eval<P1>(x)*eval<P2>(y)*eval<P3>(z)*eval<P4>(w);
+    }
+  template<int P1, int P2, int P3>
+    static real_t eval(real_t x, real_t y, real_t z)
+    {
+      return eval<P1>(x)*eval<P2>(y)*eval<P3>(z);
+    }
+  template<int P1, int P2>
+    static real_t eval(real_t x, real_t y)
+    {
+      return eval<P1>(x)*eval<P2>(y);
+    }
 #endif
 
-#if 1
-  template<int Pfirst, int... Ps, typename Arg>
-    static real_t eval(Arg&& arg)
-    {
-      return eval<Pfirst>(*(arg.end() - sizeof...(Ps)-1))*eval<Ps...>(std::forward<Arg>(arg));
-    }
-
-  template<int... Ps, typename Arg>
-    static auto eval(Arg&& arg) -> eIf<sizeof...(Ps)==0,real_t>
-    { return 1.0;}
-#endif
 };
 
 template<int M, int DIM>
@@ -78,21 +93,21 @@ struct static_loop
   /* helper methods */
   /******************/
   template<int... Vs> 
-    static constexpr eIf<sizeof...(Vs)==0,int> sum()  { return 0; }
+    static constexpr auto sum() -> enableIf<sizeof...(Vs)==0,int> { return 0; }
   template<int V, int... Vs> 
-    static constexpr int sum() { return V + sum<Vs...>(); }
+    static constexpr auto sum() -> int { return V + sum<Vs...>(); }
 
   /**************/
   /* basic loop */
   /**************/
   template<int COUNT, int B, int... As, typename F>
-    static eIf<(B<=M-sum<As...>())> eval(F&& f)
+    static auto eval(F&& f) -> enableIf<(B<=M-sum<As...>())> 
     {
       f.template eval<COUNT, B, As...>();  /* call function */
       eval<COUNT+1,B+1,As...>(f);
     }
   template<int COUNT, int B, int... As, typename F>
-    static eIf<(B>M-sum<As...>())> eval(F&& f)
+    static auto eval(F&& f) -> enableIf<(B>M-sum<As...>())> 
     {
       incr<1, COUNT, As...>(f);
     }
@@ -101,31 +116,30 @@ struct static_loop
   /* increment */
   /*************/
   template<int K, int COUNT, int B, int... As, typename F>
-    static eIf<(B<M-sum<As...>())> incr(F&& f)
+    static auto incr(F&& f) -> enableIf<(B<M-sum<As...>())>
     {
       cont<K,COUNT,B+1,As...>(f);
     }
   template<int K, int COUNT, int B, int... As, typename F>
-    static eIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
-    incr(F&& f)
+    static auto incr(F&& f) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
     {
       incr<K+1,COUNT,As...>(f);
     }
   template<int K, int COUNT, int B, int... As, typename F>
-    static eIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
-    incr(F&& f) {}
+    static auto incr(F&& f) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
+    {}
 
 
   /************/
   /* continue */
   /************/
   template<int K, int COUNT, int... As, typename F>
-    static eIf<(K>0)> cont(F&& f)
+    static auto cont(F&& f) -> enableIf<(K>0)> 
     {
       cont<K-1,COUNT,0,As...>(f);
     }
   template<int K, int COUNT, int... As, typename F>
-    static eIf<K==0> cont(F&& f)
+    static auto cont(F&& f) -> enableIf<K==0> 
     {
       eval<COUNT, As...>(f);
     }
@@ -134,12 +148,12 @@ struct static_loop
   /* warm-up */ 
   /***********/
   template<int D, int... ZERO, typename F>
-    static eIf<(D>0)> warmup(F&& f)
+    static auto warmup(F&& f) -> enableIf<(D>0)> 
     {
       warmup<D-1,0,ZERO...>(f);
     } 
   template<int D, int... ZERO, typename F>
-    static eIf<D==0> warmup(F&& f)
+    static auto warmup(F&& f) -> enableIf<D==0> 
     {
       eval<D,ZERO...>(f);
     } 
@@ -155,23 +169,10 @@ struct static_loop
     }
 };
 
-template<size_t N, size_t... S>
-struct Unpack : Unpack<N-1,N-1,S...>{};
-
-template<size_t... S>
-struct Unpack<0,S...>
-{
-  template<typename F, typename X>
-  static auto eval(F&& f, X&& x) -> decltype(f(x[S]...))
-  {
-    return f(x[S]...);
-  }
-};
 
 template<int M, int DIM, typename real_t>
 struct GenerateMatrix
 {
-//  static constexpr int DIM = 3;
   static constexpr int factorial(int n)
   {
     return n > 0 ? n*factorial(n-1) : 1;
@@ -200,8 +201,7 @@ struct GenerateMatrix
       void eval()
       {
         static_assert(count < size, "Buffer overflow");
-        result[count] = LegendrePoly<real_t>::template eval<Vs...>(node); 
-//        Unpack<DIM>::template eval(LegendrePoly<real_t>::template eval<Vs...>,node);
+        result[count] = Unpack<DIM>::template eval(LegendrePoly<real_t>::template eval<Vs...>,node);
       }
   };
 
@@ -219,7 +219,8 @@ struct GenerateMatrix
         fill<count, Vs...>();
       }
     template<int count, int... Vs>
-      eIf<sizeof...(Vs)==0> fill() {}
+      auto fill() -> enableIf<sizeof...(Vs)==0>
+      {}
 
     template<int count, int... Vs>
       void eval()
@@ -353,19 +354,17 @@ bool verify(const double *A, const double *B, const int N)
 
 
 template<int M>
-struct Foo
+struct Printer
 {
   template<int A, int... As>
-    eIf<(sizeof...(As)>0)>
-    evalR()
+    auto evalR() -> enableIf<(sizeof...(As)>0)>
     {
       fprintf(stderr, "%c= %d ", static_cast<char>('a'+sizeof...(As)), A);
       evalR<As...>();
     }
   
   template<int A, int... As>
-    eIf<(sizeof...(As)==0)>
-    evalR()
+    auto evalR() -> enableIf<(sizeof...(As)==0)>
     {
       fprintf(stderr, "%c= %d \n", 'a', A);
     }
@@ -378,66 +377,21 @@ struct Foo
       }
 };
 
-
-template<typename V>
-struct Car
-{
-  template<int W>
-    static V foo(int x, int y, int z, int v, int w)
-    {
-      using std::cout;
-      using std::endl;
-      cout << x << endl;
-      cout << y << endl;
-      cout << z << endl;
-      cout << v << endl;
-      cout << w << endl;
-      return V(100.3)+W+x+y+z+w+v+w;
-    }
-};
-
-template<typename V, int W>
-struct Mar
-{
-  static void foo()
-  {
-    std::array<int,5> var = {1,2,3,4,5};
-    std::cout << Unpack<5>::template eval(Car<V>::template foo<W>,var) << std::endl;
-  }
-};
-
 int main(int argc, char *argv[])
 {
   using std::cout;
   using std::endl;
-  constexpr int M = 3;
+  constexpr int M = 4;
   constexpr int DIM = 4;
   using real_t = double;
 
-  std::array<int,5> var = {1,2,3,4,5};
-  auto f = [&](int x, int y, int z, int v, int w) -> int
-  {
-    cout << x << endl;
-    cout << y << endl;
-    cout << z << endl;
-    cout << v << endl;
-    cout << w << endl;
-    return x+y+z+w+v+w;
-  };
-  Mar<float,1000>::foo();
   cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
-  cout << LegendrePoly<real_t>::template eval<1,2,3>({1.0,2.0,3.0}) << endl;
-  
-
+  cout << Unpack<3>::template eval(LegendrePoly<real_t>::template eval<1,2,3>,std::array<real_t,3>{1,2,3}) << endl;
 
 //  return 0;
 
-#if 1  
-  static_loop<M,4>::exec(Foo<M>{});
+  static_loop<M,4>::exec(Printer<M>{});
 
-//  cout << product(4,0,3)/factorial(3) << endl;
-
-#endif
   GenerateMatrix<M,DIM,real_t> g;
 
 
