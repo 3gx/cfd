@@ -5,17 +5,29 @@
 #include <cmath>
 #include <algorithm>
 
+template< bool B, class T = void >
+using eIf = typename std::enable_if<B,T>::type;
+
+template<typename... Ts>
+struct IsEmptyBase
+{
+  bool value = sizeof...(Ts);
+};
+
+template<typename... Ts>
+using IsEmpty = typename IsEmptyBase<Ts...>::value;
+
 template<typename real_t>
 struct LegendrePoly
 {
   template<int N>
-    static typename std::enable_if<(N==1),real_t>::type eval(const real_t x) { return x; }
+    static eIf<(N==1),real_t> eval(const real_t x) { return x; }
 
   template<int N>
-    static typename std::enable_if<(N==0),real_t>::type eval(const real_t x) { return 1; }
+    static eIf<(N==0),real_t> eval(const real_t x) { return 1; }
 
   template<int N>
-    static typename std::enable_if<(N>1),real_t>::type eval(const real_t x)
+    static eIf<(N>1),real_t> eval(const real_t x)
     {
       return ((2*N-1)*(x*eval<N-1>(x)) - (N-1)*eval<N-2>(x))/N;
     }
@@ -43,21 +55,14 @@ struct Sum<>
 {
   static constexpr size_t value = 0;
 };
-/*********************/
-#if 0
-  template<int V, int... Vs>
-constexpr typename std::enable_if<(sizeof...(Vs)==0),int>::type sum()
-{
-  return V;
-}
-  template<int V, int... Vs>
-constexpr typename std::enable_if<(sizeof...(Vs)>0),int>::type sum()
-{
-  return V + sum<Vs...>();
-}
-#endif
 
-template<int M, typename F>
+/*********************/
+template<size_t... Vs> 
+constexpr eIf<sizeof...(Vs)==0,size_t> sum()  { return 0; }
+template<size_t V, size_t... Vs> 
+constexpr size_t sum() { return V + sum<Vs...>(); }
+
+template<int M, int DIM>
 struct static_loop
 {
   /* template meta-program for  this type of loop
@@ -72,117 +77,69 @@ struct static_loop
       }
    */
 
-#if 1
   /* basic loop */
-  template<int COUNT, int B, int... As>
-    static typename std::enable_if<(B<=M-Sum<As...>::value)>::type 
-    eval(F &f)
+  template<int COUNT, int B, int... As, typename F>
+    static eIf<(B<=M-sum<As...>())> eval(F&& f)
     {
       f.template eval<COUNT, B, As...>();  /* call function */
       eval<COUNT+1,B+1,As...>(f);
     }
-  template<int COUNT, int B, int... As>
-    static typename std::enable_if<(B>M-Sum<As...>::value)>::type 
-    eval(F &f)
+  template<int COUNT, int B, int... As, typename F>
+    static eIf<(B>M-sum<As...>())> eval(F&& f)
     {
       incr<1, COUNT, As...>(f);
     }
-#else
-  template<int... Vs>
-    struct Eval;
-
-  template<int COUNT, int B, int... As>
-    struct Eval<COUNT, B, As...>
-    {
-      static void exec(F &f)
-      {
-        f.template eval<COUNT,B,As...>();
-        eval<COUNT+1,B+1,As...>(f);
-      }
-    };
-
-  /* generates error:
-     generate_modal2nodal_code.cpp:88:24: error: non-type template argument depends on a template parameter of the partial specialization
-     struct Eval<COUNT, 3-Sum<As...>::value, As...>
-     */
-  template<int COUNT, int... As>
-    struct Eval<COUNT, M-Sum<As...>::value, As...>
-    {
-      static void exec(F &f)
-      {
-        incr<1, COUNT, As...>(f);
-      }
-    };
-  template<int... Vs>
-    static void
-    eval(F &f)
-    {
-      Eval<Vs...>::exec(f);
-    }
-#endif
 
   /* increment */
-  template<int K, int COUNT, int B, int... As>
-    static typename std::enable_if<(B<M-Sum<As...>::value)>::type 
-    incr(F &f)
+  template<int K, int COUNT, int B, int... As, typename F>
+    static eIf<(B<M-sum<As...>())> incr(F&& f)
     {
       launch<K,COUNT,B+1,As...>(f);
     }
-  template<int K, int COUNT, int B, int... As>
-    static typename std::enable_if<(B>=M-Sum<As...>::value) && (sizeof...(As) > 1)>::type 
-    incr(F &f)
+  template<int K, int COUNT, int B, int... As, typename F>
+    static eIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
+    incr(F&& f)
     {
       incr<K+1,COUNT,As...>(f);
     }
-  template<int K, int COUNT, int B, int A>
-    static typename std::enable_if<(B>=M-A && A<M)>::type 
-    incr(F &f)
-    {
-      launch<K,COUNT,0,A+1>(f);
-    }
-  template<int K, int COUNT, int B, int A>
-    static typename std::enable_if<(B>=M-A && A>=M)>::type 
-    incr(F &f)
+  template<int K, int COUNT, int B, int... As, typename F>
+    static eIf<(B>=M-Sum<As...>::value) && (sizeof...(As) == 0)> 
+    incr(F&& f)
     {
     }
 
 
   /* launch */
-  template<int K, int COUNT, int... As>
-    static typename std::enable_if<(K>0)>::type 
-    launch(F &f)
+  template<int K, int COUNT, int... As, typename F>
+    static eIf<(K>0)> launch(F&& f)
     {
       launch<K-1,COUNT,0,As...>(f);
     }
-  template<int K, int COUNT, int... As>
-    static typename std::enable_if<(K==0)>::type 
-    launch(F &f)
+  template<int K, int COUNT, int... As, typename F>
+    static eIf<K==0> launch(F&& f)
     {
       eval<COUNT, As...>(f);
     }
 
   /* execute loop */ 
-  template<int DIM, int... ZERO>
-    static typename std::enable_if<(DIM>0)>::type 
-    execR(F& f)
+  template<int D, int... ZERO, typename F>
+    static eIf<(D>0)> execR(F&& f)
     {
-      execR<DIM-1,0,ZERO...>(f);
+      execR<D-1,0,ZERO...>(f);
     } 
-  template<int DIM, int... ZERO>
-    static typename std::enable_if<(DIM==0)>::type 
-    execR(F& f)
+  template<int D, int... ZERO, typename F>
+    static eIf<D==0> execR(F&& f)
     {
-      eval<DIM,ZERO...>(f);
+      eval<D,ZERO...>(f);
     } 
-  template<int DIM, typename... Ts>
-    static F exec(Ts... args)
+  template<typename F>
+    static void exec(F&& f)
     {
-      F f(args...);
       execR<DIM>(f);
-      return f;
     }
 };
 
+#if 0
 template<int M, typename F>
 struct static_loop3
 {
@@ -195,22 +152,22 @@ struct static_loop3
       }
    */
   template<int a, int b, int c,int COUNT>
-    static typename std::enable_if<(a>M)>::type eval(F &f)
+    static eIf<(a>M)> eval(F &f)
     {
     }
   template<int a, int b, int c, int COUNT>
-    static typename std::enable_if<(a<=M && b>M-a)>::type eval(F &f)
+    static eIf<(a<=M && b>M-a)> eval(F &f)
     {
       eval<a+1,0,0,COUNT>(f);
     }
   template<int a, int b, int c, int COUNT>
-    static typename std::enable_if<(a<=M && b<= M-a && c>M-b-a)>::type eval(F &f)
+    static eIf<(a<=M && b<= M-a && c>M-b-a)> eval(F &f)
     {
       eval<a,b+1,0,COUNT>(f);
     }
 
   template<int a, int b, int c, int COUNT = 0>
-    static typename std::enable_if<(a<=M && b<= M-a  && c<=M-b-a)>::type eval(F& f)
+    static eIf<(a<=M && b<= M-a  && c<=M-b-a)> eval(F& f)
     {
       f. template eval<COUNT, c,b,a>();
       eval<a,b,c+1,COUNT+1>(f);
@@ -224,6 +181,7 @@ struct static_loop3
     return f;
   }
 };
+#endif
 
 template<int M, typename real_t>
 struct GenerateMatrix
@@ -246,7 +204,7 @@ struct GenerateMatrix
     template<int idx, int c,int b,int a>
       void eval()
       {
-        fprintf(stderr, "idx= %d M= %d : a= %d b= %d c= %d\n", idx, M, a,b,c);
+//        fprintf(stderr, "idx= %d M= %d : a= %d b= %d c= %d\n", idx, M, a,b,c);
         static_assert(idx < _size, "Buffer overflow");
         result[idx] = LegendrePoly<real_t>::template eval<a,b,c>(x,y,z);
       }
@@ -282,7 +240,8 @@ struct GenerateMatrix
           const real_t x = nodes[c];
           const real_t y = nodes[b];
           const real_t z = nodes[a];
-          const auto f = static_loop3<M,Expansion3D>::loop(x,y,z);
+          Expansion3D f(x,y,z);
+          static_loop<M,3>::exec(f);
           matrix[count] = f.result;
           count++;
         }
@@ -375,20 +334,11 @@ bool verify(const double *A, const double *B, const int N)
 }
 
 
-template<int N>
-void foo() { std::cout << N << std::endl; }
-
-template<int N>
-void bar() { std::cout << "--1--" << std::endl; }
-template<int... N>
-typename std::enable_if<(sizeof...(N) > 1)>::type bar() { std::cout << sizeof...(N) << std::endl; }
-
-
 template<int M>
 struct Foo
 {
   template<int A, int... As>
-    typename std::enable_if<(sizeof...(As)>0)>::type
+    eIf<(sizeof...(As)>0)>
     evalR()
     {
       fprintf(stderr, "%c= %d ", static_cast<char>('a'+sizeof...(As)), A);
@@ -396,7 +346,7 @@ struct Foo
     }
   
   template<int A, int... As>
-    typename std::enable_if<(sizeof...(As)==0)>::type
+    eIf<(sizeof...(As)==0)>
     evalR()
     {
       fprintf(stderr, "%c= %d \n", 'a', A);
@@ -418,11 +368,11 @@ int main(int argc, char *argv[])
   using real_t = double;
 
 #if 1  
-  static_loop3<M,GenerateMatrix<M,real_t>::Expansion3D>::loop(0.3,0.4,0.5);
+//  static_loop3<M,GenerateMatrix<M,real_t>::Expansion3D>::loop(0.3,0.4,0.5);
   cout << "---------------\n";
-  static_loop<M,GenerateMatrix<M,real_t>::Expansion3D>::exec<3>(0.3,0.4,0.5);
+  static_loop<M,3>::exec(GenerateMatrix<M,real_t>::Expansion3D(0.3,0.4,0.5));
   cout << "---------------\n";
-  static_loop<M,Foo<M>>::exec<4>();
+  static_loop<M,4>::exec(Foo<M>{});
 
 #endif
   GenerateMatrix<M,real_t> g;
