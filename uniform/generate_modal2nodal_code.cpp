@@ -269,7 +269,7 @@ struct GenerateMatrix
     for (int i = 0; i < _size; i++)
     {
       const auto& idx = indices[i];
-      const auto& f = static_loop<M,DIM>::exec(Expansion(nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]));
+      const auto& f = static_loop<M,DIM>::exec(Expansion{nodes[idx[2]], nodes[idx[1]], nodes[idx[0]]});
       matrix[i] = f.result;
     }
 
