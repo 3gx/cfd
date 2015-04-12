@@ -370,13 +370,12 @@ struct Printer
   template<int count, int... As, size_t... I>
     void eval(indexSeq<I...>)
     {
+      const auto map = {std::tuple<char,int>{static_cast<char>('a'+sizeof...(I)-1-I),static_cast<int>(As)}...};
+
       fprintf(stderr, "idx= %d M= %d : ", count, (int)sizeof...(As));
-      const auto c = {('a'+sizeof...(I)-1-I)...};
-      const auto x = {As...};
-      const auto n = x.end() - x.begin();
-      for (int i = n-1;  i >= 0; i--)
+      for (const auto& m : map)
       {
-        fprintf(stderr, "%c= %d ", static_cast<char>(*(c.begin() + i)), static_cast<int>(*(x.begin() + i)));
+        fprintf(stderr, "%c= %d ", std::get<0>(m), std::get<1>(m));
       }
       fprintf(stderr, " \n");
     }
