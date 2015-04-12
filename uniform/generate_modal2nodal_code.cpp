@@ -211,7 +211,7 @@ struct static_loop
     }
 };
 
-template<int M, int DIM, typename real_t, typename Poly = LegendrePoly<real_t>>
+template<int M, int DIM, typename real_t, typename Poly = LegendrePoly<real_t>, typename StaticLoop = static_loop<M,DIM>>
 struct GenerateMatrix
 {
   static constexpr int factorial(int n)
@@ -280,11 +280,11 @@ struct GenerateMatrix
   template<size_t... I>
     void fillMatrixWithRoots(indexSeq<I...>)
     {
-      const auto indices = static_loop<M,DIM>::exec(Indices{});
+      const auto indices = StaticLoop::exec(Indices{});
       for (int i = 0; i < size; i++)
       {
         const auto& idx = indices[i];
-        const auto f = static_loop<M,DIM>::exec(Expansion(Poly::getRoot(idx[DIM-1-I])...));
+        const auto f = StaticLoop::exec(Expansion(Poly::getRoot(idx[DIM-1-I])...));
         matrix[i] = f.result;
       }
     }
@@ -440,10 +440,11 @@ int main(int argc, char *argv[])
 
   cerr << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
   cerr << Unpack<3>::template eval(LegendrePoly<real_t>::template eval<1,2,3>,std::array<real_t,3>{1,2,3}) << endl;
-
-//  return 0;
-
   static_loop<M,DIM>::exec(Printer{});
+
+#ifdef QUICK
+  return 0;
+#endif
 
   GenerateMatrix<M,DIM,real_t> g;
 
