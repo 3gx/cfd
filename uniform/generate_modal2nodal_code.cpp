@@ -139,6 +139,8 @@ struct Vector
 
   real_t& operator[](const size_t i) {return data[i];}
   const real_t& operator[](const size_t i) const {return data[i];}
+
+  constexpr size_t size() const { return N; }
   
   auto begin ()       {return data.begin();}
   auto end   ()       {return data.end  ();}
@@ -146,9 +148,15 @@ struct Vector
   auto end   () const {return data.end  ();}
   auto cbegin() const {return data.cbegin();}
   auto cend  () const {return data.cend  ();}
+  
+  auto&       front()       {return data.front();}
+  const auto& front() const {return data.front();}
+  auto&       back ()       {return data.back ();}
+  const auto& back () const {return data.back ();}
+
 };
 
-template<typename real_t, size_t M, size_t N, typename vector_t = Vector<real_t,N>>
+template<typename real_t, size_t M, size_t N=M, typename vector_t = Vector<real_t,N>>
 struct Matrix
 {
   using value_type = real_t;
@@ -156,17 +164,18 @@ struct Matrix
 
   std::array<vector_t,M> data;
   
+  constexpr size_t        size() const {return M;}
+  constexpr size_t vector_size() const {return N;}
+  
   vector_t& operator[](const size_t i) {return data[i];}
   const vector_t& operator[](const size_t i) const {return data[i];}
 
-  auto begin ()       {return data.begin();}
-  auto end   ()       {return data.end  ();}
-  auto begin () const {return data.begin();}
-  auto end   () const {return data.end  ();}
-  auto cbegin() const {return data.cbegin();}
-  auto cend  () const {return data.cend  ();}
-
-
+  auto begin ()       {return data.front().begin();}
+  auto end   ()       {return data.back ().end  ();}
+  auto begin () const {return data.front().begin();}
+  auto cend  () const {return data.back ().end  ();}
+  auto cbegin() const {return data.front().begin();}
+  auto end   () const {return data.back ().end  ();}
 };
 
 
@@ -264,10 +273,11 @@ struct GenerateMatrix
   }
 
 
+
   static constexpr int size = product(M,DIM,0)/factorial(DIM);
-  
-  using vector_t = std::array<real_t,size>;
-  using matrix_t = std::array<vector_t,size>;
+ 
+  using matrix_t = Matrix<real_t,size>;
+  using vector_t = typename matrix_t::vector_type;
   matrix_t matrix;
 
   const matrix_t& getMatrix() const {return matrix;}
@@ -276,7 +286,7 @@ struct GenerateMatrix
   struct Expansion
   {
     std::array<real_t,DIM > node;
-    std::array<real_t,size> result;
+    vector_t result;
 
 #if 0
     Expansion(const std::array<real_t,DIM>& v) : node(v) { std::reverse(node.begin(), node.end()); }
@@ -349,8 +359,8 @@ template<typename real_t, typename matrix_t>
 size_t countNonZeros(const matrix_t& matrix)
 {
   return std::count_if(
-      matrix.front().begin(),
-      matrix.back().end(),
+      matrix.begin(),
+      matrix.end(),
       [](const real_t val) {return std::abs(val) > 1.0e-10;});
 }
 
@@ -400,14 +410,14 @@ auto invertMatrix(const matrix_t A) -> enableIf<std::is_same<real_t,double>::val
   double WORK[LWORK];
   int INFO;
 
-  std::copy(A.front().begin(), A.back().end(), Ainv.front().begin());
+  std::copy(A.begin(), A.end(), Ainv.begin());
 
   int NN = N;
   int LLWORK = LWORK;
 
-  dgetrf_(&NN,&NN,Ainv.front().begin(),&NN,IPIV,&INFO);
+  dgetrf_(&NN,&NN,Ainv.begin(),&NN,IPIV,&INFO);
   assert(INFO == 0);
-  dgetri_(&NN,Ainv.front().begin(),&NN,IPIV,WORK,&LLWORK,&INFO);
+  dgetri_(&NN,Ainv.begin(),&NN,IPIV,WORK,&LLWORK,&INFO);
   assert(INFO == 0);
 
   return Ainv;
