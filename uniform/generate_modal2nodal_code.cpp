@@ -354,7 +354,8 @@ bool verify(const double *A, const double *B, const int N)
           ((i!=j) && std::abs(res)       > eps)
          )
       {
-        printf(" (%2d,%2d) = %5.2f \n", i,j, res);
+        printf(" %sI[%2d,%2d] = %g \n", (i==j ? "1-" : "  "), i,j, 
+            (i==j ? 1.0-res : res));
         success = false;
       }
     }
