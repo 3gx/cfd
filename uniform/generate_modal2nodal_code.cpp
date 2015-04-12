@@ -190,7 +190,12 @@ struct GenerateMatrix
     std::array<real_t,DIM > node;
     std::array<real_t,size> result;
 
+#if 0
     Expansion(const std::array<real_t,DIM>& v) : node(v) { std::reverse(node.begin(), node.end()); }
+#else
+    template<typename... Ts>
+      Expansion(Ts... ts) : node{ts...} { std::reverse(node.begin(), node.end()); }
+#endif
 
     real_t operator[](const int i) const {return result[i];}
 
@@ -232,36 +237,38 @@ struct GenerateMatrix
   /* Compute matrix transformation from modal to nodal expansion */
   GenerateMatrix()
   {
-    real_t nodes[] = 
-    {
-      /* n11 */ 0.0,
-      /* n21 */ -0.57735026918962576451,
-      /* n22 */ +0.57735026918962576451,
-      /* n31 */ -0.77459666924148337704,
-      /* n33 */ +0.77459666924148337704,
-      /* n41 */ -0.86113631159405257522,
-      /* n44 */ +0.86113631159405257522,
-      /* n42 */ -0.33998104358485626480,
-      /* n43 */ +0.33998104358485626480,
-      /* n51 */ -0.90617984593866399280,
-      /* n51 */ +0.90617984593866399280
-      /* n52 */ -0.53846931010568309104,
-      /* n52 */ +0.53846931010568309104,
-    };
-    static_assert(M>=0 && M<13, "M-value is out of range");
-
-    const auto indices = static_loop<M,DIM>::exec(Indices{});
-    std::array<real_t,DIM> node;
-
-    for (int i = 0; i < size; i++)
-    {
-      const auto& idx = indices[i];
-      for (int k = 0; k < DIM; k++)
-        node[k] = nodes[idx[DIM-k-1]];
-      const auto f = static_loop<M,DIM>::exec(Expansion{node});
-      matrix[i] = f.result;
-    }
+    fillMatrix(std::make_index_sequence<DIM>());
   }
+
+  template<size_t... I>
+    void fillMatrix(std::index_sequence<I...>)
+    {
+      real_t nodes[] = 
+      {
+        /* n11 */ 0.0,
+        /* n21 */ -0.57735026918962576451,
+        /* n22 */ +0.57735026918962576451,
+        /* n31 */ -0.77459666924148337704,
+        /* n33 */ +0.77459666924148337704,
+        /* n41 */ -0.86113631159405257522,
+        /* n44 */ +0.86113631159405257522,
+        /* n42 */ -0.33998104358485626480,
+        /* n43 */ +0.33998104358485626480,
+        /* n51 */ -0.90617984593866399280,
+        /* n51 */ +0.90617984593866399280
+          /* n52 */ -0.53846931010568309104,
+        /* n52 */ +0.53846931010568309104,
+      };
+      static_assert(M>=0 && M<13, "M-value is out of range");
+
+      const auto indices = static_loop<M,DIM>::exec(Indices{});
+      for (int i = 0; i < size; i++)
+      {
+        const auto& idx = indices[i];
+        const auto f = static_loop<M,DIM>::exec(Expansion(nodes[idx[DIM-1-I]]...));
+        matrix[i] = f.result;
+      }
+    }
 
   void printMatrix(const real_t *matrix) const
   {
