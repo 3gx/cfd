@@ -288,12 +288,8 @@ struct GenerateMatrix
     std::array<real_t,DIM > node;
     vector_t result;
 
-#if 0
-    Expansion(const std::array<real_t,DIM>& v) : node(v) { std::reverse(node.begin(), node.end()); }
-#else
     template<typename... Ts>
       Expansion(Ts... ts) : node{ts...} { std::reverse(node.begin(), node.end()); }
-#endif
 
     real_t operator[](const int i) const {return result[i];}
 
