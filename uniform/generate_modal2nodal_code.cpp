@@ -1,9 +1,12 @@
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <fstream>
 #include <cassert>
 #include <array>
 #include <cmath>
 #include <algorithm>
+#include <vector>
 #include <utility>
 
 /* 
@@ -219,7 +222,7 @@ struct GenerateMatrix
   {
     return i < d ? (m+i+1)*product(m, d, i+1) : 1;
   }
-  
+
   static constexpr int size = product(M,DIM,0)/factorial(DIM);
   std::array<real_t,size> matrix[size];
 
@@ -281,33 +284,45 @@ struct GenerateMatrix
         matrix[i] = f.result;
       }
     }
-
-  void printMatrix(const real_t *matrix) const
-  {
-    for (int j = 0; j < size; j++)
-    {
-      for (int i = 0; i < size; i++)
-      {
-        printf("%5.2f ", matrix[j*size + i]);
-      }
-      printf("\n");
-    }
-  }
-  
-  /* prints matrix */
-  void printMatrix() const
-  {
-    printMatrix(getMatrix());
-  }
 };
 
 template<typename real_t>
-std::string generateMatmulCode(const real_t *matrix, const int size)
+void printMatrix(const real_t *matrix, const int size) 
 {
-  std::string code;
+  for (int j = 0; j < size; j++)
+  {
+    for (int i = 0; i < size; i++)
+    {
+      printf("%5.2f ", matrix[j*size + i]);
+    }
+    printf("\n");
+  }
+}
 
-  return code;
-};
+template<typename real_t>
+bool verifyMatrix(const real_t *A, const real_t *B, const int N, const real_t eps = 1.0e-12)
+{
+  bool success = true;
+  for (int i = 0; i < N; i++)
+  {
+    for (int j = 0; j < N; j++)
+    {
+      double res = 0;
+      for (int k = 0; k < N; k++)
+        res += A[i*N+k]*B[k*N+j];
+      if (
+          ((i==j) && std::abs(res - 1.0) > eps) ||
+          ((i!=j) && std::abs(res)       > eps)
+         )
+      {
+        printf(" %sI[%2d,%2d] = %g \n", (i==j ? "1-" : "  "), i,j, 
+            (i==j ? 1.0-res : res));
+        success = false;
+      }
+    }
+  }
+  return success;
+}
 
 extern "C" 
 {
@@ -339,30 +354,6 @@ void inverse(const double* A, double *Ainv)
   assert(INFO == 0);
 }
 
-bool verify(const double *A, const double *B, const int N)
-{
-  bool success = true;
-  constexpr double eps = 1.0e-13;
-  for (int i = 0; i < N; i++)
-  {
-    for (int j = 0; j < N; j++)
-    {
-      double res = 0;
-      for (int k = 0; k < N; k++)
-        res += A[i*N+k]*B[k*N+j];
-      if (
-          ((i==j) && std::abs(res - 1.0) > eps) ||
-          ((i!=j) && std::abs(res)       > eps)
-         )
-      {
-        printf(" %sI[%2d,%2d] = %g \n", (i==j ? "1-" : "  "), i,j, 
-            (i==j ? 1.0-res : res));
-        success = false;
-      }
-    }
-  }
-  return success;
-}
 
 
 struct Printer
@@ -386,16 +377,51 @@ struct Printer
     }
 };
 
+template<typename real_t>
+std::string generateMatmulCode(const real_t *matrix, const int size, const real_t eps = 1.0e-12)
+{
+  using namespace std;
+  ostringstream code;
+
+  vector<string> bvar, xvar;
+
+  for (int i = 0; i < size; i++)
+  {
+    const auto num = std::to_string(i);
+    bvar.push_back("b["+num+"]");
+    xvar.push_back("x["+num+"]");
+  }
+
+  for (int j = 0; j < size; j++)
+  {
+    code << xvar[j] << " = ";
+
+    for (int i = 0; i < size; i++)
+    {
+      const auto value = matrix[j*size+i];
+      char buf[256] = {0};
+      if (std::abs(value) > eps)
+      {
+        sprintf(buf," + (%a)*%s",value,bvar[i].c_str());
+        code << string(buf);
+      }
+    }
+    code << ";" << endl;
+  }
+
+  return code.str();
+};
+
 int main(int argc, char *argv[])
 {
-  using std::cout;
-  using std::endl;
+  using namespace std;
+
   constexpr int M = 4;
   constexpr int DIM = 4;
   using real_t = double;
 
-  cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
-  cout << Unpack<3>::template eval(LegendrePoly<real_t>::template eval<1,2,3>,std::array<real_t,3>{1,2,3}) << endl;
+  cerr << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
+  cerr << Unpack<3>::template eval(LegendrePoly<real_t>::template eval<1,2,3>,std::array<real_t,3>{1,2,3}) << endl;
 
 //  return 0;
 
@@ -404,7 +430,8 @@ int main(int argc, char *argv[])
   GenerateMatrix<M,DIM,real_t> g;
 
 
-//  g.printMatrix(g.getMatrix());
+  if (argc > 1)
+    printMatrix(g.getMatrix(), g.size);
 
   const int non_zero =
     std::count_if(g.getMatrix(), g.getMatrix()+g.size*g.size, [](const real_t val) {return std::abs(val) > 1.0e-10;});
@@ -413,8 +440,9 @@ int main(int argc, char *argv[])
 
   real_t Ainv[g.size*g.size];
   inverse<g.size>(g.getMatrix(), Ainv);
-  
-//  g.printMatrix(Ainv);
+ 
+  if (argc > 2) 
+    printMatrix(Ainv, g.size);
   const int non_zero_inv =
     std::count_if(Ainv, Ainv+g.size*g.size, [](const real_t val) {return std::abs(val) > 1.0e-10;});
   fprintf(stderr, " number of non-zero-inv elements= %d [ %g %c ]\n", non_zero_inv, non_zero_inv*100.0/(g.size*g.size), '%' );
@@ -423,16 +451,34 @@ int main(int argc, char *argv[])
       non_zero + non_zero_inv, (non_zero + non_zero_inv)*50.0/(g.size*g.size), '%');
 
 
-  if (verify(g.getMatrix(), Ainv, g.size))
+  /*** relative accuracy paramter ***/
+  const real_t eps = 1.0e-12;      
+
+  /*********************
+   *** verify matrix ***
+   *********************/
+
+  if (verifyMatrix(g.getMatrix(), Ainv, g.size,eps))
     fprintf(stderr , " -- Matrix verified -- \n");
-//  cout << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
-//  cout << LegendrePoly<real_t>::template eval<2>(0.0) << endl;
-//
+  else
+  {
+    fprintf(stderr, " -- Verification failure: exit -- \n");
+    return -1;
+  }
   fprintf(stderr, " M= %d  DIM= %d \n", M, DIM);
 
-  const auto m2n = generateMatmulCode(g.getMatrix(), g.size);
 
-  cout << m2n << endl;
-  
+  /*********************************************
+   ***** generate and write code to a file *****
+   *********************************************/
+
+  auto writeCode = [eps](auto matrix, auto size, auto fileName)
+  {
+    std::ofstream fout(fileName);
+    fout << generateMatmulCode(matrix,size,eps) << std::endl;
+  };
+  writeCode(g.getMatrix(), g.size, "m2n.h");
+  writeCode(Ainv,          g.size, "n2m.h");
+
   return 0;
 }
