@@ -85,6 +85,28 @@ struct LegendrePoly
       return eval<P1>(x)*eval<P2>(y);
     }
 #endif
+
+  static constexpr real_t getRoot(const int i)
+  {
+      constexpr real_t roots[] = 
+      {
+        /* n11 */ 0.0,
+        /* n21 */ -0.57735026918962576451,
+        /* n22 */ +0.57735026918962576451,
+        /* n31 */ -0.77459666924148337704,
+        /* n33 */ +0.77459666924148337704,
+        /* n41 */ -0.86113631159405257522,
+        /* n44 */ +0.86113631159405257522,
+        /* n42 */ -0.33998104358485626480,
+        /* n43 */ +0.33998104358485626480,
+        /* n51 */ -0.90617984593866399280,
+        /* n51 */ +0.90617984593866399280
+        /* n52 */ -0.53846931010568309104,
+        /* n52 */ +0.53846931010568309104,
+      };
+
+      return roots[i];
+  }
 };
 
 template<size_t M, size_t DIM>
@@ -167,7 +189,7 @@ struct static_loop
     }
 };
 
-template<int M, int DIM, typename real_t>
+template<int M, int DIM, typename real_t, typename Poly = LegendrePoly<real_t>>
 struct GenerateMatrix
 {
   static constexpr int factorial(int n)
@@ -203,8 +225,8 @@ struct GenerateMatrix
       void eval()
       {
         static_assert(count < size, "Buffer overflow");
-//        result[count] = Unpack<DIM>::eval(LegendrePoly<real_t>::template eval<Vs...>,node);
-        result[count] = unpack(LegendrePoly<real_t>::template eval<Vs...>,node,std::make_index_sequence<DIM>());
+//        result[count] = Unpack<DIM>::eval(Poly::template eval<Vs...>,node);
+        result[count] = unpack(Poly::template eval<Vs...>,node,std::make_index_sequence<DIM>());
       }
   };
 
@@ -237,35 +259,17 @@ struct GenerateMatrix
   /* Compute matrix transformation from modal to nodal expansion */
   GenerateMatrix()
   {
-    fillMatrix(std::make_index_sequence<DIM>());
+    fillMatrixWithRoots(std::make_index_sequence<DIM>());
   }
 
   template<size_t... I>
-    void fillMatrix(std::index_sequence<I...>)
+    void fillMatrixWithRoots(std::index_sequence<I...>)
     {
-      real_t nodes[] = 
-      {
-        /* n11 */ 0.0,
-        /* n21 */ -0.57735026918962576451,
-        /* n22 */ +0.57735026918962576451,
-        /* n31 */ -0.77459666924148337704,
-        /* n33 */ +0.77459666924148337704,
-        /* n41 */ -0.86113631159405257522,
-        /* n44 */ +0.86113631159405257522,
-        /* n42 */ -0.33998104358485626480,
-        /* n43 */ +0.33998104358485626480,
-        /* n51 */ -0.90617984593866399280,
-        /* n51 */ +0.90617984593866399280
-          /* n52 */ -0.53846931010568309104,
-        /* n52 */ +0.53846931010568309104,
-      };
-      static_assert(M>=0 && M<13, "M-value is out of range");
-
       const auto indices = static_loop<M,DIM>::exec(Indices{});
       for (int i = 0; i < size; i++)
       {
         const auto& idx = indices[i];
-        const auto f = static_loop<M,DIM>::exec(Expansion(nodes[idx[DIM-1-I]]...));
+        const auto f = static_loop<M,DIM>::exec(Expansion(Poly::getRoot(idx[DIM-1-I])...));
         matrix[i] = f.result;
       }
     }
