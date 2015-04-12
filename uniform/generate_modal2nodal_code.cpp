@@ -223,10 +223,14 @@ struct GenerateMatrix
     return i < d ? (m+i+1)*product(m, d, i+1) : 1;
   }
 
-  static constexpr int size = product(M,DIM,0)/factorial(DIM);
-  std::array<real_t,size> matrix[size];
 
-  const real_t* getMatrix() const {return &matrix[0][0];}
+  static constexpr int size = product(M,DIM,0)/factorial(DIM);
+  
+  using vector_t = std::array<real_t,size>;
+  using matrix_t = std::array<vector_t,size>;
+  matrix_t matrix;
+
+  const matrix_t& getMatrix() const {return matrix;}
 
   /* Helper to compute matrix raw for a given node */
   struct Expansion
@@ -286,22 +290,34 @@ struct GenerateMatrix
     }
 };
 
-template<typename real_t>
-void printMatrix(const real_t *matrix, const int size) 
+
+template<typename matrix_t>
+void printMatrix(const matrix_t& matrix) 
 {
+  const int size = matrix.size();
   for (int j = 0; j < size; j++)
   {
     for (int i = 0; i < size; i++)
     {
-      printf("%5.2f ", matrix[j*size + i]);
+      printf("%5.2f ", matrix[j][i]);
     }
     printf("\n");
   }
 }
 
-template<typename real_t>
-bool verifyMatrix(const real_t *A, const real_t *B, const int N, const real_t eps = 1.0e-12)
+template<typename real_t, typename matrix_t>
+size_t countNonZeros(const matrix_t& matrix)
 {
+  return std::count_if(
+      matrix.front().begin(),
+      matrix.back().end(),
+      [](const real_t val) {return std::abs(val) > 1.0e-10;});
+}
+
+template<typename matrix_t, typename real_t>
+bool verifyMatrix(const matrix_t& A, const matrix_t& B, const real_t eps = 1.0e-12)
+{
+  const int N = A.size();
   bool success = true;
   for (int i = 0; i < N; i++)
   {
@@ -309,7 +325,7 @@ bool verifyMatrix(const real_t *A, const real_t *B, const int N, const real_t ep
     {
       double res = 0;
       for (int k = 0; k < N; k++)
-        res += A[i*N+k]*B[k*N+j];
+        res += A[i][k]*B[k][j];
       if (
           ((i==j) && std::abs(res - 1.0) > eps) ||
           ((i!=j) && std::abs(res)       > eps)
@@ -333,28 +349,66 @@ extern "C"
   void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
 }
 
-template<int N>
-void inverse(const double* A, double *Ainv)
+template<typename real_t, typename matrix_t>
+auto invertMatrix(const matrix_t A) -> enableIf<std::is_same<real_t,double>::value, matrix_t>
 {
+  matrix_t Ainv;
+  constexpr int N = A.size();
   constexpr int LWORK = N*N;
 
   int IPIV[N+1];
   double WORK[LWORK];
   int INFO;
 
-  for (int i = 0; i < N*N; i++)
-    Ainv[i] = A[i];
+  std::copy(A.front().begin(), A.back().end(), Ainv.front().begin());
 
   int NN = N;
   int LLWORK = LWORK;
 
-  dgetrf_(&NN,&NN,Ainv,&NN,IPIV,&INFO);
+  dgetrf_(&NN,&NN,Ainv.front().begin(),&NN,IPIV,&INFO);
   assert(INFO == 0);
-  dgetri_(&NN,Ainv,&NN,IPIV,WORK,&LLWORK,&INFO);
+  dgetri_(&NN,Ainv.front().begin(),&NN,IPIV,WORK,&LLWORK,&INFO);
   assert(INFO == 0);
+
+  return Ainv;
 }
 
 
+template<typename matrix_t, typename real_t>
+std::string generateMatmulCode(const matrix_t matrix, const real_t eps = 1.0e-12)
+{
+  using namespace std;
+  ostringstream code;
+
+  vector<string> bvar, xvar;
+
+  const int size = matrix.size();
+  for (int i = 0; i < size; i++)
+  {
+    const auto num = std::to_string(i);
+    bvar.push_back("b["+num+"]");
+    xvar.push_back("x["+num+"]");
+  }
+
+  for (int j = 0; j < size; j++)
+  {
+    code << xvar[j] << " = ";
+
+    for (int i = 0; i < size; i++)
+    {
+      const auto value = matrix[j][i];
+      char buf[256] = {0};
+      if (std::abs(value) > eps)
+      {
+        sprintf(buf," + (%a)*%s",value,bvar[i].c_str());
+        code << string(buf);
+      }
+    }
+    code << ";" << endl;
+  }
+
+  return code.str();
+};
 
 struct Printer
 {
@@ -376,42 +430,6 @@ struct Printer
       fprintf(stderr, " \n");
     }
 };
-
-template<typename real_t>
-std::string generateMatmulCode(const real_t *matrix, const int size, const real_t eps = 1.0e-12)
-{
-  using namespace std;
-  ostringstream code;
-
-  vector<string> bvar, xvar;
-
-  for (int i = 0; i < size; i++)
-  {
-    const auto num = std::to_string(i);
-    bvar.push_back("b["+num+"]");
-    xvar.push_back("x["+num+"]");
-  }
-
-  for (int j = 0; j < size; j++)
-  {
-    code << xvar[j] << " = ";
-
-    for (int i = 0; i < size; i++)
-    {
-      const auto value = matrix[j*size+i];
-      char buf[256] = {0};
-      if (std::abs(value) > eps)
-      {
-        sprintf(buf," + (%a)*%s",value,bvar[i].c_str());
-        code << string(buf);
-      }
-    }
-    code << ";" << endl;
-  }
-
-  return code.str();
-};
-
 int main(int argc, char *argv[])
 {
   using namespace std;
@@ -429,24 +447,19 @@ int main(int argc, char *argv[])
 
   GenerateMatrix<M,DIM,real_t> g;
 
-
   if (argc > 1)
-    printMatrix(g.getMatrix(), g.size);
+    printMatrix(g.getMatrix());
 
-  const int non_zero =
-    std::count_if(g.getMatrix(), g.getMatrix()+g.size*g.size, [](const real_t val) {return std::abs(val) > 1.0e-10;});
+  const int non_zero = countNonZeros<real_t>(g.getMatrix());
   fprintf(stderr, " matrix size= [ %d x %d ]\n", g.size, g.size);
   fprintf(stderr, " number of non-zero elements= %d [ %g %c ]\n", non_zero, non_zero*100.0/(g.size*g.size), '%' );
 
-  real_t Ainv[g.size*g.size];
-  inverse<g.size>(g.getMatrix(), Ainv);
+  const auto Ainv = invertMatrix<real_t>(g.getMatrix());
  
   if (argc > 2) 
-    printMatrix(Ainv, g.size);
-  const int non_zero_inv =
-    std::count_if(Ainv, Ainv+g.size*g.size, [](const real_t val) {return std::abs(val) > 1.0e-10;});
+    printMatrix(Ainv);
+  const int non_zero_inv =countNonZeros<real_t>(Ainv);
   fprintf(stderr, " number of non-zero-inv elements= %d [ %g %c ]\n", non_zero_inv, non_zero_inv*100.0/(g.size*g.size), '%' );
-
   fprintf(stderr, " -- total number of non-zeros= %d [ %g %c ] \n",
       non_zero + non_zero_inv, (non_zero + non_zero_inv)*50.0/(g.size*g.size), '%');
 
@@ -458,7 +471,7 @@ int main(int argc, char *argv[])
    *** verify matrix ***
    *********************/
 
-  if (verifyMatrix(g.getMatrix(), Ainv, g.size,eps))
+  if (verifyMatrix(g.getMatrix(), Ainv,eps))
     fprintf(stderr , " -- Matrix verified -- \n");
   else
   {
@@ -472,13 +485,13 @@ int main(int argc, char *argv[])
    ***** generate and write code to a file *****
    *********************************************/
 
-  auto writeCode = [eps](auto matrix, auto size, auto fileName)
+  auto writeCode = [eps](auto matrix, auto fileName)
   {
     std::ofstream fout(fileName);
-    fout << generateMatmulCode(matrix,size,eps) << std::endl;
+    fout << generateMatmulCode(matrix,eps) << std::endl;
   };
-  writeCode(g.getMatrix(), g.size, "m2n.h");
-  writeCode(Ainv,          g.size, "n2m.h");
+  writeCode(g.getMatrix(), "m2n.h");
+  writeCode(Ainv,          "n2m.h");
 
   return 0;
 }
