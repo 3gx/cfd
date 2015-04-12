@@ -183,15 +183,6 @@ struct Matrix
 template<size_t M, size_t DIM, typename Indices = makeIndexSeq<M>>
 struct static_loop
 {
-  static constexpr int factorial(int n)
-  {
-    return n > 0 ? n*factorial(n-1) : 1;
-  }
-  static constexpr int product (int m, int d, int i = 0)
-  {
-    return i < d ? (m+i+1)*product(m, d, i+1) : 1;
-  }
-  static constexpr int size = product(M,DIM,0)/factorial(DIM);
   /* template meta-program for  this type of loop
    size_t count = 0;
    for (size_t a = 0; a <= M; a++)
@@ -203,6 +194,16 @@ struct static_loop
         count++;
       }
    */
+
+  static constexpr int factorial(int n)
+  {
+    return n > 0 ? n*factorial(n-1) : 1;
+  }
+  static constexpr int product (int m, int d, int i = 0)
+  {
+    return i < d ? (m+i+1)*product(m, d, i+1) : 1;
+  }
+  static constexpr int size = product(M,DIM,0)/factorial(DIM);
 
   /******************/
   /* helper methods */
