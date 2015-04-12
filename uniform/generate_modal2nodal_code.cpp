@@ -86,8 +86,9 @@ struct LegendrePoly
     }
 #endif
 
-  static constexpr real_t getRoot(const int i)
+  static constexpr real_t getRoot(const int n)
   {
+#if 0 /* non-return constexpr are not supported yet in GCC <= 4.9.2 */
       constexpr real_t roots[] = 
       {
         /* n11 */ 0.0,
@@ -105,7 +106,24 @@ struct LegendrePoly
         /* n52 */ +0.53846931010568309104,
       };
 
-      return roots[i];
+      return roots[n];
+#else
+      return 
+        n ==  0 ? /* n11 */ 0.0 :
+        n ==  1 ? /* n21 */ -0.57735026918962576451 :
+        n ==  2 ? /* n22 */ +0.57735026918962576451 :
+        n ==  3 ? /* n31 */ -0.77459666924148337704 :
+        n ==  4 ? /* n33 */ +0.77459666924148337704 :
+        n ==  5 ? /* n41 */ -0.86113631159405257522 :
+        n ==  6 ? /* n44 */ +0.86113631159405257522 :
+        n ==  7 ? /* n42 */ -0.33998104358485626480 :
+        n ==  8 ? /* n43 */ +0.33998104358485626480 :
+        n ==  9 ? /* n51 */ -0.90617984593866399280 :
+        n == 10 ? /* n51 */ +0.90617984593866399280 :
+        n == 11 ? /* n52 */ -0.53846931010568309104 :
+        n == 12 ? /* n52 */ +0.53846931010568309104 :
+        -1.0e38;
+#endif
   }
 };
 
@@ -138,7 +156,7 @@ struct static_loop
   template<size_t COUNT, size_t B, size_t... As, typename F>
     static auto eval(F&& f) -> enableIf<(B<=M-sum<As...>())> 
     {
-      f.template eval<COUNT, B, As...>();  /* call function */
+      f.template eval<COUNT, B, As...>(std::make_index_sequence<DIM>());  /* call function */
       eval<COUNT+1,B+1,As...>(f);
     }
   template<size_t COUNT, size_t B, size_t... As, typename F>
@@ -221,12 +239,11 @@ struct GenerateMatrix
 
     real_t operator[](const int i) const {return result[i];}
 
-    template<int count, int... Vs>
-      void eval()
+    template<int count, int... Vs, size_t... I>
+      void eval(std::index_sequence<I...>)
       {
         static_assert(count < size, "Buffer overflow");
-//        result[count] = Unpack<DIM>::eval(Poly::template eval<Vs...>,node);
-        result[count] = unpack(Poly::template eval<Vs...>,node,std::make_index_sequence<DIM>());
+        result[count] = Poly::template eval<Vs...>(node[I]...);
       }
   };
 
@@ -238,21 +255,11 @@ struct GenerateMatrix
 
     const index_t& operator[](const int i) const {return indices[i];}
 
-    template<int count, int V, int... Vs>
-      void fill()
-      {
-        indices[count][sizeof...(Vs)] = V;
-        fill<count, Vs...>();
-      }
-    template<int count, int... Vs>
-      auto fill() -> enableIf<sizeof...(Vs)==0>
-      {}
-
-    template<int count, int... Vs>
-      void eval()
+    template<int count, int... Vs, size_t... I>
+      void eval(std::index_sequence<I...>)
       {
         static_assert(count < size, "Buffer overflow");
-        fill<count, Vs...>();
+        auto tmp = {(indices[count][sizeof...(I)-1-I] = Vs)...};
       }
   };
 
@@ -356,25 +363,19 @@ bool verify(const double *A, const double *B, const int N)
 }
 
 
-template<int M>
 struct Printer
 {
-  template<int A, int... As>
-    auto evalR() -> void
+  template<int count, int... As, size_t... I>
+    void eval(std::index_sequence<I...>)
     {
-      evalR<As...>();
-      fprintf(stderr, "%c= %d ", static_cast<char>('a'+sizeof...(As)), A);
-    }
-
-  template<int... As>
-    auto evalR() -> enableIf<(sizeof...(As)==0)>
-    {}
-
-  template<int count, int... As>
-    void eval()
-    {
-      fprintf(stderr, "idx= %d M= %d : ", count, M);
-      evalR<As...>();
+      fprintf(stderr, "idx= %d M= %d : ", count, (int)sizeof...(As));
+      const auto c = {('a'+sizeof...(I)-1-I)...};
+      const auto x = {As...};
+      const auto n = x.end() - x.begin();
+      for (int i = n-1;  i >= 0; i--)
+      {
+        fprintf(stderr, "%c= %d ", static_cast<char>(*(c.begin() + i)), static_cast<int>(*(x.begin() + i)));
+      }
       fprintf(stderr, " \n");
     }
 };
@@ -392,7 +393,7 @@ int main(int argc, char *argv[])
 
 //  return 0;
 
-  static_loop<M,DIM>::exec(Printer<M>{});
+  static_loop<M,DIM>::exec(Printer{});
 
   GenerateMatrix<M,DIM,real_t> g;
 
