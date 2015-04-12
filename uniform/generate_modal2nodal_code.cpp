@@ -11,13 +11,20 @@
  * Requires: C++14, lapack to compute inverse
  */
 
+/* helpers */
 template< bool B, class T = void >
 using enableIf = typename std::enable_if<B,T>::type;
+
+template<size_t... I>
+using indexSeq = std::index_sequence<I...>;
+
+template<size_t N>
+using makeIndexSeq = std::make_index_sequence<N>;
+
 
 /***************************************
  * Unpack parameter list from an array *
  ***************************************/
-// C++11
 template<size_t N, size_t... S>
 struct Unpack : Unpack<N-1,N-1,S...>{};
 template<size_t... S>
@@ -29,12 +36,6 @@ struct Unpack<0,S...>
     return f(x[S]...);
   }
 };
-// C++14
-template<typename F, typename X, size_t... I>
-static auto unpack(F&& f, X&& x, std::index_sequence<I...>)
-{
-  return f(x[I]...);
-}
 
 /**************************************/
 
@@ -156,42 +157,42 @@ struct static_loop
   template<size_t COUNT, size_t B, size_t... As, typename F>
     static auto eval(F&& f) -> enableIf<(B<=M-sum<As...>())> 
     {
-      f.template eval<COUNT, B, As...>(std::make_index_sequence<DIM>());  /* call function */
+      f.template eval<COUNT, B, As...>(makeIndexSeq<DIM>());  /* call function */
       eval<COUNT+1,B+1,As...>(f);
     }
   template<size_t COUNT, size_t B, size_t... As, typename F>
     static auto eval(F&& f) -> enableIf<(B>M-sum<As...>())> 
     {
-      incr<COUNT,As...>(f, std::index_sequence<0>());
+      incr<COUNT,As...>(f, indexSeq<0>());
     }
 
   /*************/
   /* increment */
   /*************/
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B<M-sum<As...>())>
+    static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B<M-sum<As...>())>
     {
       eval<COUNT,I...,B+1,As...>(f);
     }
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
+    static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
     {
-      incr<COUNT,As...>(f, std::index_sequence<0,I...>());
+      incr<COUNT,As...>(f, indexSeq<0,I...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
-    static auto incr(F&& f, std::index_sequence<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
+    static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
     {}
 
   /***********/
   /* warm-up */ 
   /***********/
   template<size_t D, size_t... ZEROs, typename F>
-    static auto warmup(F&& f,std::index_sequence<ZEROs...>) -> enableIf<(D>0)> 
+    static auto warmup(F&& f,indexSeq<ZEROs...>) -> enableIf<(D>0)> 
     {
-      warmup<D-1>(f,std::index_sequence<0,ZEROs...>());
+      warmup<D-1>(f,indexSeq<0,ZEROs...>());
     } 
   template<size_t D, size_t... ZEROs, typename F>
-    static auto warmup(F&& f, std::index_sequence<ZEROs...>) -> enableIf<D==0> 
+    static auto warmup(F&& f, indexSeq<ZEROs...>) -> enableIf<D==0> 
     {
       eval<0,ZEROs...>(f);
     } 
@@ -202,7 +203,7 @@ struct static_loop
   template<typename F>
     static F& exec(F&& f)
     {
-      warmup<DIM-1>(f,std::index_sequence<0>());
+      warmup<DIM-1>(f,indexSeq<0>());
       return f;
     }
 };
@@ -240,7 +241,7 @@ struct GenerateMatrix
     real_t operator[](const int i) const {return result[i];}
 
     template<int count, int... Vs, size_t... I>
-      void eval(std::index_sequence<I...>)
+      void eval(indexSeq<I...>)
       {
         static_assert(count < size, "Buffer overflow");
         result[count] = Poly::template eval<Vs...>(node[I]...);
@@ -256,7 +257,7 @@ struct GenerateMatrix
     const index_t& operator[](const int i) const {return indices[i];}
 
     template<int count, int... Vs, size_t... I>
-      void eval(std::index_sequence<I...>)
+      void eval(indexSeq<I...>)
       {
         static_assert(count < size, "Buffer overflow");
         auto tmp = {(indices[count][sizeof...(I)-1-I] = Vs)...};
@@ -266,11 +267,11 @@ struct GenerateMatrix
   /* Compute matrix transformation from modal to nodal expansion */
   GenerateMatrix()
   {
-    fillMatrixWithRoots(std::make_index_sequence<DIM>());
+    fillMatrixWithRoots(makeIndexSeq<DIM>());
   }
 
   template<size_t... I>
-    void fillMatrixWithRoots(std::index_sequence<I...>)
+    void fillMatrixWithRoots(indexSeq<I...>)
     {
       const auto indices = static_loop<M,DIM>::exec(Indices{});
       for (int i = 0; i < size; i++)
@@ -367,7 +368,7 @@ bool verify(const double *A, const double *B, const int N)
 struct Printer
 {
   template<int count, int... As, size_t... I>
-    void eval(std::index_sequence<I...>)
+    void eval(indexSeq<I...>)
     {
       fprintf(stderr, "idx= %d M= %d : ", count, (int)sizeof...(As));
       const auto c = {('a'+sizeof...(I)-1-I)...};
