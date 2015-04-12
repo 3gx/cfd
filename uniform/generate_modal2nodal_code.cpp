@@ -183,6 +183,15 @@ struct Matrix
 template<size_t M, size_t DIM, typename Indices = makeIndexSeq<M>>
 struct static_loop
 {
+  static constexpr int factorial(int n)
+  {
+    return n > 0 ? n*factorial(n-1) : 1;
+  }
+  static constexpr int product (int m, int d, int i = 0)
+  {
+    return i < d ? (m+i+1)*product(m, d, i+1) : 1;
+  }
+  static constexpr int size = product(M,DIM,0)/factorial(DIM);
   /* template meta-program for  this type of loop
    size_t count = 0;
    for (size_t a = 0; a <= M; a++)
@@ -260,24 +269,14 @@ struct static_loop
     }
 };
 
-template<int M, int DIM, typename real_t, typename Poly = LegendrePoly<real_t>, typename StaticLoop = static_loop<M,DIM>>
+template<int M, int DIM, typename real_t, typename Poly = LegendrePoly<real_t>, typename StaticLoop = static_loop<M,DIM>, typename matrix_t = Matrix<real_t,StaticLoop::size>>
 struct GenerateMatrix
 {
-  static constexpr int factorial(int n)
-  {
-    return n > 0 ? n*factorial(n-1) : 1;
-  }
-  static constexpr int product (int m, int d, int i = 0)
-  {
-    return i < d ? (m+i+1)*product(m, d, i+1) : 1;
-  }
-
-
-
-  static constexpr int size = product(M,DIM,0)/factorial(DIM);
+  static constexpr int size = StaticLoop::size; 
  
-  using matrix_t = Matrix<real_t,size>;
+  using matrix_type = matrix_t;
   using vector_t = typename matrix_t::vector_type;
+
   matrix_t matrix;
 
   const matrix_t& getMatrix() const {return matrix;}
