@@ -128,7 +128,7 @@ struct LegendrePoly
   }
 };
 
-template<size_t M, size_t DIM>
+template<size_t M, size_t DIM, typename Indices = makeIndexSeq<M>>
 struct static_loop
 {
   /* template meta-program for  this type of loop
@@ -157,7 +157,7 @@ struct static_loop
   template<size_t COUNT, size_t B, size_t... As, typename F>
     static auto eval(F&& f) -> enableIf<(B<=M-sum<As...>())> 
     {
-      f.template eval<COUNT, B, As...>(makeIndexSeq<DIM>());  /* call function */
+      f.template eval<COUNT, B, As...>(Indices());  /* call function */
       eval<COUNT+1,B+1,As...>(f);
     }
   template<size_t COUNT, size_t B, size_t... As, typename F>
