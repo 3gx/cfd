@@ -131,6 +131,46 @@ struct LegendrePoly
   }
 };
 
+template<typename real_t, size_t N>
+struct Vector
+{
+  using value_type = real_t;
+  std::array<real_t,N> data;
+
+  real_t& operator[](const size_t i) {return data[i];}
+  const real_t& operator[](const size_t i) const {return data[i];}
+  
+  auto begin ()       {return data.begin();}
+  auto end   ()       {return data.end  ();}
+  auto begin () const {return data.begin();}
+  auto end   () const {return data.end  ();}
+  auto cbegin() const {return data.cbegin();}
+  auto cend  () const {return data.cend  ();}
+};
+
+template<typename real_t, size_t M, size_t N, typename vector_t = Vector<real_t,N>>
+struct Matrix
+{
+  using value_type = real_t;
+  using vector_type = vector_t;
+
+  std::array<vector_t,M> data;
+  
+  vector_t& operator[](const size_t i) {return data[i];}
+  const vector_t& operator[](const size_t i) const {return data[i];}
+
+  auto begin ()       {return data.begin();}
+  auto end   ()       {return data.end  ();}
+  auto begin () const {return data.begin();}
+  auto end   () const {return data.end  ();}
+  auto cbegin() const {return data.cbegin();}
+  auto cend  () const {return data.cend  ();}
+
+
+};
+
+
+
 template<size_t M, size_t DIM, typename Indices = makeIndexSeq<M>>
 struct static_loop
 {
