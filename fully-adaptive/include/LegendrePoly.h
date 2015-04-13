@@ -38,19 +38,24 @@ template<typename real_t>
 struct LegendrePoly
 {
   template<int N>
-    static auto eval(const real_t x) -> enableIf<(N==1),real_t> 
+    static auto eval_impl(const real_t x) -> enableIf<(N==1),real_t> 
     { return x; }
 
   template<int N>
-    static auto eval(const real_t x) -> enableIf<(N==0),real_t>
+    static auto eval_impl(const real_t x) -> enableIf<(N==0),real_t>
     { return 1; }
 
   template<int N>
-    static auto eval(const real_t x) -> enableIf<(N>1),real_t>
+    static auto eval_impl(const real_t x) -> enableIf<(N>1),real_t>
     {
-      return ((2*N-1)*(x*eval<N-1>(x)) - (N-1)*eval<N-2>(x))*(1.0/N);
+      return ((2*N-1)*(x*eval_impl<N-1>(x)) - (N-1)*eval_impl<N-2>(x))*(1.0/N);
     }
 
+  template<int N>
+    static auto eval(const real_t x)
+    {
+      return std::sqrt(N+0.5)*eval_impl<N>(x);
+    }
 
 #if 0  /* self-reminder:
           this won't work with type deduction. need explicit specilaization */

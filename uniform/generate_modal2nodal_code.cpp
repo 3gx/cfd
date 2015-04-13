@@ -534,7 +534,7 @@ int main(int argc, char *argv[])
 {
   using namespace std;
 
-  constexpr int M = 2;
+  constexpr int M = 4;
   constexpr int DIM = 4;
   using real_t = double;
 
