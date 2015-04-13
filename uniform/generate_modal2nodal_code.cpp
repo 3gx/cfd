@@ -351,16 +351,16 @@ void printMatrix(const matrix_t& matrix)
   }
 }
 
-template<typename real_t, typename matrix_t>
-size_t countNonZeros(const matrix_t& matrix)
+template<typename matrix_t, typename real_t = typename matrix_t::value_type>
+size_t countNonZeros(const matrix_t& matrix, const real_t eps = 1.0e-12)
 {
   return std::count_if(
       matrix.begin(),
       matrix.end(),
-      [](const real_t val) {return std::abs(val) > 1.0e-10;});
+      [eps](const real_t val) {return std::abs(val) > eps;});
 }
 
-template<typename matrix_t, typename real_t>
+template<typename matrix_t, typename real_t = typename matrix_t::value_type>
 bool verifyMatrix(const matrix_t& A, const matrix_t& B, const real_t eps = 1.0e-12)
 {
   const int N = A.size();
@@ -395,7 +395,7 @@ extern "C"
   void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
 }
 
-template<typename real_t, typename matrix_t>
+template<typename matrix_t, typename real_t = typename matrix_t::value_type>
 auto invertMatrix(const matrix_t A) -> enableIf<std::is_same<real_t,double>::value, matrix_t>
 {
   matrix_t Ainv;
@@ -420,8 +420,8 @@ auto invertMatrix(const matrix_t A) -> enableIf<std::is_same<real_t,double>::val
 }
 
 
-template<typename matrix_t, typename real_t>
-std::string generateMatmulCode(const matrix_t matrix, const real_t eps = 1.0e-12)
+template<typename matrix_t, typename real_t = typename matrix_t::value_type>
+std::string generateMatvecCode(const matrix_t matrix, const real_t eps = 1.0e-12)
 {
   using namespace std;
   ostringstream code;
@@ -496,23 +496,24 @@ int main(int argc, char *argv[])
 
   if (argc > 1)
     printMatrix(g.getMatrix());
+  
+  /*** relative accuracy paramter ***/
+  const real_t eps = 1.0e-12;      
 
-  const int non_zero = countNonZeros<real_t>(g.getMatrix());
+  const int non_zero = countNonZeros(g.getMatrix(), eps);
   fprintf(stderr, " matrix size= [ %d x %d ]\n", g.size, g.size);
   fprintf(stderr, " number of non-zero elements= %d [ %g %c ]\n", non_zero, non_zero*100.0/(g.size*g.size), '%' );
 
-  const auto Ainv = invertMatrix<real_t>(g.getMatrix());
+  const auto Ainv = invertMatrix(g.getMatrix());
  
   if (argc > 2) 
     printMatrix(Ainv);
-  const int non_zero_inv =countNonZeros<real_t>(Ainv);
+  const int non_zero_inv =countNonZeros(Ainv, eps);
   fprintf(stderr, " number of non-zero-inv elements= %d [ %g %c ]\n", non_zero_inv, non_zero_inv*100.0/(g.size*g.size), '%' );
   fprintf(stderr, " -- total number of non-zeros= %d [ %g %c ] \n",
       non_zero + non_zero_inv, (non_zero + non_zero_inv)*50.0/(g.size*g.size), '%');
 
 
-  /*** relative accuracy paramter ***/
-  const real_t eps = 1.0e-12;      
 
   /*********************
    *** verify matrix ***
@@ -535,7 +536,7 @@ int main(int argc, char *argv[])
   auto writeCode = [eps](auto matrix, auto fileName)
   {
     std::ofstream fout(fileName);
-    fout << generateMatmulCode(matrix,eps) << std::endl;
+    fout << generateMatvecCode(matrix,eps) << std::endl;
   };
   writeCode(g.getMatrix(), "m2n.h");
   writeCode(Ainv,          "n2m.h");
