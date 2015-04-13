@@ -154,10 +154,10 @@ struct Vector
   auto cbegin() const {return data.cbegin();}
   auto cend  () const {return data.cend  ();}
   
-  auto&       front()       {return data.front();}
-  const auto& front() const {return data.front();}
-  auto&       back ()       {return data.back ();}
-  const auto& back () const {return data.back ();}
+  auto&&       front()       {return data.front();}
+  const auto&& front() const {return data.front();}
+  auto&&       back ()       {return data.back ();}
+  const auto&& back () const {return data.back ();}
 
 };
 
