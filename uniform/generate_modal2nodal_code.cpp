@@ -24,34 +24,16 @@ using indexSeq = std::index_sequence<I...>;
 template<size_t N>
 using makeIndexSeq = std::make_index_sequence<N>;
 
+/* genrate Zero index sequence */
 template<size_t N, size_t... S>
-struct makeZeroSeqImpl 
-{
-  using type = typename makeZeroSeqImpl<N-1,0,S...>::type;
-};
+struct makeZeroIndexSeqImpl : makeZeroIndexSeqImpl<N-1,0,S...> {};
 template<size_t... S>
-struct makeZeroSeqImpl<0,S...>
+struct makeZeroIndexSeqImpl<0,S...>
 {
   using type = indexSeq<S...>;
 };
 template<size_t N>
-using makeZeroSeq = typename makeZeroSeqImpl<N>::type;
-
-
-/***************************************
- * Unpack parameter list from an array *
- ***************************************/
-template<size_t N, size_t... S>
-struct Unpack : Unpack<N-1,N-1,S...>{};
-template<size_t... S>
-struct Unpack<0,S...>
-{
-  template<typename F, typename X>
-  static auto eval(F&& f, X&& x) -> decltype(f(x[S]...))
-  {
-    return f(x[S]...);
-  }
-};
+using makeZeroIndexSeq = typename makeZeroIndexSeqImpl<N>::type;
 
 /**************************************/
 
@@ -271,7 +253,7 @@ struct UniqueStaticLoop
   template<typename F>
     static F& exec(F&& f)
     {
-      eval(f,makeZeroSeq<DIM>());
+      eval(f,makeZeroIndexSeq<DIM>());
       return f;
     }
 };
@@ -335,7 +317,7 @@ struct FullStaticLoop
   template<typename F>
     static F& exec(F&& f)
     {
-      eval(f,makeZeroSeq<DIM>());
+      eval(f,makeZeroIndexSeq<DIM>());
       return f;
     }
 };
@@ -556,17 +538,7 @@ int main(int argc, char *argv[])
   constexpr int DIM = 4;
   using real_t = double;
 
-  cerr << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
-  cerr << Unpack<3>::template eval(LegendrePoly<real_t>::template eval<1,2,3>,std::array<real_t,3>{1,2,3}) << endl;
-#if 0
-#else
-#endif
-
-#ifdef QUICK
-  return 0;
-#endif
-
-#if 1
+#ifndef FULLLOOP
   using generate_matrix_t = GenerateMatrix<M,DIM,real_t>;
 #else
   using generate_matrix_t = GenerateMatrix<M,DIM,real_t,LegendrePoly<real_t>,FullStaticLoop<M,DIM>>;
