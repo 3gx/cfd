@@ -338,7 +338,7 @@ struct GenerateMatrix
     vector_t result;
 
     template<typename... Ts>
-      Expansion(Ts... ts) : node{ts...} { std::reverse(node.begin(), node.end()); }
+      Expansion(Ts... ts) : node{{ts...}} { std::reverse(node.begin(), node.end()); }
 
     real_t operator[](const int i) const {return result[i];}
 
