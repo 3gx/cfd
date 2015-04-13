@@ -24,6 +24,19 @@ using indexSeq = std::index_sequence<I...>;
 template<size_t N>
 using makeIndexSeq = std::make_index_sequence<N>;
 
+template<size_t N, size_t... S>
+struct makeZeroSeqImpl 
+{
+  using type = typename makeZeroSeqImpl<N-1,0,S...>::type;
+};
+template<size_t... S>
+struct makeZeroSeqImpl<0,S...>
+{
+  using type = indexSeq<S...>;
+};
+template<size_t N>
+using makeZeroSeq = typename makeZeroSeqImpl<N>::type;
+
 
 /***************************************
  * Unpack parameter list from an array *
@@ -61,7 +74,8 @@ struct LegendrePoly
     }
 
 
-#if 0  /* this won't work with type deduction. need explicit specilaization */
+#if 0  /* self-reminder:
+          this won't work with type deduction. need explicit specilaization */
   template<int Pfirst, int... P, typename Tfirst, typename... T>
     static auto eval(Tfirst x, T... args) -> enableIf<(sizeof...(P)>0),real_t>
     {
@@ -97,7 +111,8 @@ struct LegendrePoly
 
   static constexpr real_t getRoot(const int n)
   {
-#if 0 /* non-return constexpr are not supported yet in GCC <= 4.9.2 */
+#if 0 /* self-reminder:
+         non-return constexpr are not supported yet in GCC <= 4.9.2 */
       constexpr real_t roots[] = 
       {
         /* n11 */ 0.0,
@@ -221,14 +236,14 @@ struct UniqueStaticLoop
   /**************/
   /* basic loop */
   /**************/
-  template<size_t COUNT, size_t B, size_t... As, typename F>
-    static auto eval(F&& f) -> enableIf<(B<=M-sum<As...>())> 
+  template<size_t COUNT = 0, size_t B, size_t... As, typename F>
+    static auto eval(F&& f, indexSeq<B,As...>) -> enableIf<(B<=M-sum<As...>())> 
     {
       f.template eval<COUNT, B, As...>(Indices());  /* call function */
-      eval<COUNT+1,B+1,As...>(f);
+      eval<COUNT+1>(f,indexSeq<B+1,As...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F>
-    static auto eval(F&& f) -> enableIf<(B>M-sum<As...>())> 
+    static auto eval(F&& f,indexSeq<B,As...>) -> enableIf<(B>M-sum<As...>())> 
     {
       incr<COUNT,As...>(f, indexSeq<0>());
     }
@@ -239,7 +254,7 @@ struct UniqueStaticLoop
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
     static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B<M-sum<As...>())>
     {
-      eval<COUNT,I...,B+1,As...>(f);
+      eval<COUNT>(f,indexSeq<I...,B+1,As...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
     static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) > 0)> 
@@ -250,27 +265,13 @@ struct UniqueStaticLoop
     static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B>=M-sum<As...>()) && (sizeof...(As) == 0)> 
     {}
 
-  /***********/
-  /* warm-up */ 
-  /***********/
-  template<size_t D, size_t... ZEROs, typename F>
-    static auto warmup(F&& f,indexSeq<ZEROs...>) -> enableIf<(D>0)> 
-    {
-      warmup<D-1>(f,indexSeq<0,ZEROs...>());
-    } 
-  template<size_t D, size_t... ZEROs, typename F>
-    static auto warmup(F&& f, indexSeq<ZEROs...>) -> enableIf<D==0> 
-    {
-      eval<0,ZEROs...>(f);
-    } 
-
   /***************
    * entry point *
    ***************/
   template<typename F>
     static F& exec(F&& f)
     {
-      warmup<DIM-1>(f,indexSeq<0>());
+      eval(f,makeZeroSeq<DIM>());
       return f;
     }
 };
@@ -299,14 +300,14 @@ struct FullStaticLoop
   /**************/
   /* basic loop */
   /**************/
-  template<size_t COUNT, size_t B, size_t... As, typename F>
-    static auto eval(F&& f) -> enableIf<(B<=M)> 
+  template<size_t COUNT = 0, size_t B, size_t... As, typename F>
+    static auto eval(F&& f, indexSeq<B,As...>) -> enableIf<(B<=M)> 
     {
       f.template eval<COUNT, B, As...>(Indices());  /* call function */
-      eval<COUNT+1,B+1,As...>(f);
+      eval<COUNT+1>(f,indexSeq<B+1,As...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F>
-    static auto eval(F&& f) -> enableIf<(B>M)> 
+    static auto eval(F&& f,indexSeq<B,As...>) -> enableIf<(B>M)> 
     {
       incr<COUNT,As...>(f, indexSeq<0>());
     }
@@ -317,7 +318,7 @@ struct FullStaticLoop
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
     static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B<M)>
     {
-      eval<COUNT,I...,B+1,As...>(f);
+      eval<COUNT>(f, indexSeq<I...,B+1,As...>());
     }
   template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
     static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B>=M) && (sizeof...(As) > 0)> 
@@ -328,27 +329,13 @@ struct FullStaticLoop
     static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B>=M) && (sizeof...(As) == 0)> 
     {}
 
-  /***********/
-  /* warm-up */ 
-  /***********/
-  template<size_t D, size_t... ZEROs, typename F>
-    static auto warmup(F&& f,indexSeq<ZEROs...>) -> enableIf<(D>0)> 
-    {
-      warmup<D-1>(f,indexSeq<0,ZEROs...>());
-    } 
-  template<size_t D, size_t... ZEROs, typename F>
-    static auto warmup(F&& f, indexSeq<ZEROs...>) -> enableIf<D==0> 
-    {
-      eval<0,ZEROs...>(f);
-    } 
-
   /***************
    * entry point *
    ***************/
   template<typename F>
     static F& exec(F&& f)
     {
-      warmup<DIM-1>(f,indexSeq<0>());
+      eval(f,makeZeroSeq<DIM>());
       return f;
     }
 };
@@ -394,10 +381,11 @@ struct GenerateMatrix
     const index_t& operator[](const int i) const {return indices[i];}
 
     template<int count, int... Vs, size_t... I>
-      void eval(indexSeq<I...>)
+      auto eval(indexSeq<I...>)
       {
         static_assert(count < size, "Buffer overflow");
         auto tmp = {(indices[count][sizeof...(I)-1-I] = Vs)...};
+        return tmp;
       }
   };
 
