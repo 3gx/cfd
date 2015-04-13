@@ -73,6 +73,11 @@ struct LegendrePoly
       return eval<Pfirst>(x);
     }
 #else
+  template<int P1, int P2, int P3, int P4, int P5>
+    static real_t eval(real_t x, real_t y, real_t z, real_t w, real_t v)
+    {
+      return eval<P1>(x)*eval<P2>(y)*eval<P3>(z)*eval<P4>(w)*eval<P5>(v);
+    }
   template<int P1, int P2, int P3, int P4>
     static real_t eval(real_t x, real_t y, real_t z, real_t w)
     {
@@ -180,8 +185,8 @@ struct Matrix
 
 
 
-template<size_t M, size_t DIM, typename Indices = makeIndexSeq<M>>
-struct static_loop
+template<size_t M, size_t DIM, typename Indices = makeIndexSeq<DIM>>
+struct UniqueStaticLoop
 {
   /* template meta-program for  this type of loop
    size_t count = 0;
@@ -270,11 +275,90 @@ struct static_loop
     }
 };
 
-template<int M, int DIM, typename real_t, typename Poly = LegendrePoly<real_t>, typename StaticLoop = static_loop<M,DIM>, typename matrix_t = Matrix<real_t,StaticLoop::size>>
+template<size_t M, size_t DIM, typename Indices = makeIndexSeq<DIM>>
+struct FullStaticLoop
+{
+  /* template meta-program for  this type of loop
+   size_t count = 0;
+   for (size_t a = 0; a <= M; a++)
+    for (size_t b = 0; b <= M-a; b++)
+      for (size_t c = 0; c <= M-a-b; c++)
+        ...
+      {
+        f(count,a,b,c,...);
+        count++;
+      }
+   */
+
+  static constexpr int product (int m, int d)
+  {
+    return d > 0 ? (m+1)*product(m, d-1) : 1;
+  }
+  static constexpr int size = product(M,DIM);
+
+  /**************/
+  /* basic loop */
+  /**************/
+  template<size_t COUNT, size_t B, size_t... As, typename F>
+    static auto eval(F&& f) -> enableIf<(B<=M)> 
+    {
+      f.template eval<COUNT, B, As...>(Indices());  /* call function */
+      eval<COUNT+1,B+1,As...>(f);
+    }
+  template<size_t COUNT, size_t B, size_t... As, typename F>
+    static auto eval(F&& f) -> enableIf<(B>M)> 
+    {
+      incr<COUNT,As...>(f, indexSeq<0>());
+    }
+
+  /*************/
+  /* increment */
+  /*************/
+  template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
+    static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B<M)>
+    {
+      eval<COUNT,I...,B+1,As...>(f);
+    }
+  template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
+    static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B>=M) && (sizeof...(As) > 0)> 
+    {
+      incr<COUNT,As...>(f, indexSeq<0,I...>());
+    }
+  template<size_t COUNT, size_t B, size_t... As, typename F, size_t... I>
+    static auto incr(F&& f, indexSeq<I...>) -> enableIf<(B>=M) && (sizeof...(As) == 0)> 
+    {}
+
+  /***********/
+  /* warm-up */ 
+  /***********/
+  template<size_t D, size_t... ZEROs, typename F>
+    static auto warmup(F&& f,indexSeq<ZEROs...>) -> enableIf<(D>0)> 
+    {
+      warmup<D-1>(f,indexSeq<0,ZEROs...>());
+    } 
+  template<size_t D, size_t... ZEROs, typename F>
+    static auto warmup(F&& f, indexSeq<ZEROs...>) -> enableIf<D==0> 
+    {
+      eval<0,ZEROs...>(f);
+    } 
+
+  /***************
+   * entry point *
+   ***************/
+  template<typename F>
+    static F& exec(F&& f)
+    {
+      warmup<DIM-1>(f,indexSeq<0>());
+      return f;
+    }
+};
+
+template<int M, int DIM, typename real_t, typename Poly = LegendrePoly<real_t>, typename StaticLoop = UniqueStaticLoop<M,DIM>, typename matrix_t = Matrix<real_t,StaticLoop::size>>
 struct GenerateMatrix
 {
   static constexpr int size = StaticLoop::size; 
- 
+
+  using static_loop_type = StaticLoop; 
   using matrix_type = matrix_t;
   using vector_t = typename matrix_t::vector_type;
 
@@ -480,19 +564,27 @@ int main(int argc, char *argv[])
 {
   using namespace std;
 
-  constexpr int M = 4;
+  constexpr int M = 2;
   constexpr int DIM = 4;
   using real_t = double;
 
   cerr << LegendrePoly<real_t>::template eval<1,2,3>(1.0,2.0,3.0) << endl;
   cerr << Unpack<3>::template eval(LegendrePoly<real_t>::template eval<1,2,3>,std::array<real_t,3>{1,2,3}) << endl;
-  static_loop<M,DIM>::exec(Printer{});
+#if 0
+#else
+#endif
 
 #ifdef QUICK
   return 0;
 #endif
 
-  GenerateMatrix<M,DIM,real_t> g;
+#if 1
+  using generate_matrix_t = GenerateMatrix<M,DIM,real_t>;
+#else
+  using generate_matrix_t = GenerateMatrix<M,DIM,real_t,LegendrePoly<real_t>,FullStaticLoop<M,DIM>>;
+#endif
+  generate_matrix_t g;
+  generate_matrix_t::static_loop_type::exec(Printer{});
 
   if (argc > 1)
     printMatrix(g.getMatrix());
