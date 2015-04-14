@@ -33,26 +33,26 @@ iterate_ADER_DG(
 
   for (int s = 0; s < Ncoeff; s++)
     b[s] = flux_x[stateIdx](zoneIdx,s);
-#include "m2n.h"
+#include "m2n.h" /* x = Theta_ap flux_x_pbcd */
   for (int s = 0; s < Ncoeff; s++)
     q1[s] -= x[s];
   
   for (int s = 0; s < Ncoeff; s++)
     b[s] = flux_y[stateIdx](zoneIdx,s);
-#include "n2m.h"
+#include "n2m.h" /* x = Theta_ap flux_y_apcd */
   for (int s = 0; s < Ncoeff; s++)
     q1[s] -= x[s];
   
   for (int s = 0; s < Ncoeff; s++)
     b[s] = flux_z[stateIdx](zoneIdx,(2*s+1)%Ncoeff);
-#include "m2n.h"
+#include "m2n.h" /* x = Theta_ap flux_z_abpd */
   for (int s = 0; s < Ncoeff; s++)
     q1[s] -= x[s];
 
   /* invert */
   for (int s = 0; s < Ncoeff; s++)
     b[s] = x[s];
-#include "m2n.h"
+#include "m2n.h"  /*  x = Labmda_ds b_abcs */
   
   for (int s = 0; s < Ncoeff; s++)
     new_state[stateIdx](zoneIdx,s) = x[s];
