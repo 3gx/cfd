@@ -17,7 +17,7 @@ struct Expansion
   static constexpr int n_coeff = Ncoeff;
   static constexpr int VEC_SIZE_LOG2 = Log2<VEC_SIZE>();
 
-  T data[][Ncoeff][VEC_SIZE];
+  T* data[Ncoeff][VEC_SIZE];
   __host__ __device__ T operator()(const int i /* zone */, const int s /* expansion */) const
   {
 #ifdef __CUDA_ARCH__
