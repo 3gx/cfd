@@ -13,11 +13,11 @@ convert_modal2nodal2modal(const fluid_t& in, fluid_t& out)
   const int zoneIdx  = blockIdx.x*blockDim.x + threadIdx.x;
   const int stateIdx = blockIdx.y;
 
-  constexpr int N = fluid_t::n_coeff;
-  real_t x[N], b[N];
+  constexpr int Ncoeff = fluid_t::n_coeff;
+  real_t x[Ncoeff], b[Ncoeff];
 
 #pragma unroll
-  for (int s = 0; s < N; s++)
+  for (int s = 0; s < Ncoeff; s++)
   {
     b[s] = in[stateIdx](zoneIdx, s);
   }
@@ -33,7 +33,7 @@ convert_modal2nodal2modal(const fluid_t& in, fluid_t& out)
   }
   
 #pragma unroll
-  for (int s = 0; s < N; s++)
+  for (int s = 0; s < Ncoeff; s++)
   {
     out[stateIdx](zoneIdx, s) = x[s];
   }
