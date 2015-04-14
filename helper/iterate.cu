@@ -16,18 +16,27 @@ iterate_ADER_DG(
     const fluid_t& flux_z,
     fluid_t& new_state)
 {
+  constexpr bool SOURCE=true;
   const int zoneIdx  = blockIdx.x*blockDim.x + threadIdx.x;
   const int stateIdx = blockIdx.y;
   
   constexpr int Ncoeff = fluid_t::n_coeff;
   real_t q1[Ncoeff], b[Ncoeff], x[Ncoeff];
 
-  for (int s = 0; s < Ncoeff; s++)
-    q1[s]  =  state[stateIdx](zoneIdx,s);
-  for (int s = 0; s < Ncoeff; s++)
-    q1[s] *= -source_grad[stateIdx](zoneIdx,s);
-  for (int s = 0; s < Ncoeff; s++)
-    q1[s] += source[stateIdx](zoneIdx,s);
+  if (SOURCE)
+  {
+    for (int s = 0; s < Ncoeff; s++)
+      q1[s]  =  state[stateIdx](zoneIdx,s);
+    for (int s = 0; s < Ncoeff; s++)
+      q1[s] *= -source_grad[stateIdx](zoneIdx,s);
+    for (int s = 0; s < Ncoeff; s++)
+      q1[s] += source[stateIdx](zoneIdx,s);
+  }
+  else
+  {
+    for (int s = 0; s < Ncoeff; s++)
+      q1[s] = real_t(0.0);
+  }
   for (int s = 0; s < Ncoeff; s++)
     q1[s] += coeff[stateIdx](zoneIdx,s);
 
