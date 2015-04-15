@@ -205,8 +205,8 @@ iterate_ADER_DG(
     b[s] = x[s];
 #include "m2n.h"  /*  x = Labmda_ds b_abcs */
   
-  for (int s = 0; s < Ncoeff; s++)
-    b[s] = x[s];
+//  for (int s = 0; s < Ncoeff; s++)
+//    b[s] = x[s];
 #else
   for (int s = 0; s < Ncoeff; s++)
     b[s] += coeff[stateIdx](zoneIdx,s);
@@ -218,10 +218,12 @@ iterate_ADER_DG(
 #pragma unroll
   for (int s = 0; s < Ncoeff*Ncoeff; s++)
     if (s < Morder*Morder)
-      Lambda[s] = b[s%Ncoeff] + x[s%Ncoeff];
+      Lambda[s] = b[s%Ncoeff] * x[s%Ncoeff];
 
+#if 1
   decompLU<Morder>(Lambda,LU);
   solveLU<Morder>(LU,b,x);
+#endif
 
 
 
