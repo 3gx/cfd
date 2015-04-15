@@ -72,7 +72,7 @@ void decompLU1(const real_t S[N*N], real_t D[N*N])
         sum += D[k*N+p]*D[p*N+j];
       D[k*N+j] = (S[k*N+j]-sum); // not dividing by diagonals
     }
-     
+    
     // lvl2
 #pragma unroll
     for(int i = k+1; i < N; i++)
@@ -87,45 +87,44 @@ void decompLU1(const real_t S[N*N], real_t D[N*N])
 }
 
 template<int N, int I = 0> __forceinline__ __device__
-auto solveLUimpl1(const real_t LU[N*N], real_t b[N]) -> enableIf<(I==N)> {}
+auto solveLUimpl1(const real_t LU[N*N], const real_t b[N], real_t y[N]) -> enableIf<(I==N)> {}
 template<int N, int I = 0> __forceinline__ __device__
-auto solveLUimpl1(const real_t LU[N*N], real_t b[N]) -> enableIf<(I<N)>
+auto solveLUimpl1(const real_t LU[N*N], const real_t b[N], real_t y[N]) -> enableIf<(I<N)>
 {
   real_t sum = 0;
 #pragma unroll
   for (int k = 0; k < I; k++)
-    sum = LU[I*N+k]*b[k];
-  b[I] = b[I] - sum;
-  solveLUimpl1<N,I+1>(LU,b);
+    sum = LU[I*N+k]*y[k];
+  y[I] = b[I] - sum;
+  solveLUimpl1<N,I+1>(LU,b,y);
 }
 
 template<int N, int I = 0> __forceinline__ __device__
-auto solveLUimpl2(const real_t LU[N*N], real_t x[N]) -> enableIf<(I==-1)> {}
+auto solveLUimpl2(const real_t LU[N*N], const real_t y[N], real_t x[N]) -> enableIf<(I==-1)> {}
 template<int N, int I = N-1> __forceinline__ __device__
-auto solveLUimpl2(const real_t LU[N*N], real_t x[N]) -> enableIf<(I>=0)>
+auto solveLUimpl2(const real_t LU[N*N], const real_t y[N], real_t x[N]) -> enableIf<(I>=0)>
 {
   real_t sum = 0;
 #pragma unroll
   for (int k = 0; k < I; k++)
     sum = LU[I*N+k]*x[k];
-  x[I] = (x[I] - sum)*(real_t(1.0)/LU[I*N+I]);
-  solveLUimpl2<N,I-1>(LU,x);
+  x[I] = (y[I] - sum)*(real_t(1.0)/LU[I*N+I]);
+  solveLUimpl2<N,I-1>(LU,y,x);
 }
 template<int N> __forceinline__ __device__
 void solveLU(const real_t LU[N*N], const real_t b[N], real_t x[N])
 {
-#pragma unroll
-  for (int i = 0; i < N; i++)
-    x[i] = b[i];
-  solveLUimpl1<N>(LU,x);
-  solveLUimpl2<N>(LU,x);
+  real_t y[N];
+  solveLUimpl1<N>(LU,b,y);
+  solveLUimpl2<N>(LU,y,x);
 }
 
 template<int N>
 __forceinline__ __device__
 void solveLU1(const real_t LU[N*N], const real_t b[N], real_t x[N])
 {
-   real_t y[N];
+  real_t y[N];
+
 #pragma unroll
    for (int i = 0; i < N; i++)
    {
@@ -165,7 +164,7 @@ iterate_ADER_DG(
   constexpr int Ncoeff = fluid_t::n_coeff;
   constexpr int Morder = 3;
   real_t q1[Ncoeff], b[Ncoeff], x[Ncoeff];
-
+#if 1
   if (SOURCE)
   {
     for (int s = 0; s < Ncoeff; s++)
@@ -208,6 +207,10 @@ iterate_ADER_DG(
   
   for (int s = 0; s < Ncoeff; s++)
     b[s] = x[s];
+#else
+  for (int s = 0; s < Ncoeff; s++)
+    b[s] += coeff[stateIdx](zoneIdx,s);
+#endif
 
   real_t Lambda[Morder*Morder];
   real_t LU    [Morder*Morder];
