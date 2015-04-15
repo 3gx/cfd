@@ -39,48 +39,47 @@ auto decompLUimpl2(const real_t S[N*N], real_t D[N*N]) -> enableIf<(I<N)>
 }
 
 template<int N, int K> __forceinline__ __device__ 
-auto decompLUimpl(const real_t S[N*N], real_t D[N*N]) -> enableIf<K==N> {}
+auto decompLUtmpl(const real_t S[N*N], real_t D[N*N]) -> enableIf<K==N> {}
 template<int N, int K = 0> __forceinline__ __device__ 
-auto decompLUimpl(const real_t S[N*N], real_t D[N*N]) -> enableIf<(K<N)>
+auto decompLUtmpl(const real_t S[N*N], real_t D[N*N]) -> enableIf<(K<N)>
 {
   decompLUimpl1<K,N,K>(S,D);
   decompLUimpl2<K,N,K+1>(S,D);
-  decompLUimpl<N,K+1>(S,D);
+  decompLUtmpl<N,K+1>(S,D);
 }
 
-template<int N> __forceinline__ __device__
-void decompLU(const real_t S[N*N], real_t D[N*N])  
-{
-  decompLUimpl<N>(S,D);
-}
 
 template<int N>
 __forceinline__ __device__
-void decompLU1(const real_t S[N*N], real_t D[N*N])  
+void decompLU(const real_t S[N*N], real_t D[N*N])  
 {
 #pragma unroll
   for(int k = 0; k < N; k++)
   {
     // lvl1
 #pragma unroll
-    for(int j = k; j < N; j++)
+    for(int j = 0; j < N; j++)
+      if (j >= k)
     {
       // lvl3
       real_t sum = 0;
 #pragma unroll
-      for(int p = 0; p < k; p++)
-        sum += D[k*N+p]*D[p*N+j];
+      for(int p = 0; p < N; p++)
+        if (p < k)
+          sum += D[k*N+p]*D[p*N+j];
       D[k*N+j] = (S[k*N+j]-sum); // not dividing by diagonals
     }
-    
+   
     // lvl2
 #pragma unroll
-    for(int i = k+1; i < N; i++)
+    for(int i = 0; i < N; i++)
+      if (i >= k+1)
     {
       real_t sum=0.;
 #pragma unroll
-      for(int p = 0; p < k; p++)
-        sum += D[i*N+p]*D[p*N+k];
+      for(int p = 0; p < N; p++)
+        if (p < k)
+          sum += D[i*N+p]*D[p*N+k];
       D[i*N+k] = (S[i*N+k]-sum)*(real_t(1.0)/D[k*N+k]);
     }
   }
@@ -112,7 +111,7 @@ auto solveLUimpl2(const real_t LU[N*N], const real_t y[N], real_t x[N]) -> enabl
   solveLUimpl2<N,I-1>(LU,y,x);
 }
 template<int N> __forceinline__ __device__
-void solveLU(const real_t LU[N*N], const real_t b[N], real_t x[N])
+void solveLUtmpl(const real_t LU[N*N], const real_t b[N], real_t x[N])
 {
   real_t y[N];
   solveLUimpl1<N>(LU,b,y);
@@ -121,7 +120,7 @@ void solveLU(const real_t LU[N*N], const real_t b[N], real_t x[N])
 
 template<int N>
 __forceinline__ __device__
-void solveLU1(const real_t LU[N*N], const real_t b[N], real_t x[N])
+void solveLU(const real_t LU[N*N], const real_t b[N], real_t x[N])
 {
   real_t y[N];
 
@@ -130,8 +129,9 @@ void solveLU1(const real_t LU[N*N], const real_t b[N], real_t x[N])
    {
       real_t sum = 0;
 #pragma unroll
-      for (int k = 0 ;k < i; k++)
-        sum += LU[i*N+k]*y[k];
+      for (int k = 0 ;k < N; k++)
+        if (k < i)
+          sum += LU[i*N+k]*y[k];
       y[i] = (b[i]-sum); // not dividing by diagonals
    }
 
@@ -140,8 +140,9 @@ void solveLU1(const real_t LU[N*N], const real_t b[N], real_t x[N])
    {
       real_t sum = 0;
 #pragma unroll
-      for (int k = i+1; k < N; k++)
-        sum += LU[i*N+k]*x[k];
+      for (int k = 0; k < N; k++)
+        if (k >= i+1)
+          sum += LU[i*N+k]*x[k];
       x[i]=(y[i]-sum)*(real_t(1.0)/LU[i*N+i]);
    }
 }
@@ -220,9 +221,12 @@ iterate_ADER_DG(
     if (s < Morder*Morder)
       Lambda[s] = b[s%Ncoeff] * x[s%Ncoeff];
 
-#if 1
+#if 0
   decompLU<Morder>(Lambda,LU);
   solveLU<Morder>(LU,b,x);
+#else
+  decompLUtmpl<Morder>(Lambda,LU);
+  solveLUtmpl<Morder>(LU,b,x);
 #endif
 
 
