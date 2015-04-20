@@ -95,6 +95,30 @@ static void compute_update(const param_t &params, vector_t &f)
 }
 
 template<typename param_t, typename vector_t>
+static void compute_update_dg1(const param_t &params, vector_t &f)
+{
+  using real_t = typename vector_t::value_type;
+  const auto n = f.size();
+  const auto dt = params.dt();
+
+  const vector_t f0 = f;
+  const int niter = 10;
+  for (int iter = 0; iter < niter; iter++)
+  {
+    static vector_t df(n);
+    periodic_bc(f);
+    compute_df(params,f,df);
+    for (int i = 1; i < n-1; i++)
+    {
+      f[i] = f0[i] + dt * df[i];
+    }
+  }
+
+  periodic_bc(f);
+
+}
+
+template<typename param_t, typename vector_t>
 void set_ic(const param_t &params, vector_t &f)
 {
   using real_t = typename vector_t::value_type;
@@ -146,6 +170,7 @@ int main(int argc, char * argv[])
   params.dx   = 1;
   params.diff = 1;
   params.cfl  = 0.50;  /* stable for cfl <= 0.5 */
+  params.cfl  = 0.252;
 
   vector_t f(ncell+2);
 
@@ -155,7 +180,11 @@ int main(int argc, char * argv[])
   for (int iter = 0; iter < niter; iter++)
   {
     fprintf(std::cerr, "iter= %\n", iter);
+#if 0
     compute_update(params,f);
+#elif 1
+    compute_update_dg1(params,f);
+#endif
     dump2file(f,"iter"+std::to_string(iter));
   }
 
