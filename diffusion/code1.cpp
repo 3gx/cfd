@@ -3,6 +3,9 @@
 #include <fstream>
 #include <string>
 
+template<typename T>
+static T square(const T x) { return x*x; }
+
 static void fprintf(std::ostream &os, const char *s)
 {
   while (*s) {
@@ -47,9 +50,6 @@ struct Params
 
   real_t dt() const {return cfl * diff/square(dx);}
 };
-
-template<typename T>
-static T square(const T&& x) { return x*x; }
 
 template<typename vector_t>
 static void periodic_bc(vector_t &f)
@@ -133,6 +133,10 @@ int main(int argc, char * argv[])
   const int ncell = argc > 1 ? atoi(argv[1]) : 100;
   fprintf(std::cerr, "ncell= %\n", ncell);
 
+  const int niter = argc > 2 ? atoi(argv[2]) : 10;
+  fprintf(std::cerr, "niter= %\n", niter);
+  
+
   using real_t = double;
 
   using params_t = Params<real_t>;
@@ -147,6 +151,13 @@ int main(int argc, char * argv[])
 
   set_ic(params,f);
   dump2file(f,"ic.txt");
+
+  for (int iter = 0; iter < niter; iter++)
+  {
+    fprintf(std::cerr, "iter= %\n", iter);
+    compute_update(params,f);
+    dump2file(f,"iter"+std::to_string(iter));
+  }
 
 
 
