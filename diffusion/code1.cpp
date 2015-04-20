@@ -145,7 +145,7 @@ int main(int argc, char * argv[])
   auto params = params_t{};
   params.dx   = 1;
   params.diff = 1;
-  params.cfl  = 0.5;
+  params.cfl  = 0.50;  /* stable for cfl <= 0.5 */
 
   vector_t f(ncell+2);
 
