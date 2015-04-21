@@ -51,13 +51,27 @@ struct Params
   real_t dt() const {return cfl * diff/square(dx);}
 };
 
-template<typename vector_t>
-static void periodic_bc(vector_t &f)
+struct PeriodicBC
 {
-  const auto n = f.size();
-  f[0  ] = f[n-2];
-  f[n-1] = f[1  ];
-}
+  template<typename vector_t>
+    static void apply(vector_t &f) 
+    {
+      const auto n = f.size();
+      f[0  ] = f[n-2];
+      f[n-1] = f[1  ];
+    }
+};
+
+struct FreeBC 
+{
+  template<typename vector_t>
+    static void apply(vector_t &f) 
+    {
+      const auto n = f.size();
+      f[0  ] = f[  1];
+      f[n-1] = f[n-2];
+    }
+};
 
 template<typename param_t, typename vector_t>
 static void compute_df(const param_t &params, const vector_t &f, vector_t &df)
@@ -71,13 +85,13 @@ static void compute_df(const param_t &params, const vector_t &f, vector_t &df)
   }
 }
 
-template<typename param_t, typename vector_t>
+template<typename BC,typename param_t, typename vector_t>
 static void compute_update(const param_t &params, vector_t &f)
 {
   using real_t = typename vector_t::value_type;
   const auto n = f.size();
 
-  periodic_bc(f);
+  BC::apply(f);
   
 
   static vector_t df(n);
@@ -91,10 +105,10 @@ static void compute_update(const param_t &params, vector_t &f)
     f[i] += dt * df[i];
   }
 
-  periodic_bc(f);
+  BC::apply(f);
 }
 
-template<typename param_t, typename vector_t>
+template<typename BC, typename param_t, typename vector_t>
 static void compute_update_dg1(const param_t &params, vector_t &f)
 {
   using real_t = typename vector_t::value_type;
@@ -106,7 +120,7 @@ static void compute_update_dg1(const param_t &params, vector_t &f)
   for (int iter = 0; iter < niter; iter++)
   {
     static vector_t df(n);
-    periodic_bc(f);
+    BC::apply(f);
     compute_df(params,f,df);
     for (int i = 1; i < n-1; i++)
     {
@@ -114,7 +128,7 @@ static void compute_update_dg1(const param_t &params, vector_t &f)
     }
   }
 
-  periodic_bc(f);
+  BC::apply(f);
 
 }
 
@@ -141,6 +155,18 @@ void set_ic(const param_t &params, vector_t &f)
     const auto fi = max(ampl*(di - abs(i)),real_t{0});
     f[ic + i] = fi;
   }
+  std::fill(f.begin(), f.end(), 0);
+  for (int i = -di; i <= di; i++)
+  {
+    const auto fi = max(ampl*(di - abs(i)),real_t{0});
+    f[ic - ic/2 + i] = fi;
+  }
+  for (int i = -di; i <= di; i++)
+  {
+    const auto fi = max(ampl*(di - abs(i)),real_t{0});
+    f[ic + ic/3 + i] = fi;
+  }
+
 }
 
 template<typename vector_t>
@@ -170,7 +196,7 @@ int main(int argc, char * argv[])
   params.dx   = 1;
   params.diff = 1;
   params.cfl  = 0.50;  /* stable for cfl <= 0.5 */
-  params.cfl  = 0.252;
+//  params.cfl  = 0.252;
 
   vector_t f(ncell+2);
 
@@ -180,10 +206,11 @@ int main(int argc, char * argv[])
   for (int iter = 0; iter < niter; iter++)
   {
     fprintf(std::cerr, "iter= %\n", iter);
-#if 0
-    compute_update(params,f);
+#if 1
+    compute_update<FreeBC>(params,f);
+//    compute_update<PeriodicBC>(params,f);
 #elif 1
-    compute_update_dg1(params,f);
+    compute_update_dg1<FreeBC>(FreeBC,params,f);
 #endif
     dump2file(f,"iter"+std::to_string(iter));
   }
