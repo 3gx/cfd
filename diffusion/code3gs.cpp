@@ -109,22 +109,27 @@ static void compute_update(const param_t &params, vector_t &f)
 }
 
 template<typename BC, typename param_t, typename vector_t>
-static void compute_update_dg1(const param_t &params, vector_t &f)
+static void compute_update_gs(const param_t &params, vector_t &f, int niter = 10)
 {
   using real_t = typename vector_t::value_type;
   const auto n = f.size();
   const auto dt = params.dt();
 
+  BC::apply(f);
+
   const vector_t f0 = f;
-  const int niter = 10;
+  const auto c = params.diff*dt/square(params.dx);
+  const auto am = -c;
+  const auto ac = real_t{1}+real_t{2}*c;
+  const auto ap = -c;
+  const auto inv_ac = real_t{1.0}/ac;
+
   for (int iter = 0; iter < niter; iter++)
   {
-    static vector_t df(n);
     BC::apply(f);
-    compute_df(params,f,df);
     for (int i = 1; i < n-1; i++)
     {
-      f[i] = f0[i] + dt * df[i];
+      f[i] = inv_ac*(f0[i] - am*f[i-1] - ap*f[i+1]);
     }
   }
 
@@ -185,6 +190,10 @@ int main(int argc, char * argv[])
 
   const int niter = argc > 2 ? atoi(argv[2]) : 10;
   fprintf(std::cerr, "niter= %\n", niter);
+
+  const int ngs_iter = argc > 3 ? atoi(argv[3]) : 10;
+  fprintf(std::cerr, "ngs_iter= %\n", ngs_iter);
+
   
 
   using real_t = double;
@@ -195,8 +204,8 @@ int main(int argc, char * argv[])
   auto params = params_t{};
   params.dx   = 1;
   params.diff = 1;
-  params.cfl  = 0.50;  /* stable for cfl <= 0.5 */
-//  params.cfl  = 0.252;
+  params.cfl  = 0.40;  /* stable for cfl <= 0.5 */
+  params.cfl  = 4.0;
 
   vector_t f(ncell+2);
 
@@ -206,11 +215,11 @@ int main(int argc, char * argv[])
   for (int iter = 0; iter < niter; iter++)
   {
     fprintf(std::cerr, "iter= %\n", iter);
-#if 1
-//    compute_update<FreeBC>(params,f);
-    compute_update<PeriodicBC>(params,f);
+#if 0
+    compute_update<FreeBC>(params,f);
+//    compute_update<PeriodicBC>(params,f);
 #elif 1
-    compute_update_dg1<FreeBC>(FreeBC,params,f);
+    compute_update_gs<FreeBC>(params,f,ngs_iter);
 #endif
     dump2file(f,"iter"+std::to_string(iter));
   }
