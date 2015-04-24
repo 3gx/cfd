@@ -1,4 +1,4 @@
-#include <iostream>
+# include <iostream>
 #include <vector>
 #include <fstream>
 #include <string>
@@ -109,29 +109,64 @@ static void compute_update(const param_t &params, vector_t &f)
 }
 
 template<typename BC, typename param_t, typename vector_t>
-static void compute_update_gs(const param_t &params, vector_t &f, int niter = 10)
+static void compute_update_cheby(const param_t &params, vector_t &f, int niter = 10)
 {
   using real_t = typename vector_t::value_type;
   const auto n = f.size();
   const auto dt = params.dt();
 
+
+  const auto cfl = params.cfl; //diff*dt/square(params.dx);
+  const auto eigen_min = real_t{0.5};
+  const auto eigen_max = cfl*real_t{4.0};
+
+  const auto c_coeff = (eigen_max - eigen_min) * real_t{0.5};
+  const auto d_coeff = (eigen_max + eigen_min) * real_t{0.5};
+
+  const auto am = -cfl;
+  const auto ac = real_t{1}+real_t{2}*cfl;
+  const auto ap = -cfl;
+
+
   BC::apply(f);
 
-  const vector_t f0 = f;
-  const auto c = params.diff*dt/square(params.dx);
-  const auto am = -c;
-  const auto ac = real_t{1}+real_t{2}*c;
-  const auto ap = -c;
-  const auto inv_ac = real_t{1.0}/ac;
+  const auto f0 = f;
+  auto r = f;
+  for (int i = 1; i < n-1; i++)
+    r[i] = f0[i] - (am*f[i-1]+ac*f[i]+ap*f[i+1]);
 
+  BC::apply(r);
+
+  auto p = r;
+  auto alpha = real_t{0.0};
   for (int iter = 0; iter < niter; iter++)
   {
-    BC::apply(f);
     for (int i = 1; i < n-1; i++)
     {
-      f[i] = inv_ac*(f0[i] - am*f[i-1] - ap*f[i+1]);
+      if (iter == 0)
+      {
+        p[i] = r[i];
+        alpha = real_t{2.0}/d_coeff;
+      }
+      else
+      {
+        const auto beta = square(c_coeff*alpha*real_t{0.5});
+        alpha = real_t{1.0}/(d_coeff-beta);
+        p[i] = r[i] + beta*p[i];
+      }
     }
+
+    BC::apply(p);
+    for (int i = 1; i < n-1; i++)
+    {
+      const auto qi = am*p[i-1] + ac*p[i] + ap*p[i+1];
+      f[i] += alpha * p[i];
+      r[i] -= alpha * qi;
+    }
+    BC::apply(f);
+    BC::apply(r);
   }
+
 
   BC::apply(f);
 
@@ -205,7 +240,7 @@ int main(int argc, char * argv[])
   params.dx   = 1;
   params.diff = 1;
   params.cfl  = 0.40;  /* stable for cfl <= 0.5 */
-  params.cfl  = 4.0;
+  params.cfl  = 8.0;
 
   vector_t f(ncell+2);
 
@@ -219,7 +254,7 @@ int main(int argc, char * argv[])
     compute_update<FreeBC>(params,f);
 //    compute_update<PeriodicBC>(params,f);
 #elif 1
-    compute_update_gs<FreeBC>(params,f,ngs_iter);
+    compute_update_cheby<FreeBC>(params,f,ngs_iter);
 #endif
     dump2file(f,"iter"+std::to_string(iter));
   }
