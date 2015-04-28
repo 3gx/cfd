@@ -3,7 +3,7 @@
 #include <array>
 
 template<typename real_type>
-struct EOS
+struct IdealGasEos
 {
   using value_type = real_type;
   constexpr real_type gamma = 1.4;
@@ -24,7 +24,7 @@ struct EOS
 };
 
 template<typename real_type, typename EOS_type>
-namespace Cell
+struct CellT
 {
   using value_type = real_type;
   using vars_array = std::array<real_type,3>; /* dens, velx, pres */
