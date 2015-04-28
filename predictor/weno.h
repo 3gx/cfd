@@ -10,7 +10,7 @@ struct WenoFD5
 
   using Cell = CellT<real_type,EOS>;
 
-  std::vector<Cell::Conservative> cons_vec;
+  std::vector<Cell::Conservative> conservative_cell;
 
 };
 
