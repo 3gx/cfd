@@ -96,16 +96,16 @@ namespace Cell
     const auto v  = frozen.velx();
     const auto p  = frozen.pres();
     const auto c1 = EOS::gamma*p/d;
-    const auto c2 = sqrt(EOS::gamma*p*d);
+    const auto c2 = sqrt(c1);
     const real_type vec1[NVAR] = {-c1,real_type{0},real_type{1}};
-    const real_type vec2[NVAR] = {real_type{0},-c2,real_type{1}};
-    const real_type vec3[NVAR] = {real_type{0},+c2,real_type{1}};
+    const real_type vec2[NVAR] = {real_type{0},-c2*d,real_type{1}};
+    const real_type vec3[NVAR] = {real_type{0},+c2*d,real_type{1}};
     const auto var1 = vec1[0]*vars[0] + vec1[1]*vars[1] + vec1[2]*vars[2];
     const auto var2 = vec2[0]*vars[0] + vec2[1]*vars[1] + vec2[2]*vars[2];
     const auto var3 = vec3[0]*vars[0] + vec3[1]*vars[1] + vec3[2]*vars[2];
     const auto lambda1 = v;
-    const auto lambda2 = (-c1 + v*d)/d;
-    const auto lambda2 = (+c1 * v*d)/d;
+    const auto lambda2 = v - c2;
+    const auto lambda2 = v + c2;
     return Charactersitic({var1,var2,var3},{lambda1,lambda2,lambda3});
   }
 
