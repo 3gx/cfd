@@ -16,13 +16,19 @@ struct EOS
   {
     return eth*(real_type{1.0}/(gamma-1));
   }
+  static auto entr_from_dens_and_pres(const real_type dens, const real_type pres)
+  {
+    using std::pow;
+    return pres*pow(dens,-gamma);
+  }
 };
 
-template<typename real_type, typename EOS>
+template<typename real_type, typename EOS_type>
 namespace Cell
 {
   using value_type = real_type;
   using vars_array = std::array<real_type,3>; /* dens, velx, pres */
+  using EOS = EOS_type;
 
   /* forward declarations */
   struct Primitive;
@@ -41,6 +47,9 @@ namespace Cell
     Primitive(const Primitive &cell) : _vars(cell.vars) {}
     inline Conservative   cvt2conservative () const;
     inline Characteristic cvt2characterstic(const Primitive&) const;
+    auto dens() const { return _vars[DENS]; }
+    auto velx() const { return _vars[VELX]; }
+    auto pres() const { return _vars[PRES]; }
   };
   
   /* class definitions */
@@ -54,6 +63,9 @@ namespace Cell
     }
     Conservative(const Conservative& cell) : vars(cell._vars) {}
     inline Primitive cvt2primtive() const;
+    auto mass() const { return _vars[MASS]; }
+    auto momx() const { return _vars[MOMX]; }
+    auto etot() const { return _vars[ETOT]; }
   };
   struct Characteristic 
   {
@@ -67,6 +79,9 @@ namespace Cell
     Characteristic(const Characteristic& cell) : 
      _vars(cell._vars) _eigenvalues(cell._eigvenvalues) {}
     inline Primitive cvt2primitive(const Primitive&) const;
+    auto var1() const {return _vars[VAR1]; }
+    auto var2() const {return _vars[VAR2]; }
+    auto var3() const {return _vars[VAR3]; }
   };
 
 
