@@ -46,7 +46,7 @@ int main(int argc, char * argv[])
 
   fprintf(cerr, "ncell= %\n", ncell);
 
-  const auto h = 1.0/8;
+  const auto h = 1.0/16/16;
 
   const auto tmax = 1.0;
 
@@ -55,7 +55,7 @@ int main(int argc, char * argv[])
 
   for (const auto &x : solution)
   {
-    fprintf(cout, "% %\n", get<0>(x), get<1>(x));
+    printf(" %15.15g %15.15g \n", get<0>(x), get<1>(x));
   }
 
 
