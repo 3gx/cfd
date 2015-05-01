@@ -19,7 +19,7 @@ using std::make_index_sequence;
 template<size_t... I, typename... Tp>
 static inline void increment_tuple_impl(std::tuple<Tp...>& t, index_sequence<I...>)
 {
-  std::make_tuple( std::get<I>(t)++...  );
+  std::make_tuple( ++std::get<I>(t)...  );
 }
 template<typename... Ts>
 static inline void increment_tuple(std::tuple<Ts...>& ts)
