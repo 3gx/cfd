@@ -9,7 +9,7 @@
  ******************************/
 
 template< bool B, class T = void >
-using enableIf = typename std::enable_if<B,T>::type;
+using _enableIf = typename std::enable_if<B,T>::type;
 using std::index_sequence;
 using std::make_index_sequence;
 
