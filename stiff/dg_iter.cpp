@@ -4,7 +4,7 @@
 #include <cmath>
 #include <array>
 #include "myprintf.h"
-#include "zip.h"
+#include "zip_iterator.h"
 
 
 template<typename T, size_t N>
