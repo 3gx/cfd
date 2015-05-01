@@ -127,19 +127,6 @@ class ZipIterator
       _begin(ts.begin()...), 
       _end( ts.end()...) {};
 
-#if 0
-    ZipIterator(const ZipIterator<Ts...>& a) :
-      begin_(  a.begin_ ), 
-      end_( a.end_ ) {};
-
-    template<typename... Us>
-      ZipIterator<Us...>& operator=( ZipIterator<Us...>& rhs) {
-        begin_ = rhs.begin_;
-        end_ = rhs.end_;
-        return *this;
-      }
-#endif
-
     iterator& begin() { return _begin; }
     iterator& end  () { return _end; }
 
