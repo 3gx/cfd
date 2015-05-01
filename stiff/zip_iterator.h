@@ -87,36 +87,36 @@ class ZipIterator
             typename std::add_const<typename remove_ref<T>::value_type>::type,
             typename remove_ref<T>::value_type > :: type;
 
-    class iterator : std::iterator<std::forward_iterator_tag, std::tuple<value_type<Ts>&...>>
+    class Iterator : std::iterator<std::forward_iterator_tag, std::tuple<value_type<Ts>&...>>
   {
     protected:
       std::tuple<iterator_type<Ts>...> current;
     public:
 
-      explicit iterator(iterator_type<Ts>... ts ) : 
+      explicit Iterator(iterator_type<Ts>... ts ) :
         current(ts...) {};
 
-      iterator( const iterator& rhs ) :  current(rhs.current) {};
+      Iterator( const Iterator& rhs ) :  current(rhs.current) {};
 
-      iterator& operator++() {
+      Iterator& operator++() {
         increment_tuple(current);
         return *this;
       }
 
-      iterator operator++(int) {
+      Iterator operator++(int) {
         auto a = *this;
         increment_tuple(current);
         return a;
       }
 
-      bool operator!=( const iterator& rhs ) {
+      bool operator!=( const Iterator& rhs ) {
         return not_equal_tuple(current, rhs.current);
       }
 
       auto operator*() -> decltype(dereference_tuple(current))
       {
         using type1 = decltype(dereference_tuple(current));
-        using type2 = typename iterator::value_type;
+        using type2 = typename Iterator::value_type;
         static_assert(std::is_same<type1,type2>::value,"Type mismatch");
         return dereference_tuple(current);
       }
@@ -127,11 +127,11 @@ class ZipIterator
       _begin(ts.begin()...), 
       _end( ts.end()...) {};
 
-    iterator& begin() { return _begin; }
-    iterator& end  () { return _end; }
+    Iterator& begin() { return _begin; }
+    Iterator& end  () { return _end; }
 
-    iterator _begin;
-    iterator _end;
+    Iterator _begin;
+    Iterator _end;
 };
 
 template <class... Ts>
