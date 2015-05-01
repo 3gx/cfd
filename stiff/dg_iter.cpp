@@ -4,6 +4,7 @@
 #include <cmath>
 #include <array>
 #include "myprintf.h"
+#include "zip.h"
 
 
 template<typename T, size_t N>
@@ -47,10 +48,10 @@ auto solve3(real_type h, real_type tmax, real_type y0)
 
     const auto solvec = computeSolvec(C,dt);
     auto dy = 0.0;
-    for (int i = 0; i < (int)solvec.size(); i++)
+    for (auto &x : zip(solvec,weights))
     {
-      const auto coeff = solvec[i] * get<1>(u0) * dt;
-      dy += weights[i]*coeff;
+      const auto coeff = get<0>(x) * get<1>(u0) * dt;
+      dy += get<1>(x)*coeff;
     }
     dy *= -C;
 
@@ -127,7 +128,7 @@ int main(int argc, char * argv[])
 
   fprintf(cerr, "ncell= %\n", ncell);
 
-  const auto h = 1.0/16;
+  const auto h = 1.0/8;
 
   const auto tmax = 1.0;
 
