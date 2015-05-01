@@ -67,13 +67,32 @@ class zipper
 {
   public:
 
-    class iterator : std::iterator<std::forward_iterator_tag, std::tuple<typename Ts::value_type...> >
+    template<typename T>
+      using remove_ref = typename std::remove_reference<T>::type;
+
+    template<bool Condition, typename Then, typename Else>
+      struct _if { using type = Then; };
+    template<typename Then, typename Else>
+      struct _if<false,Then,Else> { using type = Else; };
+
+    template<typename T>
+      using iterator_type = typename _if<
+            std::is_const<remove_ref<T>>::value, 
+            typename remove_ref<T>::const_iterator,
+            typename remove_ref<T>::iterator > :: type;
+    template<typename T>
+      using value_type = typename _if<
+            std::is_const<remove_ref<T>>::value, 
+            typename std::add_const<typename remove_ref<T>::value_type>::type,
+            typename remove_ref<T>::value_type > :: type;
+
+    class iterator : std::iterator<std::forward_iterator_tag, std::tuple<value_type<Ts>&...>>
   {
     protected:
-      std::tuple<typename Ts::iterator...> current;
+      std::tuple<iterator_type<Ts>...> current;
     public:
 
-      explicit iterator(typename Ts::iterator... ts ) : 
+      explicit iterator(iterator_type<Ts>... ts ) : 
         current(ts...) {};
 
       iterator( const iterator& rhs ) :  current(rhs.current) {};
@@ -93,16 +112,21 @@ class zipper
         return not_equal_tuple(current, rhs.current);
       }
 
-      typename iterator::value_type operator*() {
+      auto operator*() -> decltype(dereference_tuple(current))
+      {
+        using type1 = decltype(dereference_tuple(current));
+        using type2 = typename iterator::value_type;
+        static_assert(std::is_same<type1,type2>::value,"Type mismatch");
         return dereference_tuple(current);
       }
   };
 
 
-    explicit zipper(Ts&... ts):
+    explicit zipper(Ts&&... ts):
       begin_(ts.begin()...), 
       end_( ts.end()...) {};
 
+#if 0
     zipper(const zipper<Ts...>& a) :
       begin_(  a.begin_ ), 
       end_( a.end_ ) {};
@@ -113,41 +137,17 @@ class zipper
         end_ = rhs.end_;
         return *this;
       }
+#endif
 
-    zipper<Ts...>::iterator& begin() {
-      return begin_;
-    }
+    iterator& begin() { return begin_; }
+    iterator& end  () { return end_; }
 
-    zipper<Ts...>::iterator& end() {
-      return end_;
-    }
-
-    zipper<Ts...>::iterator begin_;
-    zipper<Ts...>::iterator end_;
+    iterator begin_;
+    iterator end_;
 };
 
-
-
-//from cppreference.com: 
-template <class T>
-struct special_decay
+template <class... Ts>
+zipper<Ts...> zip(Ts&&... ts)
 {
-  using type = typename std::decay<T>::type;
-};
-
-//allows the use of references:
-template <class T>
-struct special_decay<std::reference_wrapper<T>>
-{
-  using type = T&;
-};
-
-template <class T>
-using special_decay_t = typename special_decay<T>::type;
-
-//allows template type deduction for zipper:
-  template <class... Types>
-zipper<special_decay_t<Types>...> zip(Types&&... args)
-{
-  return zipper<special_decay_t<Types>...>(std::forward<Types>(args)...);
+  return zipper<Ts...>(std::forward<Ts>(ts)...);
 }
