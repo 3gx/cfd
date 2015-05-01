@@ -48,7 +48,7 @@ auto solve3(real_type h, real_type tmax, real_type y0)
 
     const auto solvec = computeSolvec(C,dt);
     auto dy = 0.0;
-    for (auto &x : zip(solvec,weights))
+    for (auto &x : make_zip_iterator(solvec,weights))
     {
       const auto coeff = get<0>(x) * get<1>(u0) * dt;
       dy += get<1>(x)*coeff;

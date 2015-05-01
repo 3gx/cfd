@@ -4,7 +4,8 @@
 #include<utility>
 
 /*******************************
- * zipper: adapted from http://codereview.stackexchange.com/questions/30846/zip-like-functionality-with-c11s-range-based-for-loop
+ * ZipIterator: 
+ * adapted from http://codereview.stackexchange.com/questions/30846/zip-like-functionality-with-c11s-range-based-for-loop
  ******************************/
 
 template< bool B, class T = void >
@@ -13,7 +14,7 @@ using std::index_sequence;
 using std::make_index_sequence;
 
 /**************************************
- * increment everu element of a tuple *
+ * increment every element of a tuple *
  **************************************/
 template<size_t... I, typename... Tp>
 static inline void increment_tuple_impl(std::tuple<Tp...>& t, index_sequence<I...>)
@@ -26,9 +27,9 @@ static inline void increment_tuple(std::tuple<Ts...>& ts)
   increment_tuple_impl(ts,make_index_sequence<sizeof...(Ts)>());
 }
 
-/*****************************
- * check equality of a tuple *
- *****************************/
+/********************************
+ * check equality of two tuples *
+ ********************************/
 template<typename... Ts>
 static inline bool not_equal_tuple_impl(const std::tuple<Ts...>& t1, const std::tuple<Ts...>& t2, index_sequence<>) 
 {
@@ -46,9 +47,9 @@ static inline bool not_equal_tuple(const std::tuple<Ts...>& t1, const std::tuple
 }
 
 
-/**************************** 
-// dereference every element of a tuple (applying operator* to each element, and returning the tuple)
- ****************************/
+/****************************************
+ * dereference every element of a tuple *
+ ****************************************/
 template <typename Tuple, size_t... I>
 static inline auto dereference_tuple_impl(const Tuple& t, index_sequence<I...>) ->
 decltype(std::tie(*std::get<I>(t)...))
@@ -63,7 +64,7 @@ decltype( dereference_tuple_impl( std::tuple<Ts...>(), make_index_sequence<sizeo
 }
 
 template<typename... Ts >
-class zipper
+class ZipIterator
 {
   public:
 
@@ -122,32 +123,32 @@ class zipper
   };
 
 
-    explicit zipper(Ts&&... ts):
-      begin_(ts.begin()...), 
-      end_( ts.end()...) {};
+    explicit ZipIterator(Ts&&... ts):
+      _begin(ts.begin()...), 
+      _end( ts.end()...) {};
 
 #if 0
-    zipper(const zipper<Ts...>& a) :
+    ZipIterator(const ZipIterator<Ts...>& a) :
       begin_(  a.begin_ ), 
       end_( a.end_ ) {};
 
     template<typename... Us>
-      zipper<Us...>& operator=( zipper<Us...>& rhs) {
+      ZipIterator<Us...>& operator=( ZipIterator<Us...>& rhs) {
         begin_ = rhs.begin_;
         end_ = rhs.end_;
         return *this;
       }
 #endif
 
-    iterator& begin() { return begin_; }
-    iterator& end  () { return end_; }
+    iterator& begin() { return _begin; }
+    iterator& end  () { return _end; }
 
-    iterator begin_;
-    iterator end_;
+    iterator _begin;
+    iterator _end;
 };
 
 template <class... Ts>
-zipper<Ts...> zip(Ts&&... ts)
+ZipIterator<Ts...> make_zip_iterator(Ts&&... ts)
 {
-  return zipper<Ts...>(std::forward<Ts>(ts)...);
+  return ZipIterator<Ts...>(std::forward<Ts>(ts)...);
 }
