@@ -16,8 +16,9 @@ using std::make_index_sequence;
 /**************************************
  * increment every element of a tuple *
  **************************************/
-template<size_t... I, typename... Tp>
-static inline void increment_tuple_impl(std::tuple<Tp...>& t, index_sequence<I...>)
+
+  template<typename Tuple, size_t... I>
+static inline void increment_tuple_impl(Tuple& t, index_sequence<I...>)
 {
   std::make_tuple( ++std::get<I>(t)...  );
 }
@@ -30,13 +31,13 @@ static inline void increment_tuple(std::tuple<Ts...>& ts)
 /********************************
  * check equality of two tuples *
  ********************************/
-template<typename... Ts>
-static inline bool not_equal_tuple_impl(const std::tuple<Ts...>& t1, const std::tuple<Ts...>& t2, index_sequence<>) 
+template<typename Tuple>
+static inline bool not_equal_tuple_impl(const Tuple& t1, const Tuple& t2, index_sequence<>)
 {
   return true;
 }
-template<size_t I, size_t... Is, typename... Ts>
-static inline bool not_equal_tuple_impl(const std::tuple<Ts...>& t1, const std::tuple<Ts...>& t2, index_sequence<I, Is...>) 
+template<typename Tuple, size_t I, size_t... Is>
+static inline bool not_equal_tuple_impl(const Tuple& t1, const Tuple& t2, index_sequence<I, Is...>)
 {
   return (std::get<I>(t1) != std::get<I>(t2)) && not_equal_tuple_impl(t1,t2,index_sequence<Is...>());
 }
