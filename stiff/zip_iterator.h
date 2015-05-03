@@ -64,7 +64,7 @@ decltype( dereference_tuple_impl( std::tuple<Ts...>(), make_index_sequence<sizeo
   return dereference_tuple_impl( ts, make_index_sequence<sizeof...(Ts)>());
 }
 
-template<typename... Ts >
+template<typename... Types>
 class ZipIterator
 {
   public:
@@ -77,24 +77,25 @@ class ZipIterator
     template<typename Then, typename Else>
       struct _if<false,Then,Else> { using type = Else; };
 
-    template<typename T>
+    template<typename Container>
       using iterator_type = typename _if<
-            std::is_const<remove_ref<T>>::value, 
-            typename remove_ref<T>::const_iterator,
-            typename remove_ref<T>::iterator > :: type;
-    template<typename T>
-      using value_type = typename _if<
-            std::is_const<remove_ref<T>>::value, 
-            typename std::add_const<typename remove_ref<T>::value_type>::type,
-            typename remove_ref<T>::value_type > :: type;
+            std::is_const<remove_ref<Container>>::value, 
+            typename remove_ref<Container>::const_iterator,
+            typename remove_ref<Container>::iterator > :: type;
 
-    class Iterator : std::iterator<std::forward_iterator_tag, std::tuple<value_type<Ts>&...>>
+    template<typename Type>
+      using value_type = typename _if<
+            std::is_const<remove_ref<Type>>::value, 
+            typename std::add_const<typename remove_ref<Type>::value_type>::type,
+            typename remove_ref<Type>::value_type > :: type;
+
+    class Iterator : std::iterator<std::forward_iterator_tag, std::tuple<value_type<Types>&...>>
   {
     protected:
-      std::tuple<iterator_type<Ts>...> current;
+      std::tuple<iterator_type<Types>...> current;
     public:
 
-      explicit Iterator(iterator_type<Ts>... ts ) :
+      explicit Iterator(iterator_type<Types>... ts ) :
         current(ts...) {};
 
       Iterator( const Iterator& rhs ) :  current(rhs.current) {};
@@ -104,29 +105,26 @@ class ZipIterator
         return *this;
       }
 
-      Iterator operator++(int) {
+      auto operator++(int) {
         auto a = *this;
         increment_tuple(current);
         return a;
       }
 
-      bool operator!=( const Iterator& rhs ) {
+      auto operator!=( const Iterator& rhs ) {
         return not_equal_tuple(current, rhs.current);
       }
 
-      auto operator*() -> decltype(dereference_tuple(current))
+      auto operator*()
       {
-        using type1 = decltype(dereference_tuple(current));
-        using type2 = typename Iterator::value_type;
-        static_assert(std::is_same<type1,type2>::value,"Type mismatch");
         return dereference_tuple(current);
       }
   };
 
 
-    explicit ZipIterator(Ts&&... ts):
+    explicit ZipIterator(Types&&... ts):
       _begin(ts.begin()...), 
-      _end( ts.end()...) {};
+      _end( ts.end()...)  {}
 
     Iterator& begin() { return _begin; }
     Iterator& end  () { return _end; }
@@ -135,8 +133,8 @@ class ZipIterator
     Iterator _end;
 };
 
-template <class... Ts>
-ZipIterator<Ts...> make_zip_iterator(Ts&&... ts)
+template <class... Types>
+auto make_zip_iterator(Types&&... ts)
 {
-  return ZipIterator<Ts...>(std::forward<Ts>(ts)...);
+  return ZipIterator<Types...>(std::forward<Types>(ts)...);
 }
