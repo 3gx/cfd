@@ -83,11 +83,11 @@ class ZipIterator
             typename remove_ref<Container>::const_iterator,
             typename remove_ref<Container>::iterator > :: type;
 
-    template<typename Type>
+    template<typename Container>
       using value_type = typename _if<
-            std::is_const<remove_ref<Type>>::value, 
-            typename std::add_const<typename remove_ref<Type>::value_type>::type,
-            typename remove_ref<Type>::value_type > :: type;
+            std::is_same<iterator_type<Container>, typename remove_ref<Container>::const_iterator>::value,
+            typename std::add_const<typename remove_ref<Container>::value_type>::type,
+            typename remove_ref<Container>::value_type > :: type;
 
     class Iterator : std::iterator<std::forward_iterator_tag, std::tuple<value_type<Types>&...>>
   {
@@ -117,14 +117,20 @@ class ZipIterator
 
       auto operator*()
       {
+        using type1 = decltype(dereference_tuple(current));
+        using type2 = typename Iterator::value_type;
+        /* static sanity check:
+         * static_assert is triggered whenever return type of the operator
+         *               differs from Iterator::value_type
+         */
+        static_assert(std::is_same<type1,type2>::value,"Type mismatch");
         return dereference_tuple(current);
       }
   };
 
-
     explicit ZipIterator(Types&&... ts):
       _begin(ts.begin()...), 
-      _end( ts.end()...)  {}
+      _end( ts.end()...)   {}
 
     Iterator& begin() { return _begin; }
     Iterator& end  () { return _end; }
