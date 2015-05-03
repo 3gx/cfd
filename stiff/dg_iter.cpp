@@ -81,13 +81,13 @@ auto solve5(real_type h, real_type tmax, real_type y0)
     const auto det = 
       15120. + C*h*(8400. + C*h*(2100. + C*h*(300. + C*h*(25. + 1.*C*h))));
     const auto idet = 1.0/det;
-    return std::array<decltype(C),5>{
+    return std::array<decltype(C),5>{{
       idet*(15120. + C*h*(7690.72 + C*h*(1722.59 + C*h*(210.471 + 13.0961*C*h)))),
       idet*(15120. + C*h*(4910.83 + C*h*(564.161 + C*h*(8.08594 - 3.73216*C*h)))),
       idet*(15120. + C*h*(840. + C*h*(-210. + C*h*(-15. + 1.875*C*h)))),
       idet*(15120. + C*h*(-3230.83 + C*h*(111.847 + C*h*(22.8034 - 1.11962*C*h)))),
       idet*(15120. + C*h*(-6010.72 + C*h*(961.4 + C*h*(-68.027 + 0.644576*C*h))))
-    };
+    }};
   };
 
   auto time = 0.0;
