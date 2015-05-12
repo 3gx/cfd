@@ -1,0 +1,586 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize letterpaper
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Arbitrary High Order Discontinuous Galerkin method for ODE 
+\end_layout
+
+\begin_layout Abstract
+Just list of formulas not to forget
+\end_layout
+
+\begin_layout Section
+ODE to Algebraic system
+\end_layout
+
+\begin_layout Standard
+Consider the following ODE
+\begin_inset Formula 
+\[
+\frac{dy}{dx}=f(y,x)
+\]
+
+\end_inset
+
+Let's assume we want this ODE on step-size 
+\begin_inset Formula $h$
+\end_inset
+
+, say 
+\begin_inset Formula $x\in[x_{0},x_{0}+h]$
+\end_inset
+
+ , and we see solution at 
+\begin_inset Formula $x=x_{0}+h$
+\end_inset
+
+.
+ First, we change variable from 
+\begin_inset Formula $x$
+\end_inset
+
+ to 
+\begin_inset Formula $\xi$
+\end_inset
+
+ such that, 
+\begin_inset Formula $x=x_{0}+h\xi$
+\end_inset
+
+.
+ We write, 
+\begin_inset Formula 
+\begin{equation}
+\frac{dy}{d\xi}=hf(y,x_{0}+h\xi)=h\tilde{f}(y,\xi)\label{eq:ode1}
+\end{equation}
+
+\end_inset
+
+Formally this equation has the following solution 
+\begin_inset Formula 
+\begin{equation}
+y(1)=y(0)+h\int_{0}^{1}\tilde{f}\,d\zeta\label{eq:ODEint}
+\end{equation}
+
+\end_inset
+
+ where 
+\begin_inset Formula $y(1)=y(x_{0}+h)$
+\end_inset
+
+ and 
+\begin_inset Formula $y(0)=y(x_{0})$
+\end_inset
+
+.
+ To solve this problem, we apply Discontinuous Galerkin to this ODE.
+ First, we pick a orthogonal basis functions 
+\begin_inset Formula $\phi_{\alpha}(\xi)$
+\end_inset
+
+ and denote inner product as 
+\begin_inset Formula $\left\langle a,b\right\rangle =\int_{0}^{1}a(\xi)b(\xi)\,d\xi$
+\end_inset
+
+ .
+ Thus we have, 
+\begin_inset Formula $\left\langle \phi_{\alpha},\phi_{\beta}\right\rangle =\omega_{\alpha}\delta_{\alpha\beta}=\Delta_{\alpha\beta}$
+\end_inset
+
+.
+ We multiple both parts of Eq.(
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:ode1"
+
+\end_inset
+
+) by 
+\begin_inset Formula $\phi_{\beta}(\xi)$
+\end_inset
+
+ and integrate them over interval 
+\begin_inset Formula $\xi=[0,1]$
+\end_inset
+
+ 
+\begin_inset Formula 
+\begin{equation}
+\int_{0}^{1}\phi_{\beta}(\xi)\frac{dy}{d\xi}\,d\xi=h\int_{0}^{1}\phi_{\beta}(\xi)\tilde{f}(\xi)\,d\xi\label{eq:DGstep1}
+\end{equation}
+
+\end_inset
+
+Now, integrate the LHS by part
+\begin_inset Formula 
+\begin{equation}
+\int_{0}^{1}\phi_{\beta}(\xi)\frac{dy}{d\xi}\,d\xi=\left[\phi_{\beta}(\xi)y(\xi)\right]_{\xi=0}^{\xi=1}-\int_{0}^{1}\phi'_{\beta}(\xi)y(\xi)\,d\xi\label{eq:DGstep2}
+\end{equation}
+
+\end_inset
+
+ We project function 
+\begin_inset Formula $y(\xi)$
+\end_inset
+
+ to basis 
+\begin_inset Formula $\phi_{\beta}(\xi)$
+\end_inset
+
+ such that 
+\begin_inset Formula $y(\xi)=y_{\alpha}\phi_{\alpha}(\xi)$
+\end_inset
+
+ where we assume Einstein summation convention unless mentioned otherwise.
+ Thus we insert this into Eq.(
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:DGstep2"
+
+\end_inset
+
+) and use for 
+\begin_inset Formula $y(\xi=0)=y_{0}$
+\end_inset
+
+ and for 
+\begin_inset Formula $y(\xi=1)=y_{\alpha}\phi_{\alpha}(1)$
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\int_{0}^{1}\phi_{\beta}(\xi)\frac{dy}{d\xi}\,d\xi=\phi_{\beta}(1)\phi_{\alpha}(1)y_{\alpha}-\phi_{\beta}(0)y_{0}-\left\langle \phi'_{\beta},\phi_{\alpha}\right\rangle y_{\alpha}=\Phi_{\alpha\beta}y_{\beta}-\phi_{\beta}(0)y_{0}
+\]
+
+\end_inset
+
+ The RHS of Eq.(
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:DGstep1"
+
+\end_inset
+
+) can be rewritten as
+\begin_inset Formula 
+\[
+h\int_{0}^{1}\phi_{\beta}(\xi)\tilde{f}(\xi)\,d\xi=h\left\langle \phi_{\beta,}\phi_{\alpha}\right\rangle f_{\alpha}=h\Delta_{\alpha\beta}f_{\beta}
+\]
+
+\end_inset
+
+ Hence, the Eq.(
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:DGstep1"
+
+\end_inset
+
+) is transformed to a (non-linear) algebraic system
+\begin_inset Formula 
+\begin{equation}
+\Phi_{\alpha\beta}y_{\beta}=\phi_{\beta}(0)y_{0}+h\Delta_{\alpha\beta}f(y_{\beta})\label{eq:DGsystem}
+\end{equation}
+
+\end_inset
+
+ Once we solve for 
+\begin_inset Formula $y_{\alpha}$
+\end_inset
+
+, we obtain solution polynomial 
+\begin_inset Formula $y(\xi)=y_{\alpha}\phi_{\alpha}(\xi)$
+\end_inset
+
+ and 
+\begin_inset Formula $\tilde{f}(\xi)=f_{\alpha}\phi_{\alpha}(\xi)$
+\end_inset
+
+ where 
+\begin_inset Formula $f_{\alpha}=f(y_{\alpha},x_{0}+h\xi_{\alpha})$
+\end_inset
+
+.
+ Hence we have
+\begin_inset Formula 
+\begin{equation}
+y(1)=y(0)+hf_{\alpha}\int_{0}^{1}\phi_{\alpha}(\xi)\,d\xi\label{eq:ODEsolInt}
+\end{equation}
+
+\end_inset
+
+Since we use Gauss-Legendre nodes, the integral over a basis function is
+ just Gauss-weight corresponding to Legendre integration node, thus we have
+\begin_inset Formula 
+\begin{equation}
+y(x_{0}+h)=y(x_{0})+h\sum_{\alpha}\omega_{\alpha}f(y_{\alpha},x_{0}+h\zeta_{\alpha})\label{eq:ODEsol}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Solving Linear system
+\end_layout
+
+\begin_layout Standard
+In this section we describe the procedure to solve linear system in Eq.(
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:DGsystem"
+
+\end_inset
+
+).
+ In matrix form this system can be written in the following way
+\begin_inset Formula 
+\[
+\Phi{\bf y}=\tilde{{\bf y}}_{0}+h\Delta f({\bf y)}
+\]
+
+\end_inset
+
+ where 
+\begin_inset Formula $\tilde{y}_{\alpha}=\phi_{\alpha}(0)y_{0}$
+\end_inset
+
+.
+ If 
+\begin_inset Formula $f$
+\end_inset
+
+ is not stiff, an attempted can be made to solve it iteratively by first
+ computing 
+\begin_inset Formula $\Phi^{-1}$
+\end_inset
+
+ and using the following iterative process:
+\begin_inset Formula 
+\[
+\mbox{{\bf y}}^{k+1}=\Phi^{-1}({\bf y}_{0}+h\Delta f({\bf y}^{k}))
+\]
+
+\end_inset
+
+This basically resembles a Picard process where 
+\begin_inset Formula $\Phi^{-1}$
+\end_inset
+
+ can be thought of discrete operator for the integral in Eq.(
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:ODEint"
+
+\end_inset
+
+).
+ However, if 
+\begin_inset Formula $f$
+\end_inset
+
+ is stiff, this process will diverge, and other option would be to apply
+ a Newton iteration, such that 
+\begin_inset Formula 
+\[
+\Phi{\bf y}^{k+1}=\tilde{{\bf y}}_{0}+h\Delta f({\bf y}^{k+1})=\tilde{{\bf y}}_{0}+h\Delta f({\bf y}^{k})+h\Delta J^{k}{\bf y}^{k+1}-h\Delta J^{k}{\bf y}^{k}
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $J=\partial f/\partial{\bf y}|_{{\bf y=y}^{k}}$
+\end_inset
+
+ is Jacobian matrix of 
+\begin_inset Formula $f({\bf y})$
+\end_inset
+
+ evaluated at 
+\begin_inset Formula ${\bf y=y}^{k}$
+\end_inset
+
+.
+ The solution can then be obtained iteratively.
+ However, in circumstances when the Jacobian matrix is hard or expensive
+ to compute, we propose to use Generlized Picard iterative process 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "faleichik01"
+
+\end_inset
+
+.
+ We can rewrite Eq.(
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:DGsystem"
+
+\end_inset
+
+) as 
+\begin_inset Formula 
+\[
+r(y_{\alpha})=-\Phi_{\alpha\beta}y_{\beta}+\phi_{\beta}(0)y_{0}+h\Delta_{\alpha\beta}f(y_{\beta})
+\]
+
+\end_inset
+
+ and we want to solve 
+\begin_inset Formula $r(y_{\alpha})=0.$
+\end_inset
+
+ Here were construct an auxiliary system of ODE:
+\begin_inset Formula 
+\begin{equation}
+\frac{dy_{\alpha}}{dt}=r(y_{\alpha})\label{eq:ODEsteady}
+\end{equation}
+
+\end_inset
+
+ where 
+\begin_inset Formula $t$
+\end_inset
+
+ is an artificial time variable.
+ This ODE has a steady-state solution 
+\begin_inset Formula $y_{\alpha}^{\star}$
+\end_inset
+
+ such that 
+\begin_inset Formula $r(y_{\alpha}^{\star})=0$
+\end_inset
+
+.
+ Suppose that this solution is asymptotically stable, that is all eigenvalues
+ of Jacobi matrix 
+\begin_inset Formula $\partial r/\partial{\bf y}|_{{\bf y}={\bf y}^{\star}}$
+\end_inset
+
+ have negative real parts.
+ Since we are interested in a steady state solution, we are not concerned
+ with accuracy of time-dependent solution for 
+\begin_inset Formula $y_{\alpha}(t)$
+\end_inset
+
+, thus we can use an multi-stage extended-stability Runge-Kutta methods,
+ for example like Runge Kutta Chebyshev 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "alexiadisRKC1"
+
+\end_inset
+
+ or Runge Kutta Legendre 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "balsaraRKL1,balsaraRKL2"
+
+\end_inset
+
+ schemes.
+\end_layout
+
+\begin_layout Quote
+
+\noun on
+##eg todo: apply to some basic ode's and use arbitrary high order expansion
+ to test convergence
+\end_layout
+
+\begin_layout Quote
+
+\noun on
+#eg todo: apply the scheme to diffusion and compare performance to 
+\noun default
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "balsaraRKL1,balsaraRKL2"
+
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Quote
+
+\noun on
+#eg todo: understand better stability region of the rkl-scheme on Eq.(
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:ODEsteady"
+
+\end_inset
+
+ )
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "faleichik01"
+
+\end_inset
+
+Faleichik, B.
+ , Bondar, I.
+ and Byl, V., 
+\begin_inset Quotes eld
+\end_inset
+
+Generalized Picard iterations: A class of iterated Runge-Kutta methods for
+ stiff problems
+\begin_inset Quotes erd
+\end_inset
+
+, Journal of Computational and Applied Mathematics 262 (2014) 37-50
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "alexiadisRKC1"
+
+\end_inset
+
+Alexiades, V., Amiez, G., Gremaud, P.
+ A., 
+\begin_inset Quotes eld
+\end_inset
+
+Super-time-stepping acceleration of explicit schemes for parabolic problems
+\begin_inset Quotes erd
+\end_inset
+
+, Commun.
+ Numer.
+ Methods Eng.
+ 12 (1) (1996) 31-42
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "balsaraRKL1"
+
+\end_inset
+
+Meyer, C.
+ D, Balsara, D.
+ S., Aslam, T.
+ D., 
+\begin_inset Quotes eld
+\end_inset
+
+A stabilized Runge-Kutta-Legendre method for explicit super-time-stepping
+ of parabolic and mixed equations
+\begin_inset Quotes erd
+\end_inset
+
+, Journal of Computational Physics 257 (2014) 594-626
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "balsaraRKL2"
+
+\end_inset
+
+Meyer, C.
+ D, Balsara, D.
+ S., Aslam, T.
+ D.,
+\begin_inset Quotes erd
+\end_inset
+
+A second-order accurate Super TimeStepping formulation for anisotropic thermal
+ conduction
+\begin_inset Quotes erd
+\end_inset
+
+, Mon.
+ Not.
+ R.
+ Astron.
+ Soc.
+ 442, 2102-2115 (2012)
+\end_layout
+
+\end_body
+\end_document
