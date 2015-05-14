@@ -17,6 +17,7 @@ struct Params
   real_t dt() const {return cfl * diff/square(dx);}
 };
 
+
 template<typename Param, typename SoA>
 static void brusselator_rhs(const Param &param, SoA &f, SoA &rhs)
 {
@@ -57,7 +58,71 @@ static void brusselator_ic(const Param &param, SoA &f)
       Real{3}
     };
   }
+}
 
+template<typename Param, typename SoA>
+static void step(Param &param, SoA &f)
+{
+  const auto n = f.size();
+  static SoA k0(n);
+  static SoA k1(n);
+  static SoA k2(n);
+  static SoA k3(n);
+  static SoA k4(n);
+  static SoA k5(n);
+  static SoA k6(n);
+
+  const auto h = param.h
+  auto scale = [h](SoA_value val) { return val*h; }
+
+  for (int i = 0; i < n; i++)
+  {
+    k0[i] = f[i];
+  }
+  brusselator_rhs(param, f, k1, scale);
+
+  for (int i = 0; i < n; i++)
+  {
+    k0[i]  = f[i] + Real{0.25}*k1[i];
+  }
+  brusselator_rhs(param, k0, k2, scale);
+
+  for (int i = 0; i < n; i++)
+  {
+    k0[i]  = f[i] + Real{3.0/32.0}*k1[i] + Real{9.0/32.0}*k2[i];
+  }
+  brusselator_rhs(param, k0, k3, scale);
+
+  for (int i = 0; i < n; i++)
+  {
+    k0[i]  = f[i] + Real{1932.0/2197.0}*k1[i] - Real{7200.0/2197.0}*k2[i] + Real{7296.0/2197}*k3[i];
+  }
+  brusselator_rhs(param, k0, k4, scale);
+
+  for (int i = 0; i < n; i++)
+  {
+    k0[i]  = f[i] + Real{439.0/216}*k1[i] - Real{8}*k2[i] + Real{3680.0/513}*k3[i] - Real{845.0/4104}*k4[i];
+  }
+  brusselator_rhs(param, k0, k5, scale);
+
+  for (int i = 0; i < n; i++)
+  {
+    k0[i]  = f[i] - Real{8.0/27}*k1[i] + Real{2}*k2[i] - Real{3544.0/2565}*k3[i] + Real{1859.0/4104}*k4[i] - Real{11.0/40}*k5[i];
+  }
+  brusselator_rhs(param, k0, k6, scale);
+
+  auto err = Real{0};
+  for (int i = 0; i < n; i++)
+  {
+    const auto z = f[i] + Real{16.0/135}*k1[i] + Real{6656.0/12825}*k3[i] + Real{28561.0/56430}*k4[i] - Real{9.0/50}*k5[i] + Real{2.0/55}*k6[i];
+    const auto y = f[i] + Real{25.0/216}*k1[i] + Real{1408.0/ 2565}*k3[i] + Real{ 2197.0/ 4101}*k4[i] - Real{   0.2}*k5[i];
+    f[i] = z;
+    const auto err_loc = max(abs(z - y));
+    err = std::max(err_loc, err);
+  }
+
+  const auto s = std::pow(para.eps*Real{0.5}/err, Real{0.25});
+  param.h *= s;
 }
 
 template<typename Param, typename SoA>
