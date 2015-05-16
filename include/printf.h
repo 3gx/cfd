@@ -1,7 +1,7 @@
 #pragma once
 
 template<typename OS>
-static void fprintf(OS &os, const char *s)
+static void printf(OS &os, const char *s)
 {
   while (*s) {
     if (*s == '%') {
@@ -17,7 +17,7 @@ static void fprintf(OS &os, const char *s)
 }
 
 template<typename OS, typename T, typename... Args>
-static void fprintf(OS &os, const char *s, T& value, Args... args)
+static void printf(OS &os, const char *s, T& value, Args... args)
 {
   while (*s) {
     if (*s == '%') {
@@ -26,7 +26,7 @@ static void fprintf(OS &os, const char *s, T& value, Args... args)
       }
       else {
         os << value;
-        fprintf(os, s + 1, args...); // call even when *s == 0 to detect extra arguments
+        printf(os, s + 1, args...); // call even when *s == 0 to detect extra arguments
         return;
       }
     }

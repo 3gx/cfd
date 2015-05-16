@@ -2,43 +2,10 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include "printf.h"
+#include "zip_iterator.h"
+#include "common.h"
 
-template<typename T>
-static T square(const T x) { return x*x; }
-
-static void fprintf(std::ostream &os, const char *s)
-{
-  while (*s) {
-    if (*s == '%') {
-      if (*(s + 1) == '%') {
-        ++s;
-      }
-      else {
-        throw "invalid format string: missing arguments";
-      }
-    }
-    os << *s++;
-  }
-}
-
-template<typename T, typename... Args>
-static void fprintf(std::ostream &os, const char *s, T& value, Args... args)
-{
-  while (*s) {
-    if (*s == '%') {
-      if (*(s + 1) == '%') {
-        ++s;
-      }
-      else {
-        os << value;
-        fprintf(os, s + 1, args...); // call even when *s == 0 to detect extra arguments
-        return;
-      }
-    }
-    os << *s++;
-  }
-  throw "extra arguments provided to printf";
-}
 
 template<typename real_t>
 struct Params
@@ -175,16 +142,16 @@ void dump2file(const vector_t &f, const std::string fileName)
   const int n = f.size();
   std::ofstream fout(fileName);
   for (int i = 1; i < n-1; i++)
-    fout << f[i] << std::endl;
+    fout << std::setprecision(16) << f[i] << std::endl;
 }
 
 int main(int argc, char * argv[])
 {
   const int ncell = argc > 1 ? atoi(argv[1]) : 100;
-  fprintf(std::cerr, "ncell= %\n", ncell);
+  printf(std::cerr, "ncell= %\n", ncell);
 
   const int niter = argc > 2 ? atoi(argv[2]) : 10;
-  fprintf(std::cerr, "niter= %\n", niter);
+  printf(std::cerr, "niter= %\n", niter);
   
 
   using real_t = double;
@@ -195,7 +162,7 @@ int main(int argc, char * argv[])
   auto params = params_t{};
   params.dx   = 1;
   params.diff = 1;
-  params.cfl  = 0.50;  /* stable for cfl <= 0.5 */
+  params.cfl  = 0.40;  /* stable for cfl <= 0.5 */
 //  params.cfl  = 0.252;
 
   vector_t f(ncell+2);
@@ -205,7 +172,7 @@ int main(int argc, char * argv[])
 
   for (int iter = 0; iter < niter; iter++)
   {
-    fprintf(std::cerr, "iter= %\n", iter);
+    printf(std::cerr, "iter= %\n", iter);
 #if 1
     compute_update<FreeBC>(params,f);
 //    compute_update<PeriodicBC>(params,f);
