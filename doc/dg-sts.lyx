@@ -1,0 +1,341 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize letterpaper
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+DG-STS 
+\end_layout
+
+\begin_layout Abstract
+Just list of formulas not to forget
+\end_layout
+
+\begin_layout Section
+DG + Semi-discrete diffusion equation
+\end_layout
+
+\begin_layout Standard
+The diffusion equation has the following form:
+\begin_inset Formula 
+\[
+\frac{dq^{i}}{dt}=\lambda(q^{i+1}-2q^{i}+q^{i-1})
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $\lambda=\frac{D\tau}{h^{2}}$
+\end_inset
+
+, and 
+\begin_inset Formula $D$
+\end_inset
+
+ is diffusion coefficient, 
+\begin_inset Formula $\tau$
+\end_inset
+
+ and 
+\begin_inset Formula $h$
+\end_inset
+
+ are the time and space quantizations.
+ 
+\end_layout
+
+\begin_layout Standard
+We time discretize this equation with the help of DG using the following
+ basis function expansion
+\begin_inset Formula 
+\[
+q^{i}=q_{\alpha}^{i}\theta^{\alpha}(t)
+\]
+
+\end_inset
+
+ Multiplying equation above by 
+\begin_inset Formula $\theta_{\beta}(t)$
+\end_inset
+
+ and integrating it from 
+\begin_inset Formula $t=0$
+\end_inset
+
+ to 
+\begin_inset Formula $t=$
+\end_inset
+
+1 we obtain
+\begin_inset Formula 
+\[
+\int_{0}^{1}\theta_{\beta}\frac{dq^{i}}{dt}\,dt=\lambda\int_{0}^{1}\theta_{\beta}(q^{i+1}-2q^{i}+q^{i-1})\,dt
+\]
+
+\end_inset
+
+ Now, integrating the LHS by part and we have 
+\begin_inset Formula 
+\[
+\int_{0}^{1}\frac{d}{dt}(\theta_{\beta}q^{i})\,dt-\int_{0}^{1}\theta_{\beta}^{'}q^{i}\,dt=\theta_{\beta}(1)\theta_{\alpha}(1)q_{\alpha}^{i}-\theta_{\beta}(0)q_{0}^{i}-M_{\alpha\beta}q_{\alpha}^{i}
+\]
+
+\end_inset
+
+ where 
+\begin_inset Formula 
+\[
+M_{\alpha\beta}=\int_{0}^{1}\theta_{\alpha}(t)\theta'_{\beta}(t)\,dt
+\]
+
+\end_inset
+
+ Hence we have the following fully discrete form
+\begin_inset Formula 
+\[
+(\Gamma_{\alpha\beta}-M_{\alpha\beta})q_{\alpha}^{i}=\lambda\left\langle \theta_{\beta},\theta_{\alpha}\right\rangle (q_{\alpha}^{i+1}-2q_{\alpha}^{i}+q_{\alpha}^{i-1})
+\]
+
+\end_inset
+
+ where 
+\begin_inset Formula 
+\[
+\Gamma_{\alpha\beta}=\theta_{\alpha}(1)\theta_{\beta}(1)
+\]
+
+\end_inset
+
+ and 
+\begin_inset Formula 
+\[
+\left\langle \theta_{\alpha},\theta_{\beta}\right\rangle =\int_{0}^{1}\theta_{\alpha}(t)\theta_{\beta}(t)\,dt
+\]
+
+\end_inset
+
+ Assuming that 
+\begin_inset Formula $\left\langle \theta_{\alpha},\theta_{\beta}\right\rangle =\omega_{\alpha}\delta_{\alpha\beta}$
+\end_inset
+
+ we obtain
+\begin_inset Formula 
+\[
+(\Gamma_{\alpha\beta}-M_{\alpha\beta})q_{\alpha}^{i}=\theta_{\beta}(0)q_{0}^{i}+\lambda\omega_{\beta}(q_{\beta}^{i+1}-2q_{\beta}^{i}+q_{\beta}^{i-1})
+\]
+
+\end_inset
+
+In principle, this results in a sparse linear system, but perhaps we can
+ solve it differently..
+\end_layout
+
+\begin_layout Section
+STS attempt #1
+\end_layout
+
+\begin_layout Standard
+We try to use STS method on fully discrete equation above.
+ We use 2-nder order representation with the following shifted Legendre
+ Polynomials
+\begin_inset Formula 
+\[
+\theta_{0}(\tau)=1
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\theta_{1}(\tau)=2\tau-1
+\]
+
+\end_inset
+
+ Thus, the matrices take the following form
+\begin_inset Formula 
+\[
+\Gamma_{\alpha\beta}=\left(\begin{array}{cc}
+1 & 1\\
+1 & 1
+\end{array}\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+M_{\alpha\beta}=\left(\begin{array}{cc}
+0 & 2\\
+0 & 0
+\end{array}\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\Lambda_{\alpha\beta}=\Gamma_{\alpha\beta}-M_{\alpha\beta}=\left(\begin{array}{cc}
+1 & -1\\
+1 & 1
+\end{array}\right)
+\]
+
+\end_inset
+
+ 
+\begin_inset Formula 
+\[
+\Lambda_{\beta\alpha}^{-1}=\frac{1}{2}\left(\begin{array}{cc}
+1 & 1\\
+-1 & 1
+\end{array}\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\omega_{0}=1\qquad\omega_{1}=\frac{1}{3}
+\]
+
+\end_inset
+
+ and the equation take the following form
+\begin_inset Formula 
+\[
+q_{\alpha}^{i}\Lambda_{\alpha\beta}=\theta_{\beta}(0)q_{0}^{i}+\lambda\omega_{\beta}(q_{\beta}^{i+1}-2q_{\beta}^{i}+q_{\beta}^{i-1})
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let's rewrite it iteratively as follows:
+\begin_inset Formula 
+\[
+q_{\alpha}^{i,n+1}=q_{0}^{i}\theta_{\beta}\Lambda_{\beta\alpha}^{-1}+\lambda\omega_{\beta}(q_{\beta}^{i+1,n}-2q_{\beta}^{i,n}+q_{\beta}^{i-1,n})\Lambda_{\beta\alpha}^{-1}
+\]
+
+\end_inset
+
+ We obtain the following linear system
+\begin_inset Formula 
+\[
+\begin{cases}
+q_{0}^{i,n+1}= & \hat{q}_{0}^{i}+\frac{\lambda}{2}(q_{0}^{i+1}-2q_{0}^{i}+q_{0}^{i-1})-\frac{\lambda}{6}(q_{1}^{i+1}-2q_{1}^{i}+q_{1}^{i-1})\\
+q_{1}^{i,n+1}= & \frac{\lambda}{2}(q_{0}^{i+1}-2q_{0}^{i}+q_{0}^{i-1})+\frac{\lambda}{6}(q_{1}^{i+1}-2q_{1}^{i}+q_{1}^{i-1})
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+STS attempt #2
+\end_layout
+
+\begin_layout Standard
+Let's try it differently.
+ Add and subtract to LHS identity matrix, such that we have
+\begin_inset Formula 
+\[
+(\Gamma_{\alpha\beta}-M_{\alpha\beta}+\delta_{\alpha\beta})q_{\alpha}^{i}=q_{\beta}^{i}+\theta_{\beta}(0)q_{0}^{i}+\lambda\omega_{\beta}(q_{\beta}^{i+1}-2q_{\beta}^{i}+q_{\beta}^{i-1})
+\]
+
+\end_inset
+
+ which gives us the following expansion 
+\begin_inset Formula 
+\[
+\Lambda_{\alpha\beta}=\Gamma_{\alpha\beta}-M_{\alpha\beta}+\delta_{\alpha\beta}=\left(\begin{array}{cc}
+\\
+\\
+\end{array}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

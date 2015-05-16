@@ -30,3 +30,4 @@
 *.app
 *.swp
 *~
+.DS_Store
