@@ -222,7 +222,7 @@ reference "eq:DGstep2"
 
 \begin_inset Formula 
 \[
-\int_{0}^{1}\phi_{\beta}(\xi)\frac{dy}{d\xi}\,d\xi=\phi_{\beta}(1)\phi_{\alpha}(1)y_{\alpha}-\phi_{\beta}(0)y_{0}-\left\langle \phi'_{\beta},\phi_{\alpha}\right\rangle y_{\alpha}=\Phi_{\alpha\beta}y_{\beta}-\phi_{\beta}(0)y_{0}
+\int_{0}^{1}\phi_{\beta}(\xi)\frac{dy}{d\xi}\,d\xi=\phi_{\beta}(1)\phi_{\alpha}(1)y_{\alpha}-\phi_{\beta}(0)y_{0}-\left\langle \phi'_{\beta},\phi_{\alpha}\right\rangle y_{\alpha}=\Phi_{\beta\alpha}y_{\alpha}-\phi_{\beta}(0)y_{0}
 \]
 
 \end_inset
@@ -237,7 +237,7 @@ reference "eq:DGstep1"
 ) can be rewritten as
 \begin_inset Formula 
 \[
-h\int_{0}^{1}\phi_{\beta}(\xi)\tilde{f}(\xi)\,d\xi=h\left\langle \phi_{\beta,}\phi_{\alpha}\right\rangle f_{\alpha}=h\Delta_{\alpha\beta}f_{\beta}
+h\int_{0}^{1}\phi_{\beta}(\xi)\tilde{f}(\xi)\,d\xi=h\left\langle \phi_{\beta,}\phi_{\alpha}\right\rangle f_{\alpha}=h\Delta_{\beta\alpha}f_{\alpha}
 \]
 
 \end_inset
@@ -252,7 +252,7 @@ reference "eq:DGstep1"
 ) is transformed to a (non-linear) algebraic system
 \begin_inset Formula 
 \begin{equation}
-\Phi_{\alpha\beta}y_{\beta}=\phi_{\beta}(0)y_{0}+h\Delta_{\alpha\beta}f(y_{\beta})\label{eq:DGsystem}
+\Phi_{\beta\alpha}y_{\alpha}=\phi_{\beta}(0)y_{0}+h\Delta_{\beta\alpha}f(y_{\alpha})\label{eq:DGsystem}
 \end{equation}
 
 \end_inset
