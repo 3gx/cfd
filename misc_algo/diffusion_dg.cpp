@@ -33,8 +33,8 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
 
     static constexpr matrix_type _matrix{vector_type{1}};
     static constexpr matrix_type _matrix_inv{vector_type{1}};
-    static constexpr vector_type  _weight{1};
-    static constexpr vector_type  _zero{1};
+    static constexpr vector_type _weight{1};
+    static constexpr vector_type _zero{1};
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
@@ -53,12 +53,19 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
 
     static constexpr matrix_type _matrix{
       vector_type{Real{1},Real{0.36602540378443865}},
-        vector_type{Real{-1.3660254037844386},Real{1}} };
+      vector_type{Real{-1.3660254037844386},Real{1}} 
+    };
+
     static constexpr matrix_type _matrix_inv{
       vector_type{0.6666666666666666, -0.24401693585629244},
-        vector_type{0.9106836025229591, 0.6666666666666666} };
-    static constexpr vector_type  _weight{Real{0.5},Real{0.5}};
-    static constexpr vector_type  _zero{Real{1.3660254037844386}, Real{-0.36602540378443865}};
+      vector_type{0.9106836025229591, 0.6666666666666666} 
+    };
+
+    static constexpr vector_type _weight{Real{0.5},Real{0.5}};
+    static constexpr vector_type _zero{
+      Real{1.3660254037844386}, 
+      Real{-0.36602540378443865}
+    };
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
@@ -77,23 +84,27 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
 
     static constexpr matrix_type _matrix{
       vector_type{ 1.1111111111111112,  0.4485512379056266, -0.08083179131550157},
-        vector_type{-1.5596623490167376,  0.4444444444444444,  0.4485512379056266},
-        vector_type{ 0.6363873468710571, -1.5596623490167376,  1.1111111111111112} };
+      vector_type{-1.5596623490167376,  0.4444444444444444,  0.4485512379056266},
+      vector_type{ 0.6363873468710571, -1.5596623490167376,  1.1111111111111112} 
+    };
 
     static constexpr matrix_type _matrix_inv{
       vector_type{0.58, -0.18094750193111253, 0.11524199845510998},
-        vector_type{0.9809475019311126, 0.625, -0.18094750193111253},
-        vector_type{1.04475800154489, 0.9809475019311126, 0.58} };
+      vector_type{0.9809475019311126, 0.625, -0.18094750193111253},
+      vector_type{1.04475800154489, 0.9809475019311126, 0.58} 
+    };
 
-    static constexpr vector_type  _weight{
+    static constexpr vector_type _weight{
       Real{0.2777777777777778},
-        Real{0.4444444444444444},
-        Real{0.2777777777777778} };
+      Real{0.4444444444444444},
+      Real{0.2777777777777778} 
+    };
 
-    static constexpr vector_type  _zero{
+    static constexpr vector_type _zero{
       Real{1.4788305577012362},
-        Real{-0.6666666666666666},
-        Real{0.18783610896543051} };
+      Real{-0.6666666666666666},
+      Real{0.18783610896543051} 
+    };
 
   public:
 
@@ -172,19 +183,19 @@ static void compute_rhs_preconditioned(
   using ExpansionType = typename Expansion::value_type;
   using Real = typename ExpansionType::value_type;
 
-  static ExpansionType diff_x;
+  static ExpansionType dx(arraySize);
 
-  for (int k = 0; k < expansionOrder; k++)
+  for (size_t k = 0; k < expansionOrder; k++)
   {
     const auto weight = Expansion::weight(k);
     const auto scale = weight * param.dt();
-    pde(param, x[k], diff_x, [scale](const auto &val) { return val*scale;} );
+    pde(param, x[k], dx, [scale](const auto &val) { return val*scale;} );
     for (int i = 0; i < arraySize; i++)
     {
       Real r = 0;
-      for (int l = 0; l < expansionOrder; l++)
+      for (size_t l = 0; l < expansionOrder; l++)
         r += Expansion::matrix(k,l)*x[l][i];
-      rhs[k][i] = param.zeta*(-r + Expansion::zero(k)*x0[i] + diff_x[i]);
+      rhs[k][i] = param.zeta*(-r + Expansion::zero(k)*x0[i] + dx[i]);
     }
   }
 }
@@ -202,15 +213,17 @@ static void solve_system(
 
   constexpr auto expansionOrder = Expansion::size();   // expansion order
 
-  Expansion rhs;
+  static Expansion rhs;
+  rhs.resize(x[0].size());
+
   const int niter = 10;
   for (int iter = 0; iter < niter; iter++)
   {
-    for (int k = 0; k < expansionOrder; k++)
+    for (size_t k = 0; k < expansionOrder; k++)
       BC::apply(x[k]);
 
     iterate(rhs, x, x0, param, pde);
-    for (int k = 0; k < expansionOrder; k++)
+    for (size_t k = 0; k < expansionOrder; k++)
     {
       Real err = 0;
       constexpr Real eps = 1.0e-7;
@@ -234,8 +247,8 @@ static void update_step(
   using Expansion = ExpansionT<ORDER, Vector, Real>;
 
   Expansion x;
-  constexpr int expansionOrder = Expansion::size();
-  for (auto k = 0*expansionOrder; k < expansionOrder; k++)
+  constexpr auto expansionOrder = Expansion::size();
+  for (size_t k = 0; k < expansionOrder; k++)
   {
     x[k] = y;
   }
@@ -244,12 +257,12 @@ static void update_step(
 
   const auto arraySize = y.size();
   const auto dt = param.dt();
-  for (auto i = 0*arraySize; i < arraySize; i++)
+  for (size_t i = 0; i < arraySize; i++)
   {
-    Real r = 0;
-    for (auto k = 0*expansionOrder; k < expansionOrder; k++)
-      r += Expansion::weight(k)*x[k][i];
-    y[i] += param.dt*r;
+    Real dy = 0;
+    for (size_t k = 0; k < expansionOrder; k++)
+      dy += Expansion::weight(k)*x[k][i];
+    y[i] += param.dt*dy;
   }
 }
 
