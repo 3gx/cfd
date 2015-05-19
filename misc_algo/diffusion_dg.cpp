@@ -7,7 +7,7 @@
 #include "common.h"
 
 template<size_t N, typename T, typename Real>
-class ExpansionBase
+class ExpansionBaseT
 {
   protected:
     using vector_type = std::array<Real,N>;
@@ -21,13 +21,13 @@ class ExpansionBase
 };
 
 template<size_t N, typename T, typename Real>
-class Expansion;
+class ExpansionT;
 
 template<typename T, typename Real>
-class Expansion<1,T,Real> : public ExpansionBase<1,T,Real>
+class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
 {
   protected:
-    using base_type   = ExpansionBase<1,T,Real>;
+    using base_type   = ExpansionBaseT<1,T,Real>;
     using vector_type = typename base_type::vector_type;
     using matrix_type = typename base_type::matrix_type;
 
@@ -44,10 +44,10 @@ class Expansion<1,T,Real> : public ExpansionBase<1,T,Real>
 };
 
 template<typename T, typename Real>
-class Expansion<2,T,Real> : public ExpansionBase<2,T,Real>
+class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
 {
   protected:
-    using base_type   = ExpansionBase<2,T,Real>;
+    using base_type   = ExpansionBaseT<2,T,Real>;
     using vector_type = typename base_type::vector_type;
     using matrix_type = typename base_type::matrix_type;
 
@@ -68,10 +68,10 @@ class Expansion<2,T,Real> : public ExpansionBase<2,T,Real>
 };
 
 template<typename T, typename Real>
-class Expansion<3,T,Real> : public ExpansionBase<3,T,Real>
+class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
 {
   protected:
-    using base_type   = ExpansionBase<3,T,Real>;
+    using base_type   = ExpansionBaseT<3,T,Real>;
     using vector_type = typename base_type::vector_type;
     using matrix_type = typename base_type::matrix_type;
 
@@ -157,8 +157,13 @@ static void compute_df(const Param &params, const Vector &f, Vector &df)
   compute_df(params, f, df, [](const auto x) { return x; });
 }
 
-template<typename Param, typename Expansion, typename PDE>
-void compute_rhs_precondition(Expansion &y, const typename Expansion::value_type &y0, const Expansion &x, const PDE &pde, const Param &param)
+template<typename Expansion, typename Param, typename PDE>
+static void compute_rhs_preconditioned(
+    Expansion &rhs,
+    const Expansion &x, 
+    const typename Expansion::value_type &x0, 
+    const Param &param,
+    const PDE &pde)
 {
   constexpr auto expansionOrder = Expansion::size();   // expansion order
 
@@ -172,15 +177,79 @@ void compute_rhs_precondition(Expansion &y, const typename Expansion::value_type
   for (int k = 0; k < expansionOrder; k++)
   {
     const auto weight = Expansion::weight(k);
-    const auto scale = weight * param.cfl;
+    const auto scale = weight * param.dt();
     pde(param, x[k], diff_x, [scale](const auto &val) { return val*scale;} );
     for (int i = 0; i < arraySize; i++)
     {
       Real r = 0;
       for (int l = 0; l < expansionOrder; l++)
         r += Expansion::matrix(k,l)*x[l][i];
-      y[k][i] = x[k][i] + param.zeta*(-r + Expansion::zero(k)*y0[i] + diff_x[i]);
+      rhs[k][i] = param.zeta*(-r + Expansion::zero(k)*x0[i] + diff_x[i]);
     }
+  }
+}
+
+template<typename BC, typename Expansion, typename Param, typename PDE>
+static void solve_system(
+    Expansion &x, 
+    const typename Expansion::value_type &x0, 
+    const Param &param,
+    const PDE &pde)
+{
+  using ExpansionType = typename Expansion::value_type;
+  using Real = typename ExpansionType::value_type;
+  using std::get;
+
+  constexpr auto expansionOrder = Expansion::size();   // expansion order
+
+  Expansion rhs;
+  const int niter = 10;
+  for (int iter = 0; iter < niter; iter++)
+  {
+    for (int k = 0; k < expansionOrder; k++)
+      BC::apply(x[k]);
+
+    iterate(rhs, x, x0, param, pde);
+    for (int k = 0; k < expansionOrder; k++)
+    {
+      Real err = 0;
+      constexpr Real eps = 1.0e-7;
+      for (auto v : make_zip_iterator(x[k], rhs[k]))
+      {
+        get<0>(v) += get<1>(v);
+        err += square(get<1>(v)/(get<0>(v) + eps));
+      }
+    }
+  }
+}
+
+
+template<size_t ORDER, typename BC, typename Vector, typename Param, typename PDE>
+static void update_step(
+    Vector &y,
+    const Param &param,
+    const PDE &pde)
+{
+  using Real = typename Vector::value_type;
+  using Expansion = ExpansionT<ORDER, Vector, Real>;
+
+  Expansion x;
+  constexpr int expansionOrder = Expansion::size();
+  for (auto k = 0*expansionOrder; k < expansionOrder; k++)
+  {
+    x[k] = y;
+  }
+
+  solve_system<BC>(x, y, param, pde);
+
+  const auto arraySize = y.size();
+  const auto dt = param.dt();
+  for (auto i = 0*arraySize; i < arraySize; i++)
+  {
+    Real r = 0;
+    for (auto k = 0*expansionOrder; k < expansionOrder; k++)
+      r += Expansion::weight(k)*x[k][i];
+    y[i] += param.dt*r;
   }
 }
 
