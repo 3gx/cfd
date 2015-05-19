@@ -138,8 +138,8 @@ struct FreeBC
     }
 };
 
-template<typename Param, typename Vector>
-static void compute_df(const Param &params, const Vector &f, Vector &df)
+template<typename Param, typename Vector, typename Func>
+static void compute_df(const Param &params, const Vector &f, Vector &df, const Func &func)
 {
   using Real = typename Vector::value_type;
   const auto c = params.diff/square(params.dx);
@@ -147,7 +147,14 @@ static void compute_df(const Param &params, const Vector &f, Vector &df)
   for (int i = 1 ; i < n-1; i++)
   {
     df[i] = c * (f[i+1] - Real{2.0} * f[i] + f[i-1]);
+    df[i] = func(df[i]);
   }
+}
+
+  template<typename Param, typename Vector>
+static void compute_df(const Param &params, const Vector &f, Vector &df)
+{
+  compute_df(params, f, df, [](const auto x) { return x; });
 }
 
 template<typename Param, typename Expansion, typename PDE>
