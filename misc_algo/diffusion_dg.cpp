@@ -2,8 +2,6 @@
 #include <vector>
 #include <fstream>
 #include <string>
-#include "printf.h"
-#include "zip_iterator.h"
 #include "common.h"
 
 template<size_t N, typename T, typename Real>
@@ -12,12 +10,9 @@ class ExpansionBaseT
   protected:
     using vector_type = std::array<Real,N>;
     using matrix_type = std::array<vector_type,N>;
-    std::array<T,N> data;
   public:
-    using value_type = T;
+    using storage     = std::array<T,N>;
     static constexpr auto size() { return N; }
-    T& operator[](const size_t i) {return data[i];}
-    const T& operator[](const size_t i) const {return data[i];}
 };
 
 template<size_t N, typename T, typename Real>
@@ -115,204 +110,159 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
 };
 
 
-template<typename Real>
-struct ParamT
+template<size_t ORDER, typename PDE>
+struct DGSolverT
 {
-  using value_type = Real;
+  using Real           = typename PDE::Real;
+  using Vector         = typename PDE::Vector;
+  using Expansion      = ExpansionT<ORDER,Vector,Real>;
+  using range_iterator = make_range_iterator<size_t>;
+
+  static constexpr auto expansionRange = make_range_iteratorT<0,Expansion::size()>{};
+
+  PDE _pde;
+  Expansion::storage _x, _rhs;
+
+  DGSolverT(const PDE &pde) : _pde{pde}
+  {
+    for (auto k : expansionRange)
+    {
+      _x  [k].resize(_pde.resolution());
+      _rhs[k].resize(_pde.resolution());
+    }
+  };
+
+  void iterate(const Vector &u0)
+  {
+    for (auto k : expansionRange)
+    {
+      const auto scale = Expansion::weight(k) * _pde.dt();
+      _pde.compute_rhs(_x[k], _rhs[k]);
+
+      assert(_x[k].size() == u0.size());
+      for (auto i : range_iterator{0,u0.size()})
+      {
+        Real r = 0;
+        for (auto l : expansionRange)
+        {
+          r += Expansion::matrix(k,l) * _x[l][i];
+        }
+        _rhs[k][i] = omega * (-r + Expansion::zero(k)*u0[i] + _rhs[k][i]);
+      }
+    }
+  }
+
+  void solve_system(const Vector& u0)
+  {
+    constexpr auto niter = 10;
+    std::array<Real,Expansion::size()> error;
+    for (auto iter : range_iterator{0,niter})
+    {
+      for (auto k : expansionRange)
+      {
+        _pde.apply_bc(_x[k]);
+        error[k] = 0;
+      }
+
+      iterate(u0);
+
+      Real err = 0;
+      int cnt = 0;
+      constexpr auto eps = Real{1.0e-7};
+      for (auto k : expansionRange)
+      {
+        for (auto v : make_zip_iterator(_x[k], _rhs[k]))
+        {
+          get<0>(v) += get<1>(v);
+          error[k] += square(get<1>(v)/(get<0>(v) + eps));
+          cnt += 1;
+        }
+        err += std::max(err,std::sqrt(error[k]/cnt));
+      }
+    }
+  }
+
+  void update()
+  {
+    static auto du = _pde.state();
+
+    for (auto k : expansionRange)
+    {
+      _x[k] = _pde.state();
+    }
+    solve_system(_pde.state());
+
+    for (auto i : range_iterator{0,du.size()})
+    {
+      Real dy = 0;
+      du[i] = 0;
+      for (auto k : expansionRange)
+      {
+        du[i] += Expansion::weight(k) * _x[k][i];
+      }
+    }
+    _pde.update(du);
+  }
+};
+
+template<typename real_type>
+struct PDE
+{
+  using std::get;
+  using Real   = real_type;
+  using Vector = std::vector<Real>;
+
+  Vector f;
+
   Real time;
   Real cfl;
   Real dx;
   Real diff;
+  Real zeta;
 
   Real dt() const {return cfl * diff/square(dx);}
+
+  static void periodic_bc(Vector &f) 
+  {
+    const auto n = f.size();
+    f[0  ] = f[n-2];
+    f[n-1] = f[1  ];
+  }
+
+  static void free_bc(Vector &f) 
+  {
+    const auto n = f.size();
+    f[0  ] = f[  1];
+    f[n-1] = f[n-2];
+  }
+
+  size_t resolution() const { return f.size(); }
+
+  void apply_bc(Vector &f) const
+  {
+//    periodic_bc(f);
+    free_bc();
+  }
+
+  const Vector& state() const { return f; }
+
+  void update(const Vector &df) 
+  {
+    for (auto v: make_zip_iterator(f,df))
+    {
+      get<0>(v) += get<1>(v);
+    }
+  }
+
+  void compute_rhs(Vector &res, const Vector &x)
+  {
+    const auto c = dt() * diff/square(dx);
+    for (auto i : make_range_iterator(1,x.size() - 1))
+    {
+      res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
+    }
+  }
 };
-
-struct PeriodicBC
-{
-  template<typename Vector>
-    static void apply(Vector &f) 
-    {
-      const auto n = f.size();
-      f[0  ] = f[n-2];
-      f[n-1] = f[1  ];
-    }
-};
-
-struct FreeBC 
-{
-  template<typename Vector>
-    static void apply(Vector &f) 
-    {
-      const auto n = f.size();
-      f[0  ] = f[  1];
-      f[n-1] = f[n-2];
-    }
-};
-
-template<typename Param, typename Vector, typename Func>
-static void compute_df(const Param &params, const Vector &f, Vector &df, const Func &func)
-{
-  using Real = typename Vector::value_type;
-  const auto c = params.diff/square(params.dx);
-  const int n = f.size();
-  for (int i = 1 ; i < n-1; i++)
-  {
-    df[i] = c * (f[i+1] - Real{2.0} * f[i] + f[i-1]);
-    df[i] = func(df[i]);
-  }
-}
-
-  template<typename Param, typename Vector>
-static void compute_df(const Param &params, const Vector &f, Vector &df)
-{
-  compute_df(params, f, df, [](const auto x) { return x; });
-}
-
-template<typename Expansion, typename Param, typename PDE>
-static void compute_rhs_preconditioned(
-    Expansion &rhs,
-    const Expansion &x, 
-    const typename Expansion::value_type &x0, 
-    const Param &param,
-    const PDE &pde)
-{
-  constexpr auto expansionOrder = Expansion::size();   // expansion order
-
-  const auto arraySize = x[0].size();
-
-  using ExpansionType = typename Expansion::value_type;
-  using Real = typename ExpansionType::value_type;
-
-  static ExpansionType dx(arraySize);
-
-  for (size_t k = 0; k < expansionOrder; k++)
-  {
-    const auto weight = Expansion::weight(k);
-    const auto scale = weight * param.dt();
-    pde(param, x[k], dx, [scale](const auto &val) { return val*scale;} );
-    for (int i = 0; i < arraySize; i++)
-    {
-      Real r = 0;
-      for (size_t l = 0; l < expansionOrder; l++)
-        r += Expansion::matrix(k,l)*x[l][i];
-      rhs[k][i] = param.zeta*(-r + Expansion::zero(k)*x0[i] + dx[i]);
-    }
-  }
-}
-
-template<typename BC, typename Expansion, typename Param, typename PDE>
-static void solve_system(
-    Expansion &x, 
-    const typename Expansion::value_type &x0, 
-    const Param &param,
-    const PDE &pde)
-{
-  using ExpansionType = typename Expansion::value_type;
-  using Real = typename ExpansionType::value_type;
-  using std::get;
-
-  constexpr auto expansionOrder = Expansion::size();   // expansion order
-
-  static Expansion rhs;
-  rhs.resize(x[0].size());
-
-  const int niter = 10;
-  for (int iter = 0; iter < niter; iter++)
-  {
-    for (size_t k = 0; k < expansionOrder; k++)
-      BC::apply(x[k]);
-
-    iterate(rhs, x, x0, param, pde);
-    for (size_t k = 0; k < expansionOrder; k++)
-    {
-      Real err = 0;
-      constexpr Real eps = 1.0e-7;
-      for (auto v : make_zip_iterator(x[k], rhs[k]))
-      {
-        get<0>(v) += get<1>(v);
-        err += square(get<1>(v)/(get<0>(v) + eps));
-      }
-    }
-  }
-}
-
-
-template<size_t ORDER, typename BC, typename Vector, typename Param, typename PDE>
-static void update_step(
-    Vector &y,
-    const Param &param,
-    const PDE &pde)
-{
-  using Real = typename Vector::value_type;
-  using Expansion = ExpansionT<ORDER, Vector, Real>;
-
-  Expansion x;
-  constexpr auto expansionOrder = Expansion::size();
-  for (size_t k = 0; k < expansionOrder; k++)
-  {
-    x[k] = y;
-  }
-
-  solve_system<BC>(x, y, param, pde);
-
-  const auto arraySize = y.size();
-  const auto dt = param.dt();
-  for (size_t i = 0; i < arraySize; i++)
-  {
-    Real dy = 0;
-    for (size_t k = 0; k < expansionOrder; k++)
-      dy += Expansion::weight(k)*x[k][i];
-    y[i] += param.dt*dy;
-  }
-}
-
-
-template<typename BC,typename Param, typename Vector>
-static void compute_update(const Param &params, Vector &f)
-{
-  using Real = typename Vector::value_type;
-  const auto n = f.size();
-
-  BC::apply(f);
-  
-
-  static Vector df(n);
-
-  compute_df(params,f,df);
-
-  const auto dt = params.dt();
-
-  for (int i = 1; i < n-1; i++)
-  {
-    f[i] += dt * df[i];
-  }
-
-  BC::apply(f);
-}
-
-template<typename BC, typename Param, typename Vector>
-static void compute_update_dg1(const Param &params, Vector &f)
-{
-  using Real = typename Vector::value_type;
-  const auto n = f.size();
-  const auto dt = params.dt();
-
-  const Vector f0 = f;
-  const int niter = 10;
-  for (int iter = 0; iter < niter; iter++)
-  {
-    static Vector df(n);
-    BC::apply(f);
-    compute_df(params,f,df);
-    for (int i = 1; i < n-1; i++)
-    {
-      f[i] = f0[i] + dt * df[i];
-    }
-  }
-
-  BC::apply(f);
-
-}
 
 template<typename Param, typename Vector>
 void set_ic(const Param &params, Vector &f)
