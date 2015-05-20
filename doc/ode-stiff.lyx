@@ -86,7 +86,7 @@ ODE to Algebraic system
 \end_layout
 
 \begin_layout Subsection
-Discontinuous Galerkin
+Discontinuous Galerkin Formulation (DGF)
 \end_layout
 
 \begin_layout Standard
@@ -299,7 +299,7 @@ y(x_{0}+h)=y(x_{0})+h\sum_{\alpha}\omega_{\alpha}f(y_{\alpha},x_{0}+h\zeta_{\alp
 \end_layout
 
 \begin_layout Subsection
-Picard Integral Correction
+Picard Integral Formulation (PIF)
 \end_layout
 
 \begin_layout Standard
