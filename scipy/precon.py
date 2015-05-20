@@ -21,11 +21,11 @@ def isPositive(ev):
   return all(np.isreal(ev)) and all(ev > 0)
 
 def transposeVec(A):
- return np.einsum('...ji',A)
+ return np.einsum('...ij->...ji',A)
 #  return np.transpose(A,(0,2,1))
 
 def matmulVec(A,B):
- return np.einsum('...ij,...jk',A,B)
+ return np.einsum('...ij,...jk->...ik',A,B)
 #  msize = A[0][0].size
 #  niter = A.size/(msize*msize)
 #  return np.sum(transposeVec(A).reshape(niter,msize,msize,1)*B.reshape(niter,msize,1,msize),-3)
