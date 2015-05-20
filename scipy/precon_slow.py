@@ -8,8 +8,6 @@ def printf(format, *args):
 
 def genRandomMatrix(size):
   return 2*np.random.random((size,size))-1
-def genRandomEV(size,eps=0.1):
-  return 1+ (2*np.random.random([size])-1)*eps
 
 def genRandomPDMatrix(size,eps=0.1):
   P = genRandomMatrix(size)
@@ -20,25 +18,20 @@ def genRandomPDMatrix(size,eps=0.1):
 def isPositive(ev):
   return all(np.isreal(ev)) and all(ev > 0)
 
-def transposeVec(A):
-  return np.transpose(A,(0,2,1))
 
-def matmulVec(A,B):
-  msize = A[0].size
-  niter = A.size/msize
-  return np.sum(transposeVec(A).reshape(niter,size,size,1)*B.reshape(niter,size,1,size),-3)
+
 
 mm = np.array([
   [1.,  0.36602540378443865],
   [-1.3660254037844386,  1.]
   ]);
-if True:
+if False:
   mm = np.array([
     [ 1.1111111111111111111,  0.4485512379056265999, -0.0808317913155015634],
     [-1.5596623490167377110,  0.4444444444444444444,  0.4485512379056265999],
     [ 0.6363873468710571190, -1.5596623490167377110,  1.1111111111111111111]
     ])
-if False:
+if True:
   mm = np.array([
     [1.172029553823032,  0.4483838992489365,  -0.1216722269123576, 0.02804689929765592],
     [ -1.736281890383897,  0.4113037795103013,  0.6330178882990265,  -0.1216722269123576],
@@ -55,52 +48,33 @@ if True:
     ])
 
 size = mm[0].size;
-niter = 1000000
+print LA.eigvals(mm)
+mm1 = np.dot(mm, mm.transpose())
+print LA.eigvals(mm1)
+
+niter = 100000
 pmat = []
 evR  = []
 eps = 0.01
-
-#Q = np.empty([niter,size,size])
-#E = np.empty([niter,size,size])
-#for i in range(0,niter):
-#  Q[i] = genRandomMatrix(size)
-#  E[i] = np.diag(genRandomEV(size,eps))
-
-#Q = [np.mat(2*np.random.random((size,size))-1) for i in range(niter)]
-#niter=100
-A = 2*np.random.random((niter,size,size))-1
-B = transposeVec(A)
-Q = matmulVec(A,B)
-Qinv = LA.inv(Q)
-l = np.diag(1 + (2*np.random.random([size])-1)*eps)
-P = matmulVec(np.dot(Q,l),Qinv); 
-Pm = np.dot(P,mm)
-#Pm = np.dot(P,mm+np.identity(size))
-EV = LA.eigvals(Pm)
-REV = np.logical_and(np.all(np.isreal(EV),1), np.all(EV > 0,1))
-
-pmat = []
-evR  = []
-for i in range(REV.size):
-  if REV[i] == True:
-    ev = np.absolute(EV[i])
-    evR  += [[np.max(ev)/np.min(ev),len(pmat)]]
-    pmat += [P[i]]
+for i in range(0,niter):
+  p = genRandomPDMatrix(size,eps)
+  mm1 = np.dot(p,mm);
+  ev = LA.eigvals(mm1);
+  if isPositive(ev):
+    evR += [[np.max(ev)/np.min(ev),len(pmat)]]
+    pmat += [p]
 
 evR.sort()
-print " -------------- "
+
 print evR[0:3]
-print " -------------- "
 print "pmat.size= ", len(pmat)
 if len(pmat) > 0:
   k = evR[0][1]
   print "k=", k
   p = pmat[k]
-  mmp = np.dot(p,mm)
-#  mmp = np.dot(p,mm+np.identity(size))
+  mm1 = np.dot(p,mm)
   print "p=",   np.sort(LA.eigvals(p))
-  print "mmp=", np.sort(LA.eigvals(mmp))
-  print " -------------- "
+  print "mm1=", np.sort(LA.eigvals(mm1))
   printf("{\n");
   for i in range(0,size):
     printf("{");
