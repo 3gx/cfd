@@ -2,6 +2,7 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <cmath>
 #include "common.h"
 
 template<size_t N, typename T, typename Real>
@@ -30,12 +31,14 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     static constexpr matrix_type _matrix_inv{vector_type{1}};
     static constexpr vector_type _weight{1};
     static constexpr vector_type _zero{1};
+    static constexpr matrix_type _preconditioner{vector_type{1}};
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
     static constexpr auto matrix_inv(const size_t i, const size_t j) { return _matrix_inv[j][i]; }
     static constexpr auto weight(const size_t i) {  return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
+    static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
 };
 
 template<typename T, typename Real>
@@ -61,12 +64,18 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
       Real{1.3660254037844386}, 
       Real{-0.36602540378443865}
     };
+    
+    static constexpr matrix_type _preconditioner{
+      vector_type{Real{0.6666666666666652}, Real{0}},
+      vector_type{Real{0.9106836025229587}, Real{0.6666666666666665}}
+    };
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
     static constexpr auto matrix_inv(const size_t i, const size_t j) { return _matrix_inv[j][i]; }
     static constexpr auto weight(const size_t i)  { return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
+    static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
 };
 
 template<typename T, typename Real>
@@ -100,6 +109,12 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       Real{-0.6666666666666666},
       Real{0.18783610896543051} 
     };
+    
+    static constexpr matrix_type _preconditioner{
+      vector_type{0.5800000000000004,  0, 0},
+      vector_type{0.9809475019311106,  0.6249999999999984, 0},
+      vector_type{1.0447580015448896,  0.9809475019311121, 0.5799999999999996}
+    };
 
   public:
 
@@ -107,6 +122,7 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
     static constexpr auto matrix_inv(const size_t i, const size_t j) { return _matrix_inv[j][i]; }
     static constexpr auto weight(const size_t i) { return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
+    static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
 };
 
 
@@ -121,7 +137,7 @@ struct DGSolverT
   static constexpr auto expansionRange = make_range_iteratorT<0,Expansion::size()>{};
 
   PDE _pde;
-  Expansion::storage _x, _rhs;
+  typename Expansion::storage _x, _rhs;
 
   DGSolverT(const PDE &pde) : _pde{pde}
   {
@@ -134,6 +150,7 @@ struct DGSolverT
 
   void iterate(const Vector &u0)
   {
+    Real omega = 1;
     for (auto k : expansionRange)
     {
       const auto scale = Expansion::weight(k) * _pde.dt();
@@ -150,10 +167,27 @@ struct DGSolverT
         _rhs[k][i] = omega * (-r + Expansion::zero(k)*u0[i] + _rhs[k][i]);
       }
     }
+
+    for (auto i : range_iterator{0,u0.size()})
+    {
+      std::array<Vector,Expansion::size()> tmp;
+      for (auto& t : tmp)
+        t = 0;
+        
+      for (auto k : expansionRange)
+        for (auto l : expansionRange)
+        {
+          tmp[k] += Expansion::preconditioner(k,l)*_rhs[l][i];
+        }
+
+      for (auto k : expansionRange)
+        _rhs[k][i] = tmp[k];
+    }
   }
 
   void solve_system(const Vector& u0)
   {
+    using std::get;
     constexpr auto niter = 10;
     std::array<Real,Expansion::size()> error;
     for (auto iter : range_iterator{0,niter})
@@ -208,7 +242,6 @@ struct DGSolverT
 template<typename real_type>
 struct PDE
 {
-  using std::get;
   using Real   = real_type;
   using Vector = std::vector<Real>;
 
@@ -248,6 +281,7 @@ struct PDE
 
   void update(const Vector &df) 
   {
+    using std::get;
     for (auto v: make_zip_iterator(f,df))
     {
       get<0>(v) += get<1>(v);
@@ -257,7 +291,7 @@ struct PDE
   void compute_rhs(Vector &res, const Vector &x)
   {
     const auto c = dt() * diff/square(dx);
-    for (auto i : make_range_iterator(1,x.size() - 1))
+    for (auto i : range_iterator(1,x.size() - 1))
     {
       res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
     }
