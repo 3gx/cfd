@@ -11,6 +11,7 @@ def genRandomMatrix(size):
 
 def genRandomPDMatrix(size,eps=0.1):
   P = genRandomMatrix(size)
+  P = np.dot(P,P.transpose())
   ev = 1 + (2*np.random.random([size])-1)*eps
   return np.dot(P,np.dot(np.diag(ev),LA.inv(P)));
 
@@ -35,7 +36,7 @@ if True:
     [ 0.8262368847139853,  -1.285163043161573,  0.4113037795103013,  0.4483838992489365],
     [ -0.3759017444351098, 0.8262368847139853,  -1.736281890383897,  1.172029553823032]
     ])
-if False:
+if True:
   mm = np.array([
     [1.206348790012935 , 0.4391463979268352 , -0.1306066001318439, 0.0487844200342935 , -0.01226495874790658],
     [-1.845259182395017 , 0.4347623210981763 , 0.6736742077868462,  -0.2051201585243705, 0.0487844200342935],
@@ -49,11 +50,12 @@ print LA.eigvals(mm)
 mm1 = np.dot(mm, mm.transpose())
 print LA.eigvals(mm1)
 
-niter = 10000
+niter = 100000
 pmat = []
 evR  = []
+eps = 0.01
 for i in range(0,niter):
-  p = genRandomPDMatrix(size)
+  p = genRandomPDMatrix(size,eps)
   mm1 = np.dot(p,mm);
   ev = LA.eigvals(mm1);
   if isPositive(ev):
@@ -75,6 +77,7 @@ if len(pmat) > 0:
   for i in range(0,size):
     printf("{");
     for j in range (0,size):
-      printf("%.15f, ", p[i][j])
+      printf("%.15f ", p[i][j])
+      printf(",") if (j < size-1) else printf(" ");
     printf("},\n") if (i!=j) else printf("}\n");
-  printf("}\n");
+  printf("};\n");
