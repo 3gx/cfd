@@ -21,12 +21,14 @@ def isPositive(ev):
   return all(np.isreal(ev)) and all(ev > 0)
 
 def transposeVec(A):
-  return np.transpose(A,(0,2,1))
+ return np.einsum('...ji',A)
+#  return np.transpose(A,(0,2,1))
 
 def matmulVec(A,B):
-  msize = A[0][0].size
-  niter = A.size/(msize*msize)
-  return np.sum(transposeVec(A).reshape(niter,msize,msize,1)*B.reshape(niter,msize,1,msize),-3)
+ return np.einsum('...ij,...jk',A,B)
+#  msize = A[0][0].size
+#  niter = A.size/(msize*msize)
+#  return np.sum(transposeVec(A).reshape(niter,msize,msize,1)*B.reshape(niter,msize,1,msize),-3)
 
 def find_preconditioner(mm, niter, eps):
   # numpy acceleration ideas taken from
@@ -93,13 +95,16 @@ if True:  #  Chebyshev
   )
 
 
+niter = 1000000
 niter = 1000
 eps = 0.01
 
 P = None
 evR = 1e10;
-kk = 1;
+kk = 0;
 while True:
+#  if (kk == 1):
+#    break
   kk += 1
   update = False;
   p = find_preconditioner(mm,niter,eps)
