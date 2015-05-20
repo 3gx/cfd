@@ -8,10 +8,10 @@ def printf(format, *args):
 
 def genRandomMatrix(size):
   return 2*np.random.random((size,size))-1
-def genRandomEV(size,eps=0.1):
+def genRandomEV(size,eps):
   return 1+ (2*np.random.random([size])-1)*eps
 
-def genRandomPDMatrix(size,eps=0.1):
+def genRandomPDMatrix(size,eps):
   P = genRandomMatrix(size)
   P = np.dot(P,P.transpose())
   ev = 1 + (2*np.random.random([size])-1)*eps
@@ -24,9 +24,35 @@ def transposeVec(A):
   return np.transpose(A,(0,2,1))
 
 def matmulVec(A,B):
-  msize = A[0].size
-  niter = A.size/msize
-  return np.sum(transposeVec(A).reshape(niter,size,size,1)*B.reshape(niter,size,1,size),-3)
+  msize = A[0][0].size
+  niter = A.size/(msize*msize)
+  return np.sum(transposeVec(A).reshape(niter,msize,msize,1)*B.reshape(niter,msize,1,msize),-3)
+
+def find_preconditioner(mm, niter, eps):
+  size = mm[0].size;
+  A = 2*np.random.random((niter,size,size))-1
+  B = transposeVec(A)
+  Q = matmulVec(A,B)
+  Qinv = LA.inv(Q)
+  l = np.diag(1 + (2*np.random.random([size])-1)*eps)
+  P = matmulVec(np.dot(Q,l),Qinv); 
+  Pm = np.dot(P,mm)
+  #Pm = np.dot(P,mm+np.identity(size))
+  EV = LA.eigvals(Pm)
+  REV = np.logical_and(np.all(np.isreal(EV),1), np.all(EV > 0,1))
+
+  pmat = None
+  evR  = 1e10;
+  for i in range(REV.size):
+    if REV[i] == True:
+      ev = np.absolute(EV[i])
+      evT  = np.max(ev)/np.min(ev)
+      if (evT < evR):
+        pmat = P[i]
+        evR  = evT
+
+  return pmat;
+
 
 mm = np.array([
   [1.,  0.36602540378443865],
@@ -54,58 +80,43 @@ if True:
     [0.2491918438040957,  -0.5326716355661115, 0.9987488459399110 , -1.845259182395017,  1.206348790012935]
     ])
 
-size = mm[0].size;
-niter = 1000000
-pmat = []
-evR  = []
+niter = 1000
 eps = 0.01
 
-#Q = np.empty([niter,size,size])
-#E = np.empty([niter,size,size])
-#for i in range(0,niter):
-#  Q[i] = genRandomMatrix(size)
-#  E[i] = np.diag(genRandomEV(size,eps))
+P = None
+evR = 1e10;
+kk = 1;
+while True:
+  kk += 1
+  update = False;
+  p = find_preconditioner(mm,niter,eps)
+  if p != None:
+    mmp = np.dot(p,mm)
+    ev = LA.eigvals(mmp)
+    evT = np.max(ev)/np.min(ev)
+    if evT < evR:
+      evR = evT
+      P   = p
+      update = True;
 
-#Q = [np.mat(2*np.random.random((size,size))-1) for i in range(niter)]
-#niter=100
-A = 2*np.random.random((niter,size,size))-1
-B = transposeVec(A)
-Q = matmulVec(A,B)
-Qinv = LA.inv(Q)
-l = np.diag(1 + (2*np.random.random([size])-1)*eps)
-P = matmulVec(np.dot(Q,l),Qinv); 
-Pm = np.dot(P,mm)
-#Pm = np.dot(P,mm+np.identity(size))
-EV = LA.eigvals(Pm)
-REV = np.logical_and(np.all(np.isreal(EV),1), np.all(EV > 0,1))
-
-pmat = []
-evR  = []
-for i in range(REV.size):
-  if REV[i] == True:
-    ev = np.absolute(EV[i])
-    evR  += [[np.max(ev)/np.min(ev),len(pmat)]]
-    pmat += [P[i]]
-
-evR.sort()
-print " -------------- "
-print evR[0:3]
-print " -------------- "
-print "pmat.size= ", len(pmat)
-if len(pmat) > 0:
-  k = evR[0][1]
-  print "k=", k
-  p = pmat[k]
-  mmp = np.dot(p,mm)
-#  mmp = np.dot(p,mm+np.identity(size))
-  print "p=",   np.sort(LA.eigvals(p))
-  print "mmp=", np.sort(LA.eigvals(mmp))
-  print " -------------- "
-  printf("{\n");
-  for i in range(0,size):
-    printf("{");
-    for j in range (0,size):
-      printf("%.15f ", p[i][j])
-      printf(",") if (j < size-1) else printf(" ");
-    printf("},\n") if (i!=j) else printf("}\n");
-  printf("};\n");
+  if update == True:
+    print " ########################### "
+    print " ########################### "
+    p = P
+    size = p[0].size
+    mmp = np.dot(p,mm)
+  #  mmp = np.dot(p,mm+np.identity(size))
+    print "kk =" , kk
+    print "p=",   np.sort(LA.eigvals(p))
+    ev = LA.eigvals(mmp)
+    print "mmp=", np.sort(ev)
+    print "range= ", np.max(ev)/np.min(ev)
+    print " -------------- "
+    printf("{\n");
+    for i in range(0,size):
+      printf("{");
+      for j in range (0,size):
+        printf("%.15f ", p[i][j])
+        printf(",") if (j < size-1) else printf(" ");
+      printf("},\n") if (i!=j) else printf("}\n");
+    printf("};\n");
