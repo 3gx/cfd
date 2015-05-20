@@ -85,6 +85,10 @@ Just list of formulas not to forget
 ODE to Algebraic system
 \end_layout
 
+\begin_layout Subsection
+Discontinuous Galerkin
+\end_layout
+
 \begin_layout Standard
 Consider the following ODE
 \begin_inset Formula 
@@ -288,6 +292,144 @@ Since we use Gauss-Legendre nodes, the integral over a basis function is
 \begin{equation}
 y(x_{0}+h)=y(x_{0})+h\sum_{\alpha}\omega_{\alpha}f(y_{\alpha},x_{0}+h\zeta_{\alpha})\label{eq:ODEsol}
 \end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Picard Integral Correction
+\end_layout
+
+\begin_layout Standard
+Consider the following ODE
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{dy}{dx}=f(y,x)
+\]
+
+\end_inset
+
+Similarly to DG, we assume ODE is integrated with the step-size 
+\begin_inset Formula $h$
+\end_inset
+
+, so that for a step we have 
+\begin_inset Formula $x\in[x_{0},x_{0}+h]$
+\end_inset
+
+ , and we see solution at 
+\begin_inset Formula $x=x_{0}+h$
+\end_inset
+
+.
+ First, we change variable from 
+\begin_inset Formula $x$
+\end_inset
+
+ to 
+\begin_inset Formula $\xi$
+\end_inset
+
+ such that, 
+\begin_inset Formula $x=x_{0}+h\xi$
+\end_inset
+
+.
+ We write, 
+\begin_inset Formula 
+\begin{equation}
+\frac{dy}{d\xi}=hf(y,x_{0}+h\xi)=h\tilde{f}(y,\xi)\label{eq:ode1-1}
+\end{equation}
+
+\end_inset
+
+We integrate both parts
+\begin_inset Formula 
+\[
+y(\xi)=y(0)+h\int_{0}^{\xi}\tilde{f}(y(\zeta),\zeta)\,d\zeta
+\]
+
+\end_inset
+
+ and we use node expansion: 
+\begin_inset Formula $y(\xi)=y_{\alpha}\phi_{\alpha}(\xi)$
+\end_inset
+
+ and 
+\begin_inset Formula $\tilde{f}(\xi)=f_{\alpha}\phi_{\alpha}(\xi)$
+\end_inset
+
+, where 
+\begin_inset Formula $f_{\alpha}=f(y_{\alpha},\xi_{\alpha})$
+\end_inset
+
+.
+ We have 
+\begin_inset Formula 
+\[
+y_{\alpha}\phi_{\alpha}(\xi)=y_{0}+h\int_{0}^{\xi}f_{\alpha}\phi_{\alpha}(\zeta)\:d\zeta=y_{0}+hf_{\alpha}\psi_{\alpha}(\xi)
+\]
+
+\end_inset
+
+ where 
+\begin_inset Formula 
+\[
+\psi_{\alpha}(\xi)=\int_{0}^{\xi}\phi_{\alpha}(\zeta)\,d\zeta
+\]
+
+\end_inset
+
+ Since we use Legendre polynomials with nodes 
+\begin_inset Formula $\{\xi_{\alpha}\}$
+\end_inset
+
+ , such that 
+\begin_inset Formula $\phi_{\alpha}(\xi_{\beta})=\delta_{\alpha\beta}$
+\end_inset
+
+, hence we have
+\begin_inset Formula 
+\[
+y_{\alpha}\phi_{\alpha}(\xi_{\beta})=y_{0}{\bf 1}_{\beta}+hf_{\alpha}\psi_{\alpha}(\xi_{\beta})
+\]
+
+\end_inset
+
+ or, where we also use 
+\begin_inset Formula $y_{0,\beta}=y_{0}{\bf 1}_{\beta}$
+\end_inset
+
+ 
+\begin_inset Formula 
+\[
+y_{\beta}=y_{0,\beta}+hM_{\beta\alpha}f_{\alpha}
+\]
+
+\end_inset
+
+ where 
+\begin_inset Formula 
+\[
+M_{\beta\alpha}=\psi_{\alpha}(\xi_{\beta})
+\]
+
+\end_inset
+
+ We use a preconditioned version where we multiple both sides by 
+\begin_inset Formula $M^{-1}$
+\end_inset
+
+ to obtain the following equation 
+\begin_inset Formula 
+\[
+M_{\alpha\beta}^{-1}y_{\beta}=M_{\alpha\beta}^{-1}y_{0,\beta}+hf_{\alpha}
+\]
 
 \end_inset
 
