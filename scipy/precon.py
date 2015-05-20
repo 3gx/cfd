@@ -29,6 +29,8 @@ def matmulVec(A,B):
   return np.sum(transposeVec(A).reshape(niter,msize,msize,1)*B.reshape(niter,msize,1,msize),-3)
 
 def find_preconditioner(mm, niter, eps):
+  # numpy acceleration ideas taken from
+  # https://jameshensman.wordpress.com/2010/06/14/multiple-matrix-multiplication-in-numpy/
   size = mm[0].size;
   A = 2*np.random.random((niter,size,size))-1
   B = transposeVec(A)
