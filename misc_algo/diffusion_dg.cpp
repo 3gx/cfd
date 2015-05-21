@@ -27,17 +27,15 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     using vector_type = typename base_type::vector_type;
     using matrix_type = typename base_type::matrix_type;
 
-    static constexpr matrix_type _matrix{vector_type{1}};
-    static constexpr matrix_type _matrix_inv{vector_type{1}};
+    static constexpr matrix_type _matrix{vector_type{2}};
     static constexpr vector_type _weight{1};
     static constexpr vector_type _zero{1};
-    static constexpr matrix_type _preconditioner{vector_type{1}};
+    static constexpr matrix_type _preconditioner{vector_type{0.5}};
     static constexpr Real _maxAbsMEV{2};
     static constexpr Real _maxAbsPEV{0.5};
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
-    static constexpr auto matrix_inv(const size_t i, const size_t j) { return _matrix_inv[j][i]; }
     static constexpr auto weight(const size_t i) {  return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
     static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
@@ -54,24 +52,16 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
     using matrix_type = typename base_type::matrix_type;
 
     static constexpr matrix_type _matrix{
-      vector_type{Real{1},Real{0.36602540378443865}},
-      vector_type{Real{-1.3660254037844386},Real{1}} 
-    };
-
-    static constexpr matrix_type _matrix_inv{
-      vector_type{0.6666666666666666, -0.24401693585629244},
-      vector_type{0.9106836025229591, 0.6666666666666666} 
+      vector_type{3.0,  0.4641016151377546},
+      vector_type{-6.464101615137754,  3.0}
     };
 
     static constexpr vector_type _weight{Real{0.5},Real{0.5}};
-    static constexpr vector_type _zero{
-      Real{1.3660254037844386}, 
-      Real{-0.36602540378443865}
-    };
+    static constexpr vector_type _zero{1,1};
     
     static constexpr matrix_type _preconditioner{
-      vector_type{Real{0.6666666666666652}, Real{0}},
-      vector_type{Real{0.9106836025229587}, Real{0.6666666666666665}}
+      vector_type{0.250000000000000000000,  0},
+      vector_type{0.53867513459481288225, 0.250000000000000000000}
     };
 
     static constexpr Real _maxAbsMEV{3.5};
@@ -79,7 +69,6 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
-    static constexpr auto matrix_inv(const size_t i, const size_t j) { return _matrix_inv[j][i]; }
     static constexpr auto weight(const size_t i)  { return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
     static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
@@ -96,15 +85,9 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
     using matrix_type = typename base_type::matrix_type;
 
     static constexpr matrix_type _matrix{
-      vector_type{ 1.1111111111111112,  0.4485512379056266, -0.08083179131550157},
-      vector_type{-1.5596623490167376,  0.4444444444444444,  0.4485512379056266},
-      vector_type{ 0.6363873468710571, -1.5596623490167376,  1.1111111111111112} 
-    };
-
-    static constexpr matrix_type _matrix_inv{
-      vector_type{0.58, -0.18094750193111253, 0.11524199845510998},
-      vector_type{0.9809475019311126, 0.625, -0.18094750193111253},
-      vector_type{1.04475800154489, 0.9809475019311126, 0.58} 
+      vector_type{5.0,  1.1639777949432226, -0.1639777949432225},
+      vector_type{-5.727486121839514,  2.0, 0.7274861218395141},
+      vector_type{10.163977794943223,  -9.163977794943223, 5.0}
     };
 
     static constexpr vector_type _weight{
@@ -113,16 +96,12 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       Real{0.2777777777777778} 
     };
 
-    static constexpr vector_type _zero{
-      Real{1.4788305577012362},
-      Real{-0.6666666666666666},
-      Real{0.18783610896543051} 
-    };
+    static constexpr vector_type _zero{1,1,1};
     
     static constexpr matrix_type _preconditioner{
-      vector_type{0.5800000000000004,  0, 0},
-      vector_type{0.9809475019311106,  0.6249999999999984, 0},
-      vector_type{1.0447580015448896,  0.9809475019311121, 0.5799999999999996}
+      vector_type{0.13888888888888888889, 0, 0},
+      vector_type{0.30026319498086459244, 0.22222222222222222222,  0},
+      vector_type{0.26798833376246945173, 0.48042111196938334790,  0.13888888888888888889}
     };
     
     static constexpr Real _maxAbsMEV{5.1};
@@ -131,7 +110,6 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
   public:
 
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
-    static constexpr auto matrix_inv(const size_t i, const size_t j) { return _matrix_inv[j][i]; }
     static constexpr auto weight(const size_t i) { return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
     static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
@@ -182,6 +160,7 @@ struct DGSolverT
       }
     }
 
+    /* precondition */
     for (auto i : range_iterator{0,u0.size()})
     {
       std::array<Vector,Expansion::size()> tmp;
