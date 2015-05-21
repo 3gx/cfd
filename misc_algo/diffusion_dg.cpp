@@ -119,7 +119,7 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
 
 
 template<size_t ORDER, typename PDE>
-struct DGSolverT
+struct ODESolverT
 {
   using Real           = typename PDE::Real;
   using Vector         = typename PDE::Vector;
@@ -131,7 +131,7 @@ struct DGSolverT
   PDE _pde;
   typename Expansion::storage _x, _rhs;
 
-  DGSolverT(const PDE &pde) : _pde{pde}
+  ODESolverT(const PDE &pde) : _pde{pde}
   {
     for (auto k : expansionRange)
     {
@@ -248,6 +248,13 @@ struct PDEDiffusion
 
   Real dt() const {return _cfl * _diff/square(_dx);}
 
+  auto time() const { return _time; }
+  auto dx() const { return _dx; }
+
+  PDEDiffusion(const size_t n) : _f{Vector(n)}
+  {
+  }
+
   static void periodic_bc(Vector &f) 
   {
     const auto n = f.size();
@@ -290,80 +297,87 @@ struct PDEDiffusion
       res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
     }
   }
+
+  void set_ic()
+  {
+    using std::max;
+
+    /* set  a profile of delta function */
+
+    auto &f = _f;
+
+    const int n = f.size();
+    const auto dx = _dx;
+    const auto L = dx*(n-2);
+    const auto ic = n>>1;
+
+    const auto ampl = Real{1.0};
+
+
+    const int di = 10;
+    std::fill(f.begin(), f.end(), 0);
+    for (int i = -di; i <= di; i++)
+    {
+      const auto fi = max(ampl*(di - abs(i)),Real{0});
+      f[ic + i] = fi;
+    }
+    std::fill(f.begin(), f.end(), 0);
+    for (int i = -di; i <= di; i++)
+    {
+      const auto fi = max(ampl*(di - abs(i)),Real{0});
+      f[ic - ic/2 + i] = fi;
+    }
+    for (int i = -di; i <= di; i++)
+    {
+      const auto fi = max(ampl*(di - abs(i)),Real{0});
+      f[ic + ic/3 + i] = fi;
+    }
+
+  }
 };
 
-template<typename Param, typename Vector>
-void set_ic(const Param &params, Vector &f)
+template<typename PDE>
+void dump2file(std::string fileName, const PDE &pde)
 {
-  using Real = typename Vector::value_type;
-  using std::max;
-
-  /* set  a profile of delta function */
-
-  const int n = f.size();
-  const auto dx = params.dx;
-  const auto L = dx*(n-2);
-  const auto ic = n>>1;
-
-  const auto ampl = Real{1.0};
-
-
-  const int di = 10;
-  std::fill(f.begin(), f.end(), 0);
-  for (int i = -di; i <= di; i++)
-  {
-    const auto fi = max(ampl*(di - abs(i)),Real{0});
-    f[ic + i] = fi;
-  }
-  std::fill(f.begin(), f.end(), 0);
-  for (int i = -di; i <= di; i++)
-  {
-    const auto fi = max(ampl*(di - abs(i)),Real{0});
-    f[ic - ic/2 + i] = fi;
-  }
-  for (int i = -di; i <= di; i++)
-  {
-    const auto fi = max(ampl*(di - abs(i)),Real{0});
-    f[ic + ic/3 + i] = fi;
-  }
-
-}
-
-template<typename Vector>
-void dump2file(const Vector &f, const std::string fileName)
-{
-  const int n = f.size();
+  const auto &f = pde.state();
+  const auto n = f.size();
+  const auto dx = pde.dx();
   std::ofstream fout(fileName);
-  for (int i = 1; i < n-1; i++)
-    fout << std::setprecision(16) << f[i] << std::endl;
+  fout << "# time= " << pde.time() << std::endl;
+  fout << "# n= " << n-2 << std::endl;
+  for (size_t i = 1; i < n-1; i++)
+  {
+    const auto x = (i-1+0.5)*dx/(n-2);
+    fout << x << " " << std::setprecision(16) << f[i] << std::endl;
+  }
 }
 
 int main(int argc, char * argv[])
 {
-  const int ncell = argc > 1 ? atoi(argv[1]) : 100;
+  const size_t ncell = argc > 1 ? atoi(argv[1])+2 : 102;
   printf(std::cerr, "ncell= %\n", ncell);
 
-  const int niter = argc > 2 ? atoi(argv[2]) : 10;
+  const size_t niter = argc > 2 ? atoi(argv[2]) : 10;
   printf(std::cerr, "niter= %\n", niter);
   
 
   using Real = double;
 
-  using Param = ParamT<Real>;
-  using Vector = std::vector<Real>;
+  constexpr auto ORDER = 1;
+  using PDE = PDEDiffusion<Real>;
+  using Solver = ODESolverT<ORDER,PDE>;
 
-  auto params = Param{};
-  params.dx   = 1;
-  params.diff = 1;
-  params.cfl  = 0.40;  /* stable for cfl <= 0.5 */
-  params.time = 0;
-//  params.cfl  = 0.252;
+  PDE pde{ncell};
 
-  Vector f(ncell+2);
+  pde._dx   = 1;
+  pde._diff = 1;
+  pde._cfl  = 0.40;  /* stable for cfl <= 0.5 */
+  pde._time = 0;
 
-  set_ic(params,f);
-  dump2file(f,"ic.txt");
+  pde.set_ic();
+  dump2file("ic.txt",pde);
 
+#if 0
   for (int iter = 0; iter < niter; iter++)
   {
     printf(std::cerr, "iter= %\n", iter);
@@ -375,6 +389,7 @@ int main(int argc, char * argv[])
 #endif
     dump2file(f,"iter"+std::to_string(iter));
   }
+#endif
 
 
 
