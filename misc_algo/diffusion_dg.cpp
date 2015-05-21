@@ -154,9 +154,9 @@ struct DGSolverT
         Real r = 0;
         for (auto l : expansionRange)
         {
-          r += Expansion::matrix(k,l) * _x[l][i];
+          r += Expansion::matrix(k,l) * (u0[i] - _x[l][i]);
         }
-        _rhs[k][i] = omega * (-r + Expansion::zero(k)*u0[i] + _rhs[k][i]);
+        _rhs[k][i] = omega * (r + _rhs[k][i]);
       }
     }
 
