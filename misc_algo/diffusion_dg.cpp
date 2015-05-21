@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <cmath>
+#include <array>
 #include "common.h"
 
 template<size_t N, typename T, typename Real>
@@ -27,20 +28,39 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     using vector_type = typename base_type::vector_type;
     using matrix_type = typename base_type::matrix_type;
 
-    static constexpr matrix_type _matrix{vector_type{2}};
-    static constexpr vector_type _weight{1};
-    static constexpr vector_type _zero{1};
-    static constexpr matrix_type _preconditioner{vector_type{0.5}};
-    static constexpr Real _maxAbsMEV{2};
-    static constexpr Real _maxAbsPEV{0.5};
 
   public:
-    static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
-    static constexpr auto weight(const size_t i) {  return _weight[i];  }
-    static constexpr auto zero(const size_t i) { return _zero[i]; }
-    static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
-    static constexpr auto maxAbsMEV() { return _maxAbsMEV; }
-    static constexpr auto maxAbsPEV() { return _maxAbsPEV; }
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    {
+      const matrix_type _matrix{vector_type{2}};
+      return _matrix[j][i]; 
+    }
+
+    static constexpr auto weight(const size_t i) 
+    {
+      const vector_type _weight{1};
+      return _weight[i];  
+    }
+    static constexpr auto zero(const size_t i) 
+    { 
+      const vector_type _zero{1};
+      return _zero[i]; 
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    { 
+      const matrix_type _preconditioner{vector_type{0.5}};
+      return _preconditioner[j][i];
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real _maxAbsMEV{2};
+      return _maxAbsMEV; 
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real _maxAbsPEV{0.5};
+      return _maxAbsPEV;
+    }
 };
 
 template<typename T, typename Real>
@@ -126,14 +146,18 @@ struct ODESolverT
   using Expansion      = ExpansionT<ORDER,Vector,Real>;
   using range_iterator = make_range_iterator<size_t>;
 
-  static constexpr auto expansionRange = make_range_iteratorT<0,Expansion::size()>{};
 
   PDE _pde;
   typename Expansion::storage _x, _rhs;
 
+  auto expansionRange() const 
+  {
+    return make_range_iteratorT<0,Expansion::size()>{};
+  }
+
   ODESolverT(const PDE &pde) : _pde{pde}
   {
-    for (auto k : expansionRange)
+    for (auto k : expansionRange())
     {
       _x  [k].resize(_pde.resolution());
       _rhs[k].resize(_pde.resolution());
@@ -143,7 +167,7 @@ struct ODESolverT
   void iterate(const Vector &u0)
   {
     const Real omega = Real{0.9}/Expansion::maxAbsPEV*((Expansion::maxAbsMEV() + _pde.cfl()));
-    for (auto k : expansionRange)
+    for (auto k : expansionRange())
     {
       const auto scale = Expansion::weight(k) * _pde.dt();
       _pde.compute_rhs(_x[k], _rhs[k]);
@@ -152,7 +176,7 @@ struct ODESolverT
       for (auto i : range_iterator{0,u0.size()})
       {
         Real r = 0;
-        for (auto l : expansionRange)
+        for (auto l : expansionRange())
         {
           r += Expansion::matrix(k,l) * (u0[i] - _x[l][i]);
         }
@@ -167,13 +191,13 @@ struct ODESolverT
       for (auto& t : tmp)
         t = 0;
         
-      for (auto k : expansionRange)
-        for (auto l : expansionRange)
+      for (auto k : expansionRange())
+        for (auto l : expansionRange())
         {
           tmp[k] += Expansion::preconditioner(k,l)*_rhs[l][i];
         }
 
-      for (auto k : expansionRange)
+      for (auto k : expansionRange())
         _rhs[k][i] = tmp[k];
     }
   }
@@ -185,7 +209,7 @@ struct ODESolverT
     std::array<Real,Expansion::size()> error;
     for (auto iter : range_iterator{0,niter})
     {
-      for (auto k : expansionRange)
+      for (auto k : expansionRange())
       {
         _pde.apply_bc(_x[k]);
         error[k] = 0;
@@ -196,7 +220,7 @@ struct ODESolverT
       Real err = 0;
       int cnt = 0;
       constexpr auto eps = Real{1.0e-7};
-      for (auto k : expansionRange)
+      for (auto k : expansionRange())
       {
         for (auto v : make_zip_iterator(_x[k], _rhs[k]))
         {
@@ -213,7 +237,7 @@ struct ODESolverT
   {
     static auto du = _pde.state();
 
-    for (auto k : expansionRange)
+    for (auto k : expansionRange())
     {
       _x[k] = _pde.state();
     }
@@ -223,7 +247,7 @@ struct ODESolverT
     {
       Real dy = 0;
       du[i] = 0;
-      for (auto k : expansionRange)
+      for (auto k : expansionRange())
       {
         du[i] += Expansion::weight(k) * _x[k][i];
       }
@@ -376,6 +400,8 @@ int main(int argc, char * argv[])
 
   pde.set_ic();
   dump2file("ic.txt",pde);
+
+  Solver solver(pde);
 
 #if 0
   for (int iter = 0; iter < niter; iter++)
