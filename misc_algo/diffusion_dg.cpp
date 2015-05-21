@@ -32,6 +32,8 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     static constexpr vector_type _weight{1};
     static constexpr vector_type _zero{1};
     static constexpr matrix_type _preconditioner{vector_type{1}};
+    static constexpr Real _maxAbsMEV{2};
+    static constexpr Real _maxAbsPEV{0.5};
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
@@ -39,6 +41,8 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     static constexpr auto weight(const size_t i) {  return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
     static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
+    static constexpr auto maxAbsMEV() { return _maxAbsMEV; }
+    static constexpr auto maxAbsPEV() { return _maxAbsPEV; }
 };
 
 template<typename T, typename Real>
@@ -70,12 +74,17 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
       vector_type{Real{0.9106836025229587}, Real{0.6666666666666665}}
     };
 
+    static constexpr Real _maxAbsMEV{3.5};
+    static constexpr Real _maxAbsPEV{0.25};
+
   public:
     static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
     static constexpr auto matrix_inv(const size_t i, const size_t j) { return _matrix_inv[j][i]; }
     static constexpr auto weight(const size_t i)  { return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
     static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
+    static constexpr auto maxAbsMEV() { return _maxAbsMEV; }
+    static constexpr auto maxAbsPEV() { return _maxAbsPEV; }
 };
 
 template<typename T, typename Real>
@@ -115,6 +124,9 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       vector_type{0.9809475019311106,  0.6249999999999984, 0},
       vector_type{1.0447580015448896,  0.9809475019311121, 0.5799999999999996}
     };
+    
+    static constexpr Real _maxAbsMEV{5.1};
+    static constexpr Real _maxAbsPEV{0.22222};
 
   public:
 
@@ -123,6 +135,8 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
     static constexpr auto weight(const size_t i) { return _weight[i];  }
     static constexpr auto zero(const size_t i) { return _zero[i]; }
     static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
+    static constexpr auto maxAbsMEV() { return _maxAbsMEV; }
+    static constexpr auto maxAbsPEV() { return _maxAbsPEV; }
 };
 
 
@@ -150,7 +164,7 @@ struct DGSolverT
 
   void iterate(const Vector &u0)
   {
-    Real omega = 1;
+    const Real omega = Real{0.9}/Expansion::maxAbsPEV*((Expansion::maxAbsMEV() + _pde.cfl()));
     for (auto k : expansionRange)
     {
       const auto scale = Expansion::weight(k) * _pde.dt();
@@ -240,20 +254,20 @@ struct DGSolverT
 };
 
 template<typename real_type>
-struct PDE
+struct PDEDiffusion
 {
   using Real   = real_type;
   using Vector = std::vector<Real>;
 
-  Vector f;
+  Vector _f;
 
-  Real time;
-  Real cfl;
-  Real dx;
-  Real diff;
-  Real zeta;
+  Real _time;
+  Real _cfl;
+  Real _dx;
+  Real _diff;
+  Real _zeta;
 
-  Real dt() const {return cfl * diff/square(dx);}
+  Real dt() const {return _cfl * _diff/square(_dx);}
 
   static void periodic_bc(Vector &f) 
   {
@@ -269,7 +283,8 @@ struct PDE
     f[n-1] = f[n-2];
   }
 
-  size_t resolution() const { return f.size(); }
+  auto cfl() const { return _cfl; }
+  auto resolution() const { return _f.size(); }
 
   void apply_bc(Vector &f) const
   {
@@ -277,12 +292,12 @@ struct PDE
     free_bc();
   }
 
-  const Vector& state() const { return f; }
+  const Vector& state() const { return _f; }
 
   void update(const Vector &df) 
   {
     using std::get;
-    for (auto v: make_zip_iterator(f,df))
+    for (auto v: make_zip_iterator(_f,df))
     {
       get<0>(v) += get<1>(v);
     }
@@ -290,7 +305,7 @@ struct PDE
 
   void compute_rhs(Vector &res, const Vector &x)
   {
-    const auto c = dt() * diff/square(dx);
+    const auto c = dt() * _diff/square(_dx);
     for (auto i : range_iterator(1,x.size() - 1))
     {
       res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
