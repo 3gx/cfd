@@ -316,116 +316,121 @@ struct ODESolverT
 };
 
 template<typename real_type>
-struct PDEDiffusion
+class PDEDiffusion
 {
-  using Real   = real_type;
-  using Vector = std::vector<Real>;
-  using range_iterator = make_range_iterator<size_t>;
+  public:
+    using Real   = real_type;
+    using Vector = std::vector<Real>;
 
-  Vector _f;
+  private:
+    using range_iterator = make_range_iterator<size_t>;
 
-  Real _cfl;
-  Real _dx;
-  Real _diff;
-  Real _zeta;
+    Vector _f;
 
-  Real dt() const {return _cfl * 0.5*square(_dx)/_diff;}
-  Real AbsEV() const
-  {
-    return dt() * 4.0*_diff/square(_dx);  /* 2.0 * cfl */
-  }
+    Real _cfl;
+    Real _dx;
+    Real _diff;
 
-  auto dx() const { return _dx; }
+    size_t n_rhs_calls;
 
-  PDEDiffusion(const size_t n) : _f{Vector(n)}
-  {
-  }
+  public:
+    void set_dx(const Real dx) { _dx = dx;}
+    void set_diff(const Real diff) { _diff = diff;}
+    void set_cfl(const Real cfl) { _cfl = cfl;}
+    Real dt() const {return _cfl * 0.5*square(_dx)/_diff;}
 
-  static void periodic_bc(Vector &f) 
-  {
-    const auto n = f.size();
-    f[0  ] = f[n-2];
-    f[n-1] = f[1  ];
-  }
-
-  static void free_bc(Vector &f) 
-  {
-    const auto n = f.size();
-    f[0  ] = f[  1];
-    f[n-1] = f[n-2];
-  }
-
-  auto cfl() const { return _cfl; }
-  auto resolution() const { return _f.size(); }
-
-  void apply_bc(Vector &f) const
-  {
-//    periodic_bc(f);
-    free_bc(f);
-  }
-
-  const Vector& state() const { return _f; }
-
-  void update(const Vector &df) 
-  {
-    using std::get;
-    for (auto v: make_zip_iterator(_f,df))
+    Real AbsEV() const
     {
-      get<0>(v) += get<1>(v);
-    }
-  }
-
-  template<typename Func>
-  void compute_rhs(Vector &res, const Vector &x, Func func)
-  {
-    const auto c = dt() * _diff/square(_dx);
-    for (auto i : range_iterator{1,x.size() - 1})
-    {
-      res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
-      res[i] = func(res[i]);
-    }
-  }
-  void compute_rhs(Vector &res, const Vector &x)
-  {
-    compute_rhs(res, x, [](const auto x) { return x; });
-  }
-
-  void set_ic()
-  {
-    using std::max;
-
-    /* set  a profile of delta function */
-
-    auto &f = _f;
-
-    const int n = f.size();
-    const auto dx = _dx;
-    const auto L = dx*(n-2);
-    const auto ic = n>>1;
-
-    const auto ampl = Real{1.0};
-
-
-    const int di = 10;
-    std::fill(f.begin(), f.end(), 0);
-    for (int i = -di; i <= di; i++)
-    {
-      const auto fi = max(ampl*(di - abs(i)),Real{0});
-      f[ic + i] = fi;
-    }
-    std::fill(f.begin(), f.end(), 0);
-    for (int i = -di; i <= di; i++)
-    {
-      const auto fi = max(ampl*(di - abs(i)),Real{0});
-      f[ic - ic/2 + i] = fi;
-    }
-    for (int i = -di; i <= di; i++)
-    {
-      const auto fi = max(ampl*(di - abs(i)),Real{0});
-      f[ic + ic/3 + i] = fi;
+      return dt() * 4.0*_diff/square(_dx);  /* 2.0 * cfl */
     }
 
-  }
+    auto dx() const { return _dx; }
+
+    PDEDiffusion(const size_t n) : _f{Vector(n)}, n_rhs_calls{0}
+    {
+    }
+
+    static void periodic_bc(Vector &f) 
+    {
+      const auto n = f.size();
+      f[0  ] = f[n-2];
+      f[n-1] = f[1  ];
+    }
+
+    static void free_bc(Vector &f) 
+    {
+      const auto n = f.size();
+      f[0  ] = f[  1];
+      f[n-1] = f[n-2];
+    }
+
+    auto cfl() const { return _cfl; }
+    auto resolution() const { return _f.size(); }
+
+    void apply_bc(Vector &f) const
+    {
+      periodic_bc(f);
+      //free_bc(f);
+    }
+
+    const Vector& state() const { return _f; }
+
+    void update(const Vector &df) 
+    {
+      using std::get;
+      for (auto v: make_zip_iterator(_f,df))
+      {
+        get<0>(v) += get<1>(v);
+      }
+    }
+
+    template<typename Func>
+      void compute_rhs(Vector &res, const Vector &x, Func func)
+      {
+        n_rhs_calls++;
+        const auto c = dt() * _diff/square(_dx);
+        for (auto i : range_iterator{1,x.size() - 1})
+        {
+          res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
+          res[i] = func(res[i]);
+        }
+      }
+    void compute_rhs(Vector &res, const Vector &x)
+    {
+      compute_rhs(res, x, [](const auto x) { return x; });
+    }
+
+    void set_ic()
+    {
+      using std::max;
+
+      /* set  a profile of delta function */
+
+      auto &f = _f;
+
+      const int n = f.size();
+      const auto dx = _dx;
+      const auto L = dx*(n-2);
+      const auto dL = L * 0.1;
+      const auto ic = n>>1;
+
+      const auto ampl = Real{10.0};
+      const auto slope = ampl/dL;
+
+
+      std::fill(f.begin(), f.end(), 0);
+      const int m = static_cast<int>(dL/dx + 0.5);
+      for (int i = -m; i <= m; i++)
+      {
+        const auto x = L/2 + dx*i;
+        f[ic - ic/2 + i] = std::max(ampl - slope*(std::abs(L/2-x)),Real{0.0});
+      }
+      for (int i = -m*2; i <= m*2; i++)
+      {
+        const auto x = L/2 + dx*i;
+        f[ic + ic/2 + i] = std::max(1.5*ampl - slope*(std::abs(L/2-x)),Real{0.0});
+      }
+    }
 };
 
 template<typename Solver>
@@ -440,7 +445,7 @@ void dump2file(const Solver &solver, std::string fileName = std::string{})
   fout << "# n= " << n-2 << std::endl;
   for (size_t i = 1; i < n-1; i++)
   {
-    const auto x = (i-1+0.5)*dx/(n-2);
+    const auto x = (i-1)*dx;
     fout << x << " " << std::setprecision(16) << f[i] << std::endl;
   }
 }
@@ -449,24 +454,24 @@ int main(int argc, char * argv[])
 {
   using Real = double;
 
-  const size_t ncell = argc > 1 ? atoi(argv[1])+2 : 128+2;
+  const size_t ncell = argc > 1 ? atoi(argv[1]) : 128;
   printf(std::cerr, "ncell= %\n", ncell);
 
-  const Real tau = argc > 2 ? atof(argv[2]) : 1.0;
+  const Real tau = argc > 2 ? atof(argv[2]) : 0.005;
   printf(std::cerr, "tau= %\n", tau);
   
 
 
-  constexpr auto ORDER = 3;
+  constexpr auto ORDER = 1;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
 
-  Solver solver(PDE{ncell});
+  Solver solver(PDE{ncell+2});
 
-  solver.pde()._dx   = 1;
-  solver.pde()._diff = 1;
-  solver.pde()._cfl  = 0.5*8;  /* stable for cfl <= 0.5 */
+  solver.pde().set_dx(1.0/ncell);
+  solver.pde().set_diff(1);
+  solver.pde().set_cfl(0.5*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = std::max(size_t{1}, static_cast<size_t>(tau/dt));
