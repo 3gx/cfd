@@ -48,7 +48,7 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     }
     static constexpr auto maxAbsPEV() 
     { 
-      return Real{2};
+      return Real{0.5};
     }
 };
 
@@ -225,10 +225,10 @@ class ODESolverT
     {
       rhs(u0);
 
-      const Real omega = Real{0.2}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
+      const Real omega = Real{0.8}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
       if (_verbose)
       {
-#if 1
+#if 0
         printf(std::cerr, "omega= %   PEV= %  MEV= %  cfl= % \n",
             omega,
             Expansion::maxAbsPEV(),
@@ -249,7 +249,7 @@ class ODESolverT
     void solve_system(const Vector& u0)
     {
       using std::get;
-      constexpr auto niter = 5;
+      constexpr auto niter = 16 ;//1; //32; //50;
       std::array<Real,Expansion::size()> error;
       for (auto iter : range_iterator{0,niter})
       {
@@ -268,7 +268,9 @@ class ODESolverT
         {
           for (auto i : range_iterator{1,u0.size()-1})
           {
-            error[k] += square(_rhs[k][i]); ///(_x[k][i] + eps));
+            auto err = square(_rhs[k][i]);
+            err *= 1.0/square(_x[k][i] + eps);
+            error[k] += err;
             cnt += 1;
           }
           err += std::max(err,std::sqrt(error[k]/cnt));
@@ -480,7 +482,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.5*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.4*2*32);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = std::max(size_t{1}, static_cast<size_t>(tau/dt));
@@ -492,8 +494,9 @@ int main(int argc, char * argv[])
   dump2file(solver, "ic.txt");
   for (size_t step = 1; step <= nstep; step++)
   {
-    const auto verbose_step = (step-1)%10 == 0;
-    const auto verbose_iter = (step-1)%100 == 0;
+    auto verbose_step = (step-1)%10 == 0;
+    auto verbose_iter = (step-1)%100 == 0;
+//    verbose_step = verbose_iter = true;
     solver.update(verbose_iter);
     if (verbose_step)
       printf(std::cerr, "step= % : time= % \n", step, solver.time());
