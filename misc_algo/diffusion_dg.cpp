@@ -4,6 +4,7 @@
 #include <string>
 #include <cmath>
 #include <array>
+#include <cassert>
 #include "common.h"
 
 template<size_t N, typename T, typename Real>
@@ -166,7 +167,7 @@ struct ODESolverT
 
   void iterate(const Vector &u0)
   {
-    const Real omega = Real{0.9}/Expansion::maxAbsPEV*((Expansion::maxAbsMEV() + _pde.cfl()));
+    const Real omega = Real{0.9}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.cfl()));
     for (auto k : expansionRange())
     {
       const auto scale = Expansion::weight(k) * _pde.dt();
@@ -187,7 +188,7 @@ struct ODESolverT
     /* precondition */
     for (auto i : range_iterator{0,u0.size()})
     {
-      std::array<Vector,Expansion::size()> tmp;
+      std::array<Real,Expansion::size()> tmp;
       for (auto& t : tmp)
         t = 0;
         
@@ -261,6 +262,7 @@ struct PDEDiffusion
 {
   using Real   = real_type;
   using Vector = std::vector<Real>;
+  using range_iterator = make_range_iterator<size_t>;
 
   Vector _f;
 
@@ -299,7 +301,7 @@ struct PDEDiffusion
   void apply_bc(Vector &f) const
   {
 //    periodic_bc(f);
-    free_bc();
+    free_bc(f);
   }
 
   const Vector& state() const { return _f; }
@@ -316,7 +318,7 @@ struct PDEDiffusion
   void compute_rhs(Vector &res, const Vector &x)
   {
     const auto c = dt() * _diff/square(_dx);
-    for (auto i : range_iterator(1,x.size() - 1))
+    for (auto i : range_iterator{1,x.size() - 1})
     {
       res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
     }
@@ -381,7 +383,7 @@ int main(int argc, char * argv[])
   const size_t ncell = argc > 1 ? atoi(argv[1])+2 : 102;
   printf(std::cerr, "ncell= %\n", ncell);
 
-  const size_t niter = argc > 2 ? atoi(argv[2]) : 10;
+  const size_t niter = argc > 2 ? atoi(argv[2]) : 1;
   printf(std::cerr, "niter= %\n", niter);
   
 
@@ -403,19 +405,12 @@ int main(int argc, char * argv[])
 
   Solver solver(pde);
 
-#if 0
   for (int iter = 0; iter < niter; iter++)
   {
+    solver.update();
     printf(std::cerr, "iter= %\n", iter);
-#if 1
-    compute_update<FreeBC>(params,f);
-//    compute_update<PeriodicBC>(params,f);
-#elif 1
-    compute_update_dg1<FreeBC>(FreeBC,params,f);
-#endif
-    dump2file(f,"iter"+std::to_string(iter));
+    dump2file("iter"+std::to_string(iter),pde);
   }
-#endif
 
 
 
