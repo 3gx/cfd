@@ -33,7 +33,7 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     {
       return Real{1};
     }
-    static constexpr auto matrix0(const size_t i, const size_t j) 
+    static constexpr auto zero(const size_t i)
     {
       return Real{1};
     }
@@ -56,6 +56,7 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     }
 };
 
+#if 0
 template<typename T, typename Real>
 class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
 {
@@ -73,15 +74,8 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
       };
       return matrix[j][i]; 
     }
-    static constexpr auto matrix0(const size_t i, const size_t j) 
-    { 
-      constexpr Real matrix[N][N] = 
-      {
-        {3.0,  0.4641016151377546},
-        {-6.464101615137754,  3.0}
-      };
-      return matrix[j][i]; 
-    }
+    static constexpr auto zero(const size_t i)
+    {return Real{1};}
     static constexpr auto weight(const size_t i)  
     { 
       constexpr Real weight[] = {0.5,0.5};
@@ -107,6 +101,58 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
       return maxAbsPEV; 
     }
 };
+#else
+template<typename T, typename Real>
+class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
+{
+  protected:
+    using base_type = ExpansionBaseT<2,T,Real>;
+    static constexpr size_t N = 2;
+
+  public:
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {2.0,  0.7320508075688785},
+        {-2.732050807568876,  1.9999999999999958}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto zero(const size_t i)
+    { 
+      constexpr Real zero[] = {
+        2.732050807568875,
+       -0.7320508075688765
+      };
+      return zero[i];
+    }
+    static constexpr auto weight(const size_t i)  
+    { 
+      constexpr Real weight[] = {0.5,0.5};
+      return weight[i];
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    {
+      constexpr Real preconditioner[N][N] = 
+      {
+        {0.3333333333333329,  0},
+        {0.4553418012614798,  0.33333333333333365}
+      };
+      return preconditioner[j][i];
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real maxAbsMEV = 2.5;
+      return maxAbsMEV;
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real maxAbsPEV = 0.33;
+      return maxAbsPEV; 
+    }
+};
+#endif
 
 template<typename T, typename Real>
 class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
@@ -127,15 +173,9 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       };
       return matrix[j][i]; 
     }
-    static constexpr auto matrix0(const size_t i, const size_t j) 
+    static constexpr auto zero(const size_t i)
     { 
-      constexpr Real matrix[N][N] = 
-      {
-        {5.0,  1.1639777949432226, -0.1639777949432225},
-        {-5.727486121839514,  2.0, 0.7274861218395141},
-        {10.163977794943223,  -9.163977794943223, 5.0}
-      };
-      return matrix[j][i]; 
+      return Real{1};
     }
     static constexpr auto weight(const size_t i)  
     { 
@@ -222,7 +262,7 @@ class ODESolverT
         for (auto l : expansionRange())
           for (auto v : make_zip_iterator(rhs[k], x[l], u0))
           {
-            get<0>(v) += Expansion::matrix(k,l) * get<2>(v) - Expansion::matrix(k,l)* get<1>(v);
+            get<0>(v) += Expansion::zero(k) * get<2>(v) - Expansion::matrix(k,l)* get<1>(v);
           }
       }
 
@@ -264,7 +304,7 @@ class ODESolverT
       auto scale = [](int i, int n) 
       {
         i++;
-#if 0
+#if 1
         if (i == n) return Real{1};
         return Real{0};
 #elif 0
@@ -339,14 +379,14 @@ class ODESolverT
           get<0>(v) = get<0>(v) + 2.0*omega*get<1>(v);
         }
 #else
-      iterate(u0, 8*2*2*2);
+      iterate(u0, 8); //*2*2*2);
 #endif
     }
 
     void solve_system(const Vector& u0)
     {
       using std::get;
-      constexpr auto niter = 8; //*2; // * 32; //*2; //16 ;//1; //32; //50;
+      constexpr auto niter = 8*2; // * 32; //*2; //16 ;//1; //32; //50;
       std::array<Real,Expansion::size()> error;
       for (auto iter : range_iterator{0,niter})
       {
@@ -578,7 +618,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 //  solver.pde().set_cfl(0.8);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
