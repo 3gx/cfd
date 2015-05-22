@@ -277,6 +277,61 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       return maxAbsPEV; 
     }
 };
+template<typename T, typename Real>
+class ExpansionT<4,T,Real> : public ExpansionBaseT<4,T,Real>
+{
+  /* DGF */
+  protected:
+    static constexpr size_t N = 4;
+    using base_type  = ExpansionBaseT<N,T,Real>;
+
+  public:
+
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {6.738612787525834, 2.5779942727073806, -0.6995574654955786,  0.1612563383245323},
+        {-5.324832600342981,  1.2613872124741736, 1.941340462561435,  -0.3731446166705182},
+        {2.5339048478804855,  -3.9413404625614348,  1.2613872124741656, 1.3751045941403923},
+        {-2.161256338324527,  4.750469319393827,  -9.982795494470142, 6.738612787525786}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto weight(const size_t i)  
+    { 
+      constexpr Real weight[] =
+      {
+        0.17392742256872748, 
+        0.32607257743127305, 
+        0.3260725774312732, 
+        0.17392742256872748
+      };
+      return weight[i];
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    {
+      constexpr Real preconditioner[N][N] = 
+      {
+        {0.0950400941860567,  0,0,0},
+        {0.17720653136163217, 0.19067419152822931,  0,0},
+        {0.17810350811242565, 0.32631510322115087,  0.19067419152822807,  0},
+        {0.1694061893528294,  0.3339017452341196, 0.33222012702401943,  0.09504009418605698}
+
+      };
+      return preconditioner[j][i];
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real maxAbsMEV{5.8};
+      return maxAbsMEV;
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real maxAbsPEV{0.20};
+      return maxAbsPEV; 
+    }
+};
 #endif
 
 
@@ -452,7 +507,7 @@ class ODESolverT
         }
 #else
 //      iterate(u0, 8*2*2*2);  /* stiffffff */
-      const int nstage = static_cast<int>(std::sqrt(_pde.cfl()) + 2);
+      const int nstage = static_cast<int>(1*std::sqrt(_pde.cfl()) + 2);
       iterate(u0, nstage);
       if (verbose)
       {
@@ -465,9 +520,9 @@ class ODESolverT
     {
       using std::get;
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
-      niter = 256;
+      niter = 32;
       std::array<Real,Expansion::size()> error;
-      constexpr Real tol = 1.0e-7;
+      constexpr Real tol = 1.0e-8;
       bool verbose = _verbose;
       for (auto iter : range_iterator{0,niter})
       {
@@ -699,7 +754,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 3;
+  constexpr auto ORDER = 4;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -708,7 +763,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64*64*8); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
