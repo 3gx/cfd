@@ -157,6 +157,7 @@ struct ODESolverT
 
 
   PDE _pde;
+  Real _time;
   typename Expansion::storage _x, _rhs;
 
   auto expansionRange() const 
@@ -164,7 +165,9 @@ struct ODESolverT
     return make_range_iteratorT<0,Expansion::size()>{};
   }
 
-  ODESolverT(const PDE &pde) : _pde{pde}
+  auto time() const {return _time;}
+
+  ODESolverT(const PDE &pde) : _pde{pde}, _time{0}
   {
     for (auto k : expansionRange())
     {
@@ -174,6 +177,7 @@ struct ODESolverT
   };
 
   PDE& pde() { return _pde; }
+  const PDE& pde() const { return _pde; }
 
 
   void rhs(const Vector &u0)
@@ -218,7 +222,7 @@ struct ODESolverT
     rhs(u0);
 
     const Real omega = Real{0.7}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
-#if 1
+#if 0
     printf(std::cerr, "omega= %   PEV= %  MEV= %  cfl= % \n",
         omega,
         Expansion::maxAbsPEV(),
@@ -238,7 +242,7 @@ struct ODESolverT
   void solve_system(const Vector& u0)
   {
     using std::get;
-    constexpr auto niter = 10;
+    constexpr auto niter = 40;
     std::array<Real,Expansion::size()> error;
     for (auto iter : range_iterator{0,niter})
     {
@@ -262,7 +266,8 @@ struct ODESolverT
         }
         err += std::max(err,std::sqrt(error[k]/cnt));
       }
-      printf(std::cerr, "iter= %  err= % \n", iter, err);
+      if (iter == niter - 1)
+        printf(std::cerr, "   >> iter= %  err= % \n", iter, err);
     }
   }
 
@@ -299,7 +304,15 @@ struct ODESolverT
         printf(std::cerr,  "u= % ", u);
 #endif
     _pde.update(du);
+    _time += _pde.dt();
   }
+
+#if 0
+  void integrate(Real dt)
+  {
+  }
+#endif
+
 };
 
 template<typename real_type>
@@ -311,7 +324,6 @@ struct PDEDiffusion
 
   Vector _f;
 
-  Real _time;
   Real _cfl;
   Real _dx;
   Real _diff;
@@ -323,7 +335,6 @@ struct PDEDiffusion
     return dt() * 4.0*_diff/square(_dx);  /* 2.0 * cfl */
   }
 
-  auto time() const { return _time; }
   auto dx() const { return _dx; }
 
   PDEDiffusion(const size_t n) : _f{Vector(n)}
@@ -417,14 +428,15 @@ struct PDEDiffusion
   }
 };
 
-template<typename PDE>
-void dump2file(std::string fileName, const PDE &pde)
+template<typename Solver>
+void dump2file(const Solver &solver, std::string fileName = std::string{})
 {
-  const auto &f = pde.state();
+  const auto &f = solver.pde().state();
   const auto n = f.size();
-  const auto dx = pde.dx();
-  std::ofstream fout(fileName);
-  fout << "# time= " << pde.time() << std::endl;
+  const auto dx = solver.pde().dx();
+  std::ofstream foutFn(fileName);
+  std::ostream &fout = fileName.empty() ? std::cout : foutFn;
+  fout << "# time= " << solver.time() << std::endl;
   fout << "# n= " << n-2 << std::endl;
   for (size_t i = 1; i < n-1; i++)
   {
@@ -435,16 +447,17 @@ void dump2file(std::string fileName, const PDE &pde)
 
 int main(int argc, char * argv[])
 {
-  const size_t ncell = argc > 1 ? atoi(argv[1])+2 : 102;
-  printf(std::cerr, "ncell= %\n", ncell);
-
-  const size_t niter = argc > 2 ? atoi(argv[2]) : 1;
-  printf(std::cerr, "niter= %\n", niter);
-  
-
   using Real = double;
 
-  constexpr auto ORDER = 1;
+  const size_t ncell = argc > 1 ? atoi(argv[1])+2 : 128+2;
+  printf(std::cerr, "ncell= %\n", ncell);
+
+  const Real tau = argc > 2 ? atof(argv[2]) : 1.0;
+  printf(std::cerr, "tau= %\n", tau);
+  
+
+
+  constexpr auto ORDER = 3;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -453,17 +466,22 @@ int main(int argc, char * argv[])
 
   solver.pde()._dx   = 1;
   solver.pde()._diff = 1;
-  solver.pde()._cfl  = 0.50*8;  /* stable for cfl <= 0.5 */
-  solver.pde()._time = 0;
+  solver.pde()._cfl  = 0.5*8;  /* stable for cfl <= 0.5 */
+
+  const auto dt = solver.pde().dt();
+  const size_t nstep = std::max(size_t{1}, static_cast<size_t>(tau/dt));
+
+  printf(std::cerr, "dt= %  tau= %   nstep= %\n",
+      dt, tau, static_cast<int>(tau/dt));
 
   solver.pde().set_ic();
-  dump2file("ic.txt",solver.pde());
-  for (int iter = 1; iter <= niter; iter++)
+  dump2file(solver, "ic.txt");
+  for (size_t step = 1; step <= nstep; step++)
   {
     solver.update();
-    printf(std::cerr, "iter= %\n", iter);
-    dump2file("iter"+std::to_string(iter),solver.pde());
+    printf(std::cerr, "step= % : time= % \n", step, solver.time());
   }
+  dump2file(solver);
 
 
 
