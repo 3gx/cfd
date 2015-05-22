@@ -165,27 +165,29 @@ struct ODESolverT
     }
   };
 
+  PDE& pde() { return _pde; }
+
 
   void rhs(const Vector &u0)
   {
+    using std::get;
+    const auto& x = _x;
+    auto& rhs = _rhs;
+
+    /* compute RHS */
     for (auto k : expansionRange())
     {
-      const auto scale = Expansion::weight(k);
-      _pde.compute_rhs(_x[k], _rhs[k], [scale](const auto x) { return x * scale; });
+      _pde.compute_rhs(rhs[k], x[k]);
 
       assert(_x[k].size() == u0.size());
-      for (auto i : range_iterator{0,u0.size()})
-      {
-        Real r = 0;
-        for (auto l : expansionRange())
+      for (auto l : expansionRange())
+        for (auto v : make_zip_iterator(rhs[k], x[l], u0))
         {
-          r += Expansion::matrix(k,l) * (u0[i] - _x[l][i]);
+          get<0>(v) += Expansion::matrix(k,l) * (get<2>(v) - get<1>(v));
         }
-        _rhs[k][i] += r;
-      }
     }
 
-    /* precondition */
+    /* precondition RHS */
     for (auto i : range_iterator{0,u0.size()})
     {
       std::array<Real,Expansion::size()> tmp;
@@ -208,11 +210,13 @@ struct ODESolverT
     rhs(u0);
 
     const Real omega = Real{0.9}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.cfl()));
+#if 1
     printf(std::cerr, "omega= %   PEV= %  MEV= %  cfl= % \n",
         omega,
         Expansion::maxAbsPEV(),
         Expansion::maxAbsMEV(),
         _pde.cfl());
+#endif
 
     for (auto k : expansionRange())
       for (auto& x : _rhs[k])
@@ -233,7 +237,7 @@ struct ODESolverT
       }
 
       iterate(u0);
-
+      
       Real err = 0;
       int cnt = 0;
       constexpr auto eps = Real{1.0e-7};
@@ -253,6 +257,7 @@ struct ODESolverT
 
   void update()
   {
+    using std::get;
     static auto du = _pde.state();
 
     for (auto k : expansionRange())
@@ -261,15 +266,27 @@ struct ODESolverT
     }
     solve_system(_pde.state());
 
-    for (auto i : range_iterator{0,du.size()})
+    for (auto k : expansionRange())
     {
-      Real dy = 0;
-      du[i] = 0;
-      for (auto k : expansionRange())
+      _pde.apply_bc(_x[k]);
+      _pde.compute_rhs(_rhs[k], _x[k]);
+    }
+
+    std::fill(du.begin(), du.end(), 0);
+    for (auto k : expansionRange())
+    {
+      const auto w = Expansion::weight(k);
+      for (auto v : make_zip_iterator(du,_rhs[k]))
       {
-        du[i] += Expansion::weight(k) * _x[k][i];
+        get<0>(v) += w*get<1>(v);
       }
     }
+
+#if 0
+    for (auto u : du)
+      if (std::abs(u) > 1.0e-10)
+        printf(std::cerr,  "u= % ", u);
+#endif
     _pde.update(du);
   }
 };
@@ -342,6 +359,10 @@ struct PDEDiffusion
       res[i] = func(res[i]);
     }
   }
+  void compute_rhs(Vector &res, const Vector &x)
+  {
+    compute_rhs(res, x, [](const auto x) { return x; });
+  }
 
   void set_ic()
   {
@@ -412,23 +433,21 @@ int main(int argc, char * argv[])
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
-  PDE pde{ncell};
 
-  pde._dx   = 1;
-  pde._diff = 1;
-  pde._cfl  = 0.40;  /* stable for cfl <= 0.5 */
-  pde._time = 0;
+  Solver solver(PDE{ncell});
 
-  pde.set_ic();
-  dump2file("ic.txt",pde);
+  solver.pde()._dx   = 1;
+  solver.pde()._diff = 1;
+  solver.pde()._cfl  = 0.40;  /* stable for cfl <= 0.5 */
+  solver.pde()._time = 0;
 
-  Solver solver(pde);
-
+  solver.pde().set_ic();
+  dump2file("ic.txt",solver.pde());
   for (int iter = 0; iter < niter; iter++)
   {
     solver.update();
     printf(std::cerr, "iter= %\n", iter);
-    dump2file("iter"+std::to_string(iter),pde);
+    dump2file("iter"+std::to_string(iter),solver.pde());
   }
 
 
