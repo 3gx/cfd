@@ -323,7 +323,7 @@ class ODESolverT
     void solve_system(const Vector& u0)
     {
       using std::get;
-      constexpr auto niter = 8*2; // * 32; //*2; //16 ;//1; //32; //50;
+      constexpr auto niter = 8; //*2; // * 32; //*2; //16 ;//1; //32; //50;
       std::array<Real,Expansion::size()> error;
       for (auto iter : range_iterator{0,niter})
       {
@@ -570,7 +570,8 @@ int main(int argc, char * argv[])
   {
     auto verbose_step = (step-1)%10 == 0;
     auto verbose_iter = (step-1)%10 == 0;
-//    verbose_step = verbose_iter = true;
+    if (step == nstep-1)
+      verbose_step = verbose_iter = true;
     solver.update(verbose_iter);
     if (verbose_step)
       printf(std::cerr, "step= % : time= % \n", step, solver.time());
