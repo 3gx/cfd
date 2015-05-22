@@ -28,7 +28,6 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     using base_type   = ExpansionBaseT<1,T,Real>;
     static constexpr size_t N = 1;
 
-
   public:
     static constexpr auto matrix(const size_t i, const size_t j) 
     {
@@ -227,11 +226,12 @@ struct ODESolverT
         _pde.cfl());
 #endif
 
+    /* use LegendreP(1,z) for update */
     using std::get;
     for (auto k : expansionRange())
       for (auto v : make_zip_iterator(_x[k], _rhs[k]))
       {
-        get<0>(v) += 2.0*omega*get<1>(v);
+        get<0>(v) = get<0>(v) + 2.0*omega*get<1>(v);
       }
   }
 
