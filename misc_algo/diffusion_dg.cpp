@@ -255,9 +255,9 @@ struct ODESolverT
       constexpr auto eps = Real{1.0e-7};
       for (auto k : expansionRange())
       {
-        for (const auto v : make_zip_iterator(_rhs[k],_x[k]))
+        for (auto i : range_iterator{1,u0.size()-1})
         {
-          error[k] += square(get<0>(v)); ///(get<1>(v) + eps));
+          error[k] += square(_rhs[k][i]); ///(_x[k][i] + eps));
           cnt += 1;
         }
         err += std::max(err,std::sqrt(error[k]/cnt));
@@ -458,7 +458,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_ic();
   dump2file("ic.txt",solver.pde());
-  for (int iter = 0; iter < niter; iter++)
+  for (int iter = 1; iter <= niter; iter++)
   {
     solver.update();
     printf(std::cerr, "iter= %\n", iter);
