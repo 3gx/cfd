@@ -183,7 +183,6 @@ class ODESolverT
     PDE& pde() { return _pde; }
     const PDE& pde() const { return _pde; }
 
-
     void rhs(const Vector &u0)
     {
       using std::get;
@@ -193,6 +192,7 @@ class ODESolverT
       /* compute RHS */
       for (auto k : expansionRange())
       {
+        _pde.apply_bc(_x[k]);
         _pde.compute_rhs(rhs[k], x[k]);
 
         assert(_x[k].size() == u0.size());
@@ -221,8 +221,75 @@ class ODESolverT
       }
     }
 
+    constexpr Real alpha(const int n) const 
+    {
+      return (Real{2}*n + 1)/(n+1);
+    }
+    constexpr Real beta(const int n) const 
+    {
+      return Real{-1}*n/(n+1);
+    }
+
+    void iterate(const Vector &u0, int n)
+    {
+      n++;
+      using std::get;
+
+      const Real omega = Real{0.8}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
+
+      static auto res = _x;
+
+      static decltype(_x) y0, y1;
+      y0  = _x;
+
+      rhs(u0);
+      for (auto k : expansionRange())
+        for (auto v : make_zip_iterator(_x[k], _rhs[k], res[k]))
+        {
+          get<2>(v) = get<0>(v)/n;
+          get<0>(v) = get<0>(v) + 2.0*omega*get<1>(v);
+          get<2>(v) += get<0>(v)/n;
+        }
+
+      y1 = _x;
+
+#if 0
+      for (int i = 2; i < n; i++)
+      {
+        rhs(u0);
+        for (auto k : expansionRange())
+          for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k]))
+          {
+            const auto a = alpha(i-1);
+            const auto b =  beta(i-1);
+            get<0>(v) = a*get<1>(v) + b*get<2>(v) + 2*omega*a*get<3>(v);
+          }
+        y0 = y1;
+        y1 = _x;
+      }
+#else
+      for (int i = 2; i < n; i++)
+      {
+        rhs(u0);
+        for (auto k : expansionRange())
+          for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k], res[k]))
+          {
+            const auto a = alpha(i-1);
+            const auto b =  beta(i-1);
+            get<0>(v) = a*get<1>(v) + b*get<2>(v) + 2*omega*a*get<3>(v);
+            get<4>(v) += get<0>(v)/n;
+          }
+        y0 = y1;
+        y1 = _x;
+      }
+      _x = res;
+#endif
+    }
+
+
     void iterate(const Vector &u0)
     {
+#if 0
       rhs(u0);
 
       const Real omega = Real{0.8}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
@@ -244,18 +311,20 @@ class ODESolverT
         {
           get<0>(v) = get<0>(v) + 2.0*omega*get<1>(v);
         }
+#else
+      iterate(u0, 4);
+#endif
     }
 
     void solve_system(const Vector& u0)
     {
       using std::get;
-      constexpr auto niter = 16 ;//1; //32; //50;
+      constexpr auto niter = 4; //16 ;//1; //32; //50;
       std::array<Real,Expansion::size()> error;
       for (auto iter : range_iterator{0,niter})
       {
         for (auto k : expansionRange())
         {
-          _pde.apply_bc(_x[k]);
           error[k] = 0;
         }
 
