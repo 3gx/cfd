@@ -229,7 +229,7 @@ struct ODESolverT
   {
     rhs(u0);
 
-    const Real omega = Real{0.5}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.cfl()));
+    const Real omega = Real{0.4}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.cfl()));
 #if 1
     printf(std::cerr, "omega= %   PEV= %  MEV= %  cfl= % \n",
         omega,
