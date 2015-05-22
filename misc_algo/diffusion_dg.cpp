@@ -68,74 +68,94 @@ template<typename T, typename Real>
 class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
 {
   protected:
-    using base_type   = ExpansionBaseT<2,T,Real>;
-    using vector_type = typename base_type::vector_type;
-    using matrix_type = typename base_type::matrix_type;
-
-    static constexpr matrix_type _matrix{
-      vector_type{3.0,  0.4641016151377546},
-      vector_type{-6.464101615137754,  3.0}
-    };
-
-    static constexpr vector_type _weight{Real{0.5},Real{0.5}};
-    static constexpr vector_type _zero{1,1};
-    
-    static constexpr matrix_type _preconditioner{
-      vector_type{0.250000000000000000000,  0},
-      vector_type{0.53867513459481288225, 0.250000000000000000000}
-    };
-
-    static constexpr Real _maxAbsMEV{3.5};
-    static constexpr Real _maxAbsPEV{0.25};
+    using base_type = ExpansionBaseT<2,T,Real>;
+    static constexpr size_t N = 2;
 
   public:
-    static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
-    static constexpr auto weight(const size_t i)  { return _weight[i];  }
-    static constexpr auto zero(const size_t i) { return _zero[i]; }
-    static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
-    static constexpr auto maxAbsMEV() { return _maxAbsMEV; }
-    static constexpr auto maxAbsPEV() { return _maxAbsPEV; }
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {3.0,  0.4641016151377546},
+        {-6.464101615137754,  3.0}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto weight(const size_t i)  
+    { 
+      constexpr Real weight[] = {0.5,0.5};
+      return weight[i];
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    {
+      constexpr Real preconditioner[N][N] = 
+      {
+        {0.250000000000000000000,  0},
+        {0.53867513459481288225, 0.250000000000000000000}
+      };
+      return preconditioner[j][i];
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real maxAbsMEV = 3.5;
+      return maxAbsMEV;
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real maxAbsPEV = 0.25;
+      return maxAbsPEV; 
+    }
 };
 
 template<typename T, typename Real>
 class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
 {
   protected:
-    using base_type   = ExpansionBaseT<3,T,Real>;
-    using vector_type = typename base_type::vector_type;
-    using matrix_type = typename base_type::matrix_type;
-
-    static constexpr matrix_type _matrix{
-      vector_type{5.0,  1.1639777949432226, -0.1639777949432225},
-      vector_type{-5.727486121839514,  2.0, 0.7274861218395141},
-      vector_type{10.163977794943223,  -9.163977794943223, 5.0}
-    };
-
-    static constexpr vector_type _weight{
-      Real{0.2777777777777778},
-      Real{0.4444444444444444},
-      Real{0.2777777777777778} 
-    };
-
-    static constexpr vector_type _zero{1,1,1};
-    
-    static constexpr matrix_type _preconditioner{
-      vector_type{0.13888888888888888889, 0, 0},
-      vector_type{0.30026319498086459244, 0.22222222222222222222,  0},
-      vector_type{0.26798833376246945173, 0.48042111196938334790,  0.13888888888888888889}
-    };
-    
-    static constexpr Real _maxAbsMEV{5.1};
-    static constexpr Real _maxAbsPEV{0.22222};
+    using base_type  = ExpansionBaseT<3,T,Real>;
+    static constexpr size_t N = 3;
 
   public:
 
-    static constexpr auto matrix(const size_t i, const size_t j) { return _matrix[j][i]; }
-    static constexpr auto weight(const size_t i) { return _weight[i];  }
-    static constexpr auto zero(const size_t i) { return _zero[i]; }
-    static constexpr auto preconditioner(const size_t i, const size_t j) { return _preconditioner[j][i]; }
-    static constexpr auto maxAbsMEV() { return _maxAbsMEV; }
-    static constexpr auto maxAbsPEV() { return _maxAbsPEV; }
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {5.0,  1.1639777949432226, -0.1639777949432225},
+        {-5.727486121839514,  2.0, 0.7274861218395141},
+        {10.163977794943223,  -9.163977794943223, 5.0}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto weight(const size_t i)  
+    { 
+      constexpr Real weight[] =
+      {
+        0.2777777777777778,
+        0.4444444444444444,
+        0.2777777777777778
+      };
+      return weight[i];
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    {
+      constexpr Real preconditioner[N][N] = 
+      {
+        {0.13888888888888888889, 0, 0},
+        {0.30026319498086459244, 0.22222222222222222222,  0},
+        {0.26798833376246945173, 0.48042111196938334790,  0.13888888888888888889}
+      };
+      return preconditioner[j][i];
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real maxAbsMEV{5.1};
+      return maxAbsMEV;
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real maxAbsPEV{0.22222};
+      return maxAbsPEV; 
+    }
 };
 
 
