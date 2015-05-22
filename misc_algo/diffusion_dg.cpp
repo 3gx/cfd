@@ -148,169 +148,177 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
 
 
 template<size_t ORDER, typename PDE>
-struct ODESolverT
+class ODESolverT
 {
-  using Real           = typename PDE::Real;
-  using Vector         = typename PDE::Vector;
-  using Expansion      = ExpansionT<ORDER,Vector,Real>;
-  using range_iterator = make_range_iterator<size_t>;
+  public:
+    using Real           = typename PDE::Real;
+    using Vector         = typename PDE::Vector;
+  private:
+    using Expansion      = ExpansionT<ORDER,Vector,Real>;
+    using range_iterator = make_range_iterator<size_t>;
 
 
-  PDE _pde;
-  Real _time;
-  typename Expansion::storage _x, _rhs;
+    PDE _pde;
+    Real _time;
+    bool _verbose;
+    typename Expansion::storage _x, _rhs;
 
-  auto expansionRange() const 
-  {
-    return make_range_iteratorT<0,Expansion::size()>{};
-  }
-
-  auto time() const {return _time;}
-
-  ODESolverT(const PDE &pde) : _pde{pde}, _time{0}
-  {
-    for (auto k : expansionRange())
-    {
-      _x  [k].resize(_pde.resolution());
-      _rhs[k].resize(_pde.resolution());
-    }
-  };
-
-  PDE& pde() { return _pde; }
-  const PDE& pde() const { return _pde; }
-
-
-  void rhs(const Vector &u0)
-  {
-    using std::get;
-    const auto& x = _x;
-    auto& rhs = _rhs;
-
-    /* compute RHS */
-    for (auto k : expansionRange())
-    {
-      _pde.compute_rhs(rhs[k], x[k]);
-
-      assert(_x[k].size() == u0.size());
-      for (auto l : expansionRange())
-        for (auto v : make_zip_iterator(rhs[k], x[l], u0))
-        {
-          get<0>(v) += Expansion::matrix(k,l) * (get<2>(v) - get<1>(v));
-        }
-    }
-
-    /* precondition RHS */
-    for (auto i : range_iterator{0,u0.size()})
-    {
-      std::array<Real,Expansion::size()> tmp;
-      for (auto& t : tmp)
-        t = 0;
-        
-      for (auto k : expansionRange())
-        for (auto l : expansionRange())
-        {
-          tmp[k] += Expansion::preconditioner(k,l)*_rhs[l][i];
-        }
-
-      for (auto k : expansionRange())
-        _rhs[k][i] = tmp[k];
-    }
-  }
-  
-  void iterate(const Vector &u0)
-  {
-    rhs(u0);
-
-    const Real omega = Real{0.7}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
-#if 0
-    printf(std::cerr, "omega= %   PEV= %  MEV= %  cfl= % \n",
-        omega,
-        Expansion::maxAbsPEV(),
-        Expansion::maxAbsMEV(),
-        _pde.cfl());
-#endif
-
-    /* use LegendreP(1,z) for update */
-    using std::get;
-    for (auto k : expansionRange())
-      for (auto v : make_zip_iterator(_x[k], _rhs[k]))
+  public:
+      auto expansionRange() const 
       {
-        get<0>(v) = get<0>(v) + 2.0*omega*get<1>(v);
+        return make_range_iteratorT<0,Expansion::size()>{};
       }
-  }
 
-  void solve_system(const Vector& u0)
-  {
-    using std::get;
-    constexpr auto niter = 5;
-    std::array<Real,Expansion::size()> error;
-    for (auto iter : range_iterator{0,niter})
+    auto time() const {return _time;}
+
+    ODESolverT(const PDE &pde) : _pde{pde}, _time{0}
     {
+      for (auto k : expansionRange())
+      {
+        _x  [k].resize(_pde.resolution());
+        _rhs[k].resize(_pde.resolution());
+      }
+    };
+
+    PDE& pde() { return _pde; }
+    const PDE& pde() const { return _pde; }
+
+
+    void rhs(const Vector &u0)
+    {
+      using std::get;
+      const auto& x = _x;
+      auto& rhs = _rhs;
+
+      /* compute RHS */
+      for (auto k : expansionRange())
+      {
+        _pde.compute_rhs(rhs[k], x[k]);
+
+        assert(_x[k].size() == u0.size());
+        for (auto l : expansionRange())
+          for (auto v : make_zip_iterator(rhs[k], x[l], u0))
+          {
+            get<0>(v) += Expansion::matrix(k,l) * (get<2>(v) - get<1>(v));
+          }
+      }
+
+      /* precondition RHS */
+      for (auto i : range_iterator{0,u0.size()})
+      {
+        std::array<Real,Expansion::size()> tmp;
+        for (auto& t : tmp)
+          t = 0;
+
+        for (auto k : expansionRange())
+          for (auto l : expansionRange())
+          {
+            tmp[k] += Expansion::preconditioner(k,l)*_rhs[l][i];
+          }
+
+        for (auto k : expansionRange())
+          _rhs[k][i] = tmp[k];
+      }
+    }
+
+    void iterate(const Vector &u0)
+    {
+      rhs(u0);
+
+      const Real omega = Real{0.2}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
+      if (_verbose)
+      {
+#if 1
+        printf(std::cerr, "omega= %   PEV= %  MEV= %  cfl= % \n",
+            omega,
+            Expansion::maxAbsPEV(),
+            Expansion::maxAbsMEV(),
+            _pde.cfl());
+#endif
+      }
+
+      /* use LegendreP(1,z) for update */
+      using std::get;
+      for (auto k : expansionRange())
+        for (auto v : make_zip_iterator(_x[k], _rhs[k]))
+        {
+          get<0>(v) = get<0>(v) + 2.0*omega*get<1>(v);
+        }
+    }
+
+    void solve_system(const Vector& u0)
+    {
+      using std::get;
+      constexpr auto niter = 5;
+      std::array<Real,Expansion::size()> error;
+      for (auto iter : range_iterator{0,niter})
+      {
+        for (auto k : expansionRange())
+        {
+          _pde.apply_bc(_x[k]);
+          error[k] = 0;
+        }
+
+        iterate(u0);
+
+        Real err = 0;
+        int cnt = 0;
+        constexpr auto eps = Real{1.0e-7};
+        for (auto k : expansionRange())
+        {
+          for (auto i : range_iterator{1,u0.size()-1})
+          {
+            error[k] += square(_rhs[k][i]); ///(_x[k][i] + eps));
+            cnt += 1;
+          }
+          err += std::max(err,std::sqrt(error[k]/cnt));
+        }
+        if (iter == niter - 1 && _verbose)
+          printf(std::cerr, "   >> iter= %  err= % \n", iter, err);
+      }
+    }
+
+    void update(const bool verbose = true)
+    {
+      _verbose = verbose;
+      using std::get;
+      static auto du = _pde.state();
+
+      for (auto k : expansionRange())
+      {
+        _x[k] = _pde.state();
+      }
+      solve_system(_pde.state());
+
       for (auto k : expansionRange())
       {
         _pde.apply_bc(_x[k]);
-        error[k] = 0;
+        _pde.compute_rhs(_rhs[k], _x[k]);
       }
 
-      iterate(u0);
-      
-      Real err = 0;
-      int cnt = 0;
-      constexpr auto eps = Real{1.0e-7};
+      std::fill(du.begin(), du.end(), 0);
       for (auto k : expansionRange())
       {
-        for (auto i : range_iterator{1,u0.size()-1})
+        const auto w = Expansion::weight(k);
+        for (auto v : make_zip_iterator(du,_rhs[k]))
         {
-          error[k] += square(_rhs[k][i]); ///(_x[k][i] + eps));
-          cnt += 1;
+          get<0>(v) += w*get<1>(v);
         }
-        err += std::max(err,std::sqrt(error[k]/cnt));
       }
-      if (iter == niter - 1)
-        printf(std::cerr, "   >> iter= %  err= % \n", iter, err);
-    }
-  }
-
-  void update()
-  {
-    using std::get;
-    static auto du = _pde.state();
-
-    for (auto k : expansionRange())
-    {
-      _x[k] = _pde.state();
-    }
-    solve_system(_pde.state());
-
-    for (auto k : expansionRange())
-    {
-      _pde.apply_bc(_x[k]);
-      _pde.compute_rhs(_rhs[k], _x[k]);
-    }
-
-    std::fill(du.begin(), du.end(), 0);
-    for (auto k : expansionRange())
-    {
-      const auto w = Expansion::weight(k);
-      for (auto v : make_zip_iterator(du,_rhs[k]))
-      {
-        get<0>(v) += w*get<1>(v);
-      }
-    }
 
 #if 0
-    for (auto u : du)
-      if (std::abs(u) > 1.0e-10)
-        printf(std::cerr,  "u= % ", u);
+      for (auto u : du)
+        if (std::abs(u) > 1.0e-10)
+          printf(std::cerr,  "u= % ", u);
 #endif
-    _pde.update(du);
-    _time += _pde.dt();
-  }
+      _pde.update(du);
+      _time += _pde.dt();
+    }
 
 #if 0
-  void integrate(Real dt)
-  {
-  }
+    void integrate(Real dt)
+    {
+    }
 #endif
 
 };
@@ -339,6 +347,7 @@ class PDEDiffusion
     void set_cfl(const Real cfl) { _cfl = cfl;}
     Real dt() const {return _cfl * 0.5*square(_dx)/_diff;}
 
+    auto cost() const { return n_rhs_calls; }
     Real AbsEV() const
     {
       return dt() * 4.0*_diff/square(_dx);  /* 2.0 * cfl */
@@ -462,7 +471,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 1;
+  constexpr auto ORDER = 3;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -483,11 +492,14 @@ int main(int argc, char * argv[])
   dump2file(solver, "ic.txt");
   for (size_t step = 1; step <= nstep; step++)
   {
-    solver.update();
-    printf(std::cerr, "step= % : time= % \n", step, solver.time());
+    const auto verbose_step = (step-1)%10 == 0;
+    const auto verbose_iter = (step-1)%100 == 0;
+    solver.update(verbose_iter);
+    if (verbose_step)
+      printf(std::cerr, "step= % : time= % \n", step, solver.time());
   }
   dump2file(solver);
-
+  printf(std::cerr, "cost= %\n", solver.pde().cost());
 
 
 

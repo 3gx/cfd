@@ -17,7 +17,7 @@ static void printf(OS &os, const char *s)
 }
 
 template<typename OS, typename T, typename... Args>
-static void printf(OS &os, const char *s, T& value, Args... args)
+static void printf(OS &os, const char *s, T&& value, Args&&... args)
 {
   while (*s) {
     if (*s == '%') {
