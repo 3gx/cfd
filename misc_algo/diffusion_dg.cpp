@@ -165,13 +165,13 @@ struct ODESolverT
     }
   };
 
-  void iterate(const Vector &u0)
+
+  void rhs(const Vector &u0)
   {
-    const Real omega = Real{0.9}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.cfl()));
     for (auto k : expansionRange())
     {
-      const auto scale = Expansion::weight(k) * _pde.dt();
-      _pde.compute_rhs(_x[k], _rhs[k]);
+      const auto scale = Expansion::weight(k);
+      _pde.compute_rhs(_x[k], _rhs[k], [scale](const auto x) { return x * scale; });
 
       assert(_x[k].size() == u0.size());
       for (auto i : range_iterator{0,u0.size()})
@@ -181,7 +181,7 @@ struct ODESolverT
         {
           r += Expansion::matrix(k,l) * (u0[i] - _x[l][i]);
         }
-        _rhs[k][i] = omega * (r + _rhs[k][i]);
+        _rhs[k][i] += r;
       }
     }
 
@@ -201,6 +201,22 @@ struct ODESolverT
       for (auto k : expansionRange())
         _rhs[k][i] = tmp[k];
     }
+  }
+  
+  void iterate(const Vector &u0)
+  {
+    rhs(u0);
+
+    const Real omega = Real{0.9}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.cfl()));
+    printf(std::cerr, "omega= %   PEV= %  MEV= %  cfl= % \n",
+        omega,
+        Expansion::maxAbsPEV(),
+        Expansion::maxAbsMEV(),
+        _pde.cfl());
+
+    for (auto k : expansionRange())
+      for (auto& x : _rhs[k])
+        x *= omega;
   }
 
   void solve_system(const Vector& u0)
@@ -226,11 +242,12 @@ struct ODESolverT
         for (auto v : make_zip_iterator(_x[k], _rhs[k]))
         {
           get<0>(v) += get<1>(v);
-          error[k] += square(get<1>(v)/(get<0>(v) + eps));
+          error[k] += square(get<1>(v)); ///(get<0>(v) + eps));
           cnt += 1;
         }
         err += std::max(err,std::sqrt(error[k]/cnt));
       }
+      printf(std::cerr, "iter= %  err= % \n", iter, err);
     }
   }
 
@@ -315,12 +332,14 @@ struct PDEDiffusion
     }
   }
 
-  void compute_rhs(Vector &res, const Vector &x)
+  template<typename Func>
+  void compute_rhs(Vector &res, const Vector &x, Func func)
   {
     const auto c = dt() * _diff/square(_dx);
     for (auto i : range_iterator{1,x.size() - 1})
     {
       res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
+      res[i] = func(res[i]);
     }
   }
 
