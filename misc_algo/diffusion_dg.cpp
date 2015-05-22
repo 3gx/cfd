@@ -242,7 +242,7 @@ struct ODESolverT
   void solve_system(const Vector& u0)
   {
     using std::get;
-    constexpr auto niter = 40;
+    constexpr auto niter = 5;
     std::array<Real,Expansion::size()> error;
     for (auto iter : range_iterator{0,niter})
     {
