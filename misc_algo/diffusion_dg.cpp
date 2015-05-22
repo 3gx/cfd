@@ -26,41 +26,30 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
 {
   protected:
     using base_type   = ExpansionBaseT<1,T,Real>;
-    using vector_type = typename base_type::vector_type;
-    using matrix_type = typename base_type::matrix_type;
+    static constexpr size_t N = 1;
 
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) 
     {
-      const matrix_type _matrix{vector_type{2}};
-      return _matrix[j][i]; 
+      return Real{1};
     }
 
     static constexpr auto weight(const size_t i) 
     {
-      const vector_type _weight{1};
-      return _weight[i];  
-    }
-    static constexpr auto zero(const size_t i) 
-    { 
-      const vector_type _zero{1};
-      return _zero[i]; 
+      return Real{1};
     }
     static constexpr auto preconditioner(const size_t i, const size_t j) 
     { 
-      const matrix_type _preconditioner{vector_type{0.5}};
-      return _preconditioner[j][i];
+      return Real{0.5};
     }
     static constexpr auto maxAbsMEV() 
     {
-      constexpr Real _maxAbsMEV{2};
-      return _maxAbsMEV; 
+      return Real{2};
     }
     static constexpr auto maxAbsPEV() 
     { 
-      constexpr Real _maxAbsPEV{0.5};
-      return _maxAbsPEV;
+      return Real{2};
     }
 };
 
