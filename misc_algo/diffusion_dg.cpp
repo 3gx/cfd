@@ -229,7 +229,7 @@ struct ODESolverT
   {
     rhs(u0);
 
-    const Real omega = Real{0.4}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.cfl()));
+    const Real omega = Real{0.7}/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
 #if 1
     printf(std::cerr, "omega= %   PEV= %  MEV= %  cfl= % \n",
         omega,
@@ -238,9 +238,12 @@ struct ODESolverT
         _pde.cfl());
 #endif
 
+    using std::get;
     for (auto k : expansionRange())
-      for (auto& x : _rhs[k])
-        x *= omega;
+      for (auto v : make_zip_iterator(_x[k], _rhs[k]))
+      {
+        get<0>(v) += 2.0*omega*get<1>(v);
+      }
   }
 
   void solve_system(const Vector& u0)
@@ -263,10 +266,9 @@ struct ODESolverT
       constexpr auto eps = Real{1.0e-7};
       for (auto k : expansionRange())
       {
-        for (auto v : make_zip_iterator(_x[k], _rhs[k]))
+        for (const auto v : make_zip_iterator(_rhs[k],_x[k]))
         {
-          get<0>(v) += get<1>(v);
-          error[k] += square(get<1>(v)); ///(get<0>(v) + eps));
+          error[k] += square(get<0>(v)); ///(get<1>(v) + eps));
           cnt += 1;
         }
         err += std::max(err,std::sqrt(error[k]/cnt));
@@ -326,7 +328,11 @@ struct PDEDiffusion
   Real _diff;
   Real _zeta;
 
-  Real dt() const {return _cfl * _diff/square(_dx);}
+  Real dt() const {return _cfl * 0.5*square(_dx)/_diff;}
+  Real AbsEV() const
+  {
+    return dt() * 4.0*_diff/square(_dx);  /* 2.0 * cfl */
+  }
 
   auto time() const { return _time; }
   auto dx() const { return _dx; }
