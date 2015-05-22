@@ -33,6 +33,10 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     {
       return Real{1};
     }
+    static constexpr auto matrix0(const size_t i, const size_t j) 
+    {
+      return Real{1};
+    }
 
     static constexpr auto weight(const size_t i) 
     {
@@ -61,6 +65,15 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
 
   public:
     static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {3.0,  0.4641016151377546},
+        {-6.464101615137754,  3.0}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto matrix0(const size_t i, const size_t j) 
     { 
       constexpr Real matrix[N][N] = 
       {
@@ -105,6 +118,16 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
   public:
 
     static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {5.0,  1.1639777949432226, -0.1639777949432225},
+        {-5.727486121839514,  2.0, 0.7274861218395141},
+        {10.163977794943223,  -9.163977794943223, 5.0}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto matrix0(const size_t i, const size_t j) 
     { 
       constexpr Real matrix[N][N] = 
       {
@@ -199,7 +222,7 @@ class ODESolverT
         for (auto l : expansionRange())
           for (auto v : make_zip_iterator(rhs[k], x[l], u0))
           {
-            get<0>(v) += Expansion::matrix(k,l) * (get<2>(v) - get<1>(v));
+            get<0>(v) += Expansion::matrix(k,l) * get<2>(v) - Expansion::matrix(k,l)* get<1>(v);
           }
       }
 
