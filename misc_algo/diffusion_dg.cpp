@@ -316,14 +316,14 @@ class ODESolverT
           get<0>(v) = get<0>(v) + 2.0*omega*get<1>(v);
         }
 #else
-      iterate(u0, 8*2);
+      iterate(u0, 2*2*8);
 #endif
     }
 
     void solve_system(const Vector& u0)
     {
       using std::get;
-      constexpr auto niter = 2*2; //16 ;//1; //32; //50;
+      constexpr auto niter = 2*2; //*2; //16 ;//1; //32; //50;
       std::array<Real,Expansion::size()> error;
       for (auto iter : range_iterator{0,niter})
       {
@@ -546,7 +546,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 2;
+  constexpr auto ORDER = 3;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -556,6 +556,7 @@ int main(int argc, char * argv[])
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
   solver.pde().set_cfl(0.8*64*4);  /* stable for cfl <= 0.5 */
+//  solver.pde().set_cfl(0.8);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = std::max(size_t{1}, static_cast<size_t>(tau/dt));
