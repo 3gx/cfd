@@ -351,7 +351,7 @@ class ODESolverT
     bool _verbose;
     typename Expansion::storage _x, _rhs;
 
-    static constexpr Real omegaCFL = 0.4;
+    static constexpr Real omegaCFL = 0.8;
 
   public:
       auto expansionRange() const 
