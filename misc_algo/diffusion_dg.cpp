@@ -426,7 +426,7 @@ class ODESolverT
       static auto res = _x;
 
 #if 1
-#define WP
+#define WP   /* prefered for high resolution & large time step, use scaleing 1x for nstate with cfl */
 #elif 0
 #define OPT
 #endif
@@ -500,7 +500,7 @@ class ODESolverT
 
     void iterate(const Vector &u0, bool verbose)
     {
-      const int nstage = static_cast<int>(1+std::sqrt(_pde.cfl()));
+      const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));
       iterate(u0, nstage);
       if (verbose)
       {
@@ -514,7 +514,7 @@ class ODESolverT
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
       std::array<Real,Expansion::size()> error;
-      constexpr Real tol = 1.0e-4;
+      constexpr Real tol = 1.0e-7;
       bool verbose = _verbose;
       for (auto iter : range_iterator{0,niter})
       {
