@@ -425,9 +425,9 @@ class ODESolverT
       rhs(u0);
       static auto res = _x;
 
-#if 0
+#if 1
 #define WP
-#elif 1
+#elif 0
 #define OPT
 #endif
 
@@ -500,7 +500,7 @@ class ODESolverT
 
     void iterate(const Vector &u0, bool verbose)
     {
-      const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));
+      const int nstage = static_cast<int>(1+std::sqrt(_pde.cfl()));
       iterate(u0, nstage);
       if (verbose)
       {
@@ -534,7 +534,7 @@ class ODESolverT
           for (auto i : range_iterator{1,u0.size()-1})
           {
             auto err = square(_rhs[k][i]);
-            err *= 1.0/square(_x[k][i] + eps);
+    //        err *= 1.0/square(_x[k][i] + eps);
             error[k] += err;
             cnt += 1;
           }
@@ -558,9 +558,9 @@ class ODESolverT
       static auto du = _pde.state();
 
       for (auto k : expansionRange())
-      {
-        _x[k] = _pde.state();
-      }
+        for (auto &x : _x[k])
+          x = 0;
+
       solve_system(_pde.state());
 
       for (auto k : expansionRange())
@@ -755,7 +755,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
