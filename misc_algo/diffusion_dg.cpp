@@ -351,7 +351,7 @@ class ODESolverT
     bool _verbose;
     typename Expansion::storage _x, _rhs;
 
-    static constexpr Real omegaCFL = 0.8;
+    static constexpr Real omegaCFL = 0.9;
 
   public:
       auto expansionRange() const 
@@ -424,19 +424,39 @@ class ODESolverT
 
       rhs(u0);
       static auto res = _x;
+
+#if 0
+#define WP
+#elif 1
+#define OPT
+#endif
+
+#ifdef WP
       auto scale = Real{1}/(2*n+1);
+#elif defined OPT
+      auto frac = Real{1}/(1+n)/(2+n)/(3+4*n);
+      auto omega0 = frac*6;
+      auto omega1 = frac*3*n*(3+n);
+      auto omegak = [n,frac](const int k) 
+      {
+        return frac*3*(1-k+n)*(2+k+n);
+      };
+#endif
 
       for (auto k : expansionRange())
         for (auto v : make_zip_iterator(_x[k], _rhs[k],res[k]))
         {
           auto&   x = get<0>(v);
           auto& rhs = get<1>(v);
-#if 1
-#define TCH
+#ifdef OPT
+          auto& r = get<2>(v);
+          r = x*omega0 + (3*x + 4.0*omega*rhs)*omega1;
+#elif defined WP
           auto& r = get<2>(v);
           r = (3*x + 4.0*omega*rhs)*scale;
-#endif
+#else
           x = x + 2.0*omega*rhs;
+#endif
         }
 
 
@@ -452,7 +472,11 @@ class ODESolverT
             auto&  y1 = get<1>(v);
             auto&  y0 = get<2>(v);
             auto& rhs = get<3>(v);
-#ifdef TCH
+#ifdef OPT
+            x = 2*y1 - y0 + 4*omega*rhs;
+            auto& r = get<4>(v);
+            r += 2*omegak(i)*x;
+#elif defined WP
             x = 2*y1 - y0 + 4*omega*rhs;
             auto& r = get<4>(v);
             r += 2*scale*x;
@@ -465,9 +489,10 @@ class ODESolverT
         y0 = y1;
         y1 = _x;
       }
-#ifdef TCH
+#ifdef OPT
       _x = res;
-
+#elif defined WP
+      _x = res;
 #endif
 
     }
@@ -475,7 +500,7 @@ class ODESolverT
 
     void iterate(const Vector &u0, bool verbose)
     {
-      const int nstage = static_cast<int>(4+std::sqrt(_pde.cfl()) + 1);
+      const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));
       iterate(u0, nstage);
       if (verbose)
       {
@@ -730,7 +755,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
