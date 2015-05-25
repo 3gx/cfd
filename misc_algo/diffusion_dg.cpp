@@ -21,13 +21,65 @@ class ExpansionBaseT
 template<size_t N, typename T, typename Real>
 class ExpansionT;
 
-#if 0
+#if 1
 #define PIF_
 #else
 #define DGF_
 #endif
 
-#ifdef PIF_
+#ifdef PIFT_
+template<typename T, typename Real>
+class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
+{
+  /* PIF */
+  protected:
+    using base_type  = ExpansionBaseT<3,T,Real>;
+    static constexpr size_t N = 3;
+
+  public:
+
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {11.464101615137755,  0.6188021535170061, -0.0829037686547607},
+        {-8.618802153517006,  2., 0.6188021535170061},
+        {16.08290376865476, -8.618802153517006, 4.535898384862246}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto weight(const size_t i)  
+    { 
+      constexpr Real weight[] =
+      {
+        0.22222222222222274,
+        0.5555555555555555,
+        0.22222222222222274
+      };
+      return weight[i];
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    {
+      constexpr Real preconditioner[N][N] = 
+      {
+        {0.075026719286759500829, 0,0},
+        {0.25544867840851755224,0.27777777777777777778, 0},
+        {0.21936428658416594196,0.56645291237259066003, 0.147195502935462721393}
+      };
+      return preconditioner[j][i];
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real maxAbsMEV{10.8};
+      return maxAbsMEV;
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real maxAbsPEV{0.28};
+      return maxAbsPEV; 
+    }
+};
+#elif defined PIF_  /* not PIFt_ */
 template<typename T, typename Real>
 class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
 {
@@ -152,7 +204,7 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       return maxAbsPEV; 
     }
 };
-#elif defined DGF_
+#elif defined DGF_  /* not PIF_ */
 template<typename T, typename Real>
 class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
 {
@@ -427,7 +479,7 @@ class ODESolverT
 
 #if 1
 #define WP   /* prefered for high resolution & large time step, use scaleing 1x for nstate with cfl */
-#elif 0
+#elif 1
 #define OPT
 #endif
 
@@ -514,7 +566,7 @@ class ODESolverT
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
       std::array<Real,Expansion::size()> error;
-      constexpr Real tol = 1.0e-7;
+      constexpr Real tol = 1.0e-5;
       bool verbose = _verbose;
       for (auto iter : range_iterator{0,niter})
       {
@@ -538,12 +590,22 @@ class ODESolverT
             error[k] += err;
             cnt += 1;
           }
-          err += std::max(err,std::sqrt(error[k]/cnt));
+          error[k] = std::sqrt(error[k]/cnt);
+          err = std::max(err,error[k]);
+        }
+        if (_verbose)
+        {
+          printf(std::cerr, " >>  iter= %  ", iter);
+          for (auto k : expansionRange())
+            printf(std::cerr, "e[%]= % ", k, error[k]);
+          printf(std::cerr, "\n");
         }
         if (err < tol)
         {
           if (_verbose)
+          {
             printf(std::cerr, "   >> iter= %  err= % \n", iter, err);
+          }
           break;
         }
         if (iter == niter - 1 && _verbose)
@@ -746,7 +808,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 4;
+  constexpr auto ORDER = 3;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -755,7 +817,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64*64); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
