@@ -204,6 +204,63 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       return maxAbsPEV; 
     }
 };
+template<typename T, typename Real>
+class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
+{
+  /* PIF */
+  protected:
+    static constexpr size_t N = 5;
+    using base_type  = ExpansionBaseT<N,T,Real>;
+
+  public:
+
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {11.18330013267037774,3.13131216201181084,-0.758731795980807391,0.239101223353686050,-0.0543147605653389237},
+        {-9.44759960151614989,2.81669986732962226,2.21788633227481812,-0.557122620293797301,0.118357949604667387},
+        {6.42011650355933662,-6.22012045466975167,2.00000000000000000,1.86599528883177949,-0.315991337721364445},
+        {-8.01592078481097030,6.19052235495304182,-7.39311627638238017,2.81669986732962226,1.55003676630984697},
+        {22.4209150259060944,-16.1933902399992350,15.4154432215698509,-19.0856011786573598,11.18330013267037774}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto weight(const size_t i)  
+    { 
+      constexpr Real weight[] =
+      {
+        0.11846344252809503,
+        0.2393143352496833,
+        0.28444444444444444,
+        0.23931433524968349,
+        0.1184634425280951
+      };
+      return weight[i];
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    {
+      constexpr Real preconditioner[N][N] = 
+      {
+        {0.0592317212640472719,0,0,0,0},
+        {0.128151005670045283,0.119657167624841617,0,0,0},
+        {0.1137762880042246025,0.260004651680641519,0.142222222222222222,0,0},
+        {0.121232436926864147,0.228996054578999877,0.309036559064086645,0.119657167624841617,0},
+        {0.1168753295602285452,0.244908128910495419,0.273190043625801489,0.258884699608759272,0.0592317212640472719}
+      };
+      return preconditioner[j][i];
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real maxAbsMEV{8.6};
+      return maxAbsMEV;
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real maxAbsPEV{0.15};
+      return maxAbsPEV; 
+    }
+};
 #elif defined DGF_  /* not PIF_ */
 template<typename T, typename Real>
 class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
@@ -405,6 +462,8 @@ class ODESolverT
 
     static constexpr Real omegaCFL = 0.9;
 
+    std::array<bool,Expansion::size()> updateExpansion;
+
   public:
       auto expansionRange() const 
       {
@@ -433,19 +492,20 @@ class ODESolverT
 
       /* compute RHS */
       for (auto k : expansionRange())
-      {
-        for (auto v : make_zip_iterator(x[k], u0))
-          get<0>(v) += get<1>(v);
-        _pde.apply_bc(x[k]);
-        _pde.compute_rhs(rhs[k], x[k]);
+        if (updateExpansion[k])
+        {
+          for (auto v : make_zip_iterator(x[k], u0))
+            get<0>(v) += get<1>(v);
+          _pde.apply_bc(x[k]);
+          _pde.compute_rhs(rhs[k], x[k]);
 
-        assert(_x[k].size() == u0.size());
-        for (auto l : expansionRange())
-          for (auto v : make_zip_iterator(rhs[k], _x[l]))
-          {
-            get<0>(v) += - Expansion::matrix(k,l) * get<1>(v);
-          }
-      }
+          assert(_x[k].size() == u0.size());
+          for (auto l : expansionRange())
+            for (auto v : make_zip_iterator(rhs[k], _x[l]))
+            {
+              get<0>(v) += - Expansion::matrix(k,l) * get<1>(v);
+            }
+        }
 
       /* precondition RHS */
       for (auto i : range_iterator{0,u0.size()})
@@ -568,6 +628,9 @@ class ODESolverT
       std::array<Real,Expansion::size()> error;
       constexpr Real tol = 1.0e-5;
       bool verbose = _verbose;
+      for (auto k : expansionRange())
+        updateExpansion[k] = true;
+
       for (auto iter : range_iterator{0,niter})
       {
         for (auto k : expansionRange())
@@ -588,19 +651,24 @@ class ODESolverT
             auto err = square(_rhs[k][i]);
     //        err *= 1.0/square(_x[k][i] + eps);
             error[k] += err;
+         //   error[k] = std::max(error[k], std::abs(_rhs[k][i]));
             cnt += 1;
           }
-          error[k] = std::sqrt(error[k]/cnt);
+          error[k] = std::sqrt(error[k]);
+          error[k] *= std::sqrt(Real{1}/cnt);
           err = std::max(err,error[k]);
         }
         if (_verbose)
         {
           printf(std::cerr, " >>  iter= %  ", iter);
           for (auto k : expansionRange())
+          {
+            updateExpansion[k] = error[k] > tol;
             printf(std::cerr, "e[%]= % ", k, error[k]);
+          }
           printf(std::cerr, "\n");
         }
-        if (err < tol)
+        if (err <= tol)
         {
           if (_verbose)
           {
@@ -764,17 +832,18 @@ class PDEDiffusion
       const auto slope = ampl/dL;
 
 
-      std::fill(f.begin(), f.end(), 0);
+      const auto fmin = Real{1};
+      std::fill(f.begin(), f.end(), fmin);
       const int m = static_cast<int>(dL/dx + 0.5);
       for (int i = -m; i <= m; i++)
       {
         const auto x = L/2 + dx*i;
-        f[ic - ic/2 + i] = std::max(ampl - slope*(std::abs(L/2-x)),Real{0.0});
+        f[ic - ic/2 + i] = std::max(ampl - slope*(std::abs(L/2-x)),fmin);
       }
       for (int i = -m*2; i <= m*2; i++)
       {
         const auto x = L/2 + dx*i;
-        f[ic + ic/2 + i] = std::max(1.5*ampl - slope*(std::abs(L/2-x)),Real{0.0});
+        f[ic + ic/2 + i] = std::max(1.5*ampl - slope*(std::abs(L/2-x)),fmin);
       }
     }
 };
