@@ -552,7 +552,7 @@ class ODESolverT
 
     void iterate(const Vector &u0, bool verbose)
     {
-      const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));
+      const int nstage = static_cast<int>(1+std::sqrt(_pde.cfl()));  /* stiffff */
       iterate(u0, nstage);
       if (verbose)
       {
