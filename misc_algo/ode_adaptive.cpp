@@ -704,7 +704,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-11;
+      constexpr Real tol = 1.0e-7;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
