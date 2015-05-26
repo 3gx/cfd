@@ -249,6 +249,7 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
     }
     static constexpr auto preconditioner(const size_t i, const size_t j) 
     {
+//      return static_cast<Real>(i==j);
       constexpr Real preconditioner[N][N] = 
       {{0.03237124154221742,0,0,0,0,0,0},{0.07004354137872608,0.06992634787231917,0,0,0,0,0},{0.06215393578734986,0.15200552205783099,0.09545751262627974,0,0,0,0},{0.06633292861768470,0.13359576922388229,0.20770188076597078,0.10448979591836735,0,0,0},{0.06366576746880693,0.14380627590344877,0.18220246265408429,0.22735483605218653,0.09545751262627974,0,0},{0.06548633327460677,0.13720685187790830,0.19631211718445561,0.19962996905329136,0.20750503183140724,0.06992634787231917,0},{0.06428437356068539,0.14145951478168444,0.18773996647887383,0.21411332539996004,0.18328182138013593,0.15130371302782220,0.03237124154221742}};
       return preconditioner[j][i];
@@ -260,6 +261,7 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
     }
     static constexpr auto maxAbsPEV() 
     { 
+ //     return Real{1};
       constexpr Real maxAbsPEV{0.11};
       return maxAbsPEV; 
     }
@@ -463,7 +465,7 @@ class ODESolverT
     bool _verbose;
     typename Expansion::storage _x, _rhs;
 
-    static constexpr Real omegaCFL = 0.8;
+    static constexpr Real omegaCFL = 0.9;
 
     std::array<bool,Expansion::size()> updateExpansion;
 
@@ -493,6 +495,8 @@ class ODESolverT
       auto x = _x;
       auto& rhs = _rhs;
 
+      static auto rhs0 = rhs;
+
       /* compute RHS */
       for (auto k : expansionRange())
         if (updateExpansion[k])
@@ -508,27 +512,17 @@ class ODESolverT
             {
               get<0>(v) += - Expansion::matrix(k,l) * get<1>(v);
             }
+          rhs0[k] = rhs[k];
         }
 
       /* precondition RHS */
       for (auto i : range_iterator{0,u0.size()})
-      {
-        std::array<Real,Expansion::size()> tmp;
-        for (auto& t : tmp)
-          t = 0;
-
-        for (auto k : expansionRange())
-          for (auto l : expansionRange())
-          {
-            tmp[k] += Expansion::preconditioner(k,l)*_rhs[l][i];
-          }
-
         for (auto k : expansionRange())
         {
-        //  if (updateExpansion[k])
-            _rhs[k][i] = tmp[k];
+          _rhs[k][i] = 0;
+          for (auto l : expansionRange())
+            _rhs[k][i] += Expansion::preconditioner(k,l)*rhs0[l][i];
         }
-      }
     }
 
     void iterate(const Vector &u0, int n)
@@ -562,52 +556,60 @@ class ODESolverT
 #endif
 
       for (auto k : expansionRange())
-        for (auto v : make_zip_iterator(_x[k], _rhs[k],res[k]))
-        {
-          auto&   x = get<0>(v);
-          auto& rhs = get<1>(v);
+      {
+        if (updateExpansion[k])
+          for (auto v : make_zip_iterator(_x[k], _rhs[k],res[k]))
+          {
+            auto&   x = get<0>(v);
+            auto& rhs = get<1>(v);
 #ifdef OPT
-          auto& r = get<2>(v);
-          r = x*omega0 + (3*x + 4.0*omega*rhs)*omega1;
+            auto& r = get<2>(v);
+            r = x*omega0 + (3*x + 4.0*omega*rhs)*omega1;
 #elif defined WP
-          auto& r = get<2>(v);
-          r = (3*x + 4.0*omega*rhs)*scale;
+            auto& r = get<2>(v);
+            r = (3*x + 4.0*omega*rhs)*scale;
 #endif
-          x = x + 2.0*omega*rhs;
-        }
+            x = x + 2.0*omega*rhs;
+          }
+        y1[k] = _x[k];
+      }
 
 
-      y1 = _x;
 
       for (int i = 2; i <= n; i++)
       {
         rhs(u0);
         for (auto k : expansionRange())
-          for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k],res[k]))
+          if (updateExpansion[k])
           {
-            auto&   x = get<0>(v);
-            auto&  y1 = get<1>(v);
-            auto&  y0 = get<2>(v);
-            auto& rhs = get<3>(v);
+            for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k],res[k]))
+            {
+              auto&   x = get<0>(v);
+              auto&  y1 = get<1>(v);
+              auto&  y0 = get<2>(v);
+              auto& rhs = get<3>(v);
 #ifdef OPT
-            x = 2*y1 - y0 + 4*omega*rhs;
-            auto& r = get<4>(v);
-            r += 2*omegak(i)*x;
+              x = 2*y1 - y0 + 4*omega*rhs;
+              auto& r = get<4>(v);
+              r += 2*omegak(i)*x;
 #elif defined WP
-            x = 2*y1 - y0 + 4*omega*rhs;
-            auto& r = get<4>(v);
-            r += 2*scale*x;
+              x = 2*y1 - y0 + 4*omega*rhs;
+              auto& r = get<4>(v);
+              r += 2*scale*x;
 #else
-            const auto a = (Real{2}*i-1)/i;
-            const auto b = Real{-1}*(i-1)/i;
-            x = a*y1 + b*y0 + 2*omega*a*rhs;
+              const auto a = (Real{2}*i-1)/i;
+              const auto b = Real{-1}*(i-1)/i;
+              x = a*y1 + b*y0 + 2*omega*a*rhs;
 #endif
+            }
+            y0[k] = y1[k];
+            y1[k] = _x[k];
           }
-        y0 = y1;
-        y1 = _x;
       }
 #if defined OPT || defined WP
-      _x = res;
+        for (auto k : expansionRange())
+          if (updateExpansion[k])
+            _x[k] = res[k];
 #endif
 
     }
@@ -671,8 +673,8 @@ class ODESolverT
           }
           printf(std::cerr, "\n");
         }
-//        auto n2conv = std::count_if(updateExpansion.begin(), updateExpansion.end(), [](const auto x) { return x == true; });
-        if (err <= tol)
+        auto n2conv = std::count_if(updateExpansion.begin(), updateExpansion.end(), [](const auto x) { return x == true; });
+        if (n2conv == 0) //err <= tol)
         {
           if (_verbose)
           {
@@ -689,11 +691,17 @@ class ODESolverT
     {
       _verbose = verbose;
       using std::get;
-      static auto du = _pde.state();
+      auto du = _pde.state();
+        
 
       for (auto k : expansionRange())
-        for (auto &x : _x[k])
-          x = 0;
+      {
+        _pde.apply_bc(du);
+        _pde.compute_rhs(_x[k], du);
+        const Real omega = omegaCFL/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
+        for (auto& x : _x[k])
+          x *= 0.0*omega;
+      }
 
       solve_system(_pde.state());
 
@@ -881,7 +889,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 3;
+  constexpr auto ORDER = 7;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
