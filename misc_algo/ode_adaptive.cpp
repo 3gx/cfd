@@ -752,7 +752,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-8;
+      constexpr Real tol = 1.0e-7;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -812,7 +812,7 @@ class ODESolverT
           {
             _x[k][i] = du;
             for (auto l : expansionRange())
-              _x[k][i] += Expansion::nodeMatrix(k,l)*xtmp[l][i];
+              _x[k][i] += Expansion::nodeMatrix(l,k)*xtmp[l][i];
           }
         }
       }
@@ -822,7 +822,7 @@ class ODESolverT
           for (auto& x : _x[k])
             x = 0;
       }
-      firstRun = false;
+//      firstRun = false;
         
       u0 = _pde.state();
 
@@ -1120,7 +1120,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 7;
+  constexpr auto ORDER = 5;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -1129,7 +1129,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
