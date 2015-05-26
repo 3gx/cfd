@@ -828,7 +828,7 @@ class ODESolverT
       u0 = _pde.state();
 
       const auto cfl0 = _pde.get_cfl();
-      _pde.set_cfl(2.0*cfl0);
+      _pde.set_cfl(cfl0);
       solve_system(_pde.state());
       auto x_coarse = _x;
 
@@ -843,7 +843,7 @@ class ODESolverT
             _y0[i] += Expansion::oneVec(k)*_x[k][i];
         }
 
-      _pde.set_cfl(cfl0);
+      _pde.set_cfl(0.5*cfl0);
       solve_system(_pde.state());
       auto x_fine = _x;
 
@@ -866,7 +866,8 @@ class ODESolverT
       }
 
 
-      auto x = x_fine;
+      auto x = x_coarse;
+      _pde.set_cfl(cfl0);
       for (auto k : expansionRange())
       {
         for (auto v : make_zip_iterator(x[k], _pde.state()))
@@ -1067,7 +1068,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 7;
+  constexpr auto ORDER = 5;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
