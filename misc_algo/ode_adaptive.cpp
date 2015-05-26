@@ -147,6 +147,17 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       {0.30026319498086457,0.2222222222222222,-0.022485417203086805};
       return weight[i];
     }
+    static constexpr auto nodeMatrix(const size_t i, const size_t j)
+    {
+      constexpr Real matrix[N][N] = 
+      {
+        {0.460349987125916448154,-1.50268887172344415309,2.042338884597527704940},
+        {2.042338884597527704940,-5.66666666666666666667,4.62432778206913896173},
+        {4.62432778206913896173,-11.83064446160988918024,8.20631667954075021851}
+      };
+      return matrix[i][j];
+    }
+
     static constexpr auto preconditioner(const size_t i, const size_t j) 
     {
       constexpr Real preconditioner[N][N] = 
@@ -1184,7 +1195,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 7;
+  constexpr auto ORDER = 3;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
