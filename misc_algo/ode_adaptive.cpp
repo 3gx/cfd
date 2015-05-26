@@ -141,6 +141,12 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       };
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)  
+    { 
+      constexpr Real weight[] =
+      {0.30026319498086457,0.2222222222222222,-0.022485417203086805};
+      return weight[i];
+    }
     static constexpr auto preconditioner(const size_t i, const size_t j) 
     {
       constexpr Real preconditioner[N][N] = 
@@ -162,15 +168,22 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       return maxAbsPEV; 
     }
 
-    static constexpr auto nodeMatrix(const size_t i, const size_t j)
+    static constexpr auto prolongateMatrix(const size_t i, const size_t j)
     {
       constexpr Real matrix[N][N] = 
       {
-        {0.460349987125916448154,2.042338884597527704940,4.62432778206913896173},
-        {-1.50268887172344415309,-5.66666666666666666667,-11.83064446160988918024},
-        {2.042338884597527704940,4.62432778206913896173,8.20631667954075021851}
+        {1.228830557701236147530, 0.531081945517284740432, 0.0833333333333333333333}, 
+        {-0.312163891034569480863, 0.583333333333333333333, 0.978830557701236147530}, 
+        {0.083333333333333333333, -0.1144152788506180737649,  -0.0621638910345694808632}
       };
       return matrix[j][i];
+    }
+    static constexpr auto midVec(const size_t i)
+    {
+      constexpr Real vec[N] =
+      {
+        0., 1., 0.
+      };
     }
     static constexpr auto oneVec(const size_t i)
     {
@@ -765,8 +778,76 @@ class ODESolverT
       u0 = _pde.state();
 
       solve_system(_pde.state());
+      auto x_coarse = _x;
 
-      auto x = _x;
+      const auto cfl0 = _pde.get_cfl();
+      _pde.set_cfl(0.5*cfl0);
+      for (auto i : range_iterator{0,u0.size()})
+        for (auto k : expansionRange())
+        {
+          _x[k][i] = 0;
+          for (auto l : expansionRange())
+            _x[k][i] += Expansion::prolongateMatrix(k,l)*x_coarse[l][i];
+        }
+      solve_system(_pde.state());
+      _pde.set_cfl(cfl0);
+      auto x_fine = _x;
+
+
+      {
+        auto du_fine = du;
+        auto du_coarse = du;
+        auto rhs = _rhs;
+
+        auto x = x_fine;
+        for (auto k : expansionRange())
+        {
+          for (auto v : make_zip_iterator(x[k], _pde.state()))
+            get<0>(v) += get<1>(v);
+          _pde.compute_rhs(rhs[k], x[k]);
+        }
+
+        std::fill(du_fine.begin(), du_fine.end(), 0);
+        for (auto k : expansionRange())
+        {
+          const auto w = Expansion::weight(k);
+          for (auto v : make_zip_iterator(du_fine,rhs[k]))
+          {
+            get<0>(v) += w*get<1>(v);
+          }
+        }
+
+        x = x_coarse;
+        for (auto k : expansionRange())
+        {
+          for (auto v : make_zip_iterator(x[k], _pde.state()))
+            get<0>(v) += get<1>(v);
+          _pde.compute_rhs(rhs[k], x[k]);
+        }
+
+        std::fill(du_coarse.begin(), du_coarse.end(), 0);
+        for (auto k : expansionRange())
+        {
+          const auto w = Expansion::weight_half(k);
+          for (auto v : make_zip_iterator(du_coarse,rhs[k]))
+          {
+            get<0>(v) += w*get<1>(v);
+          }
+        }
+
+        auto err = Real{0};
+        for (auto v : make_zip_iterator(du_fine, du_coarse))
+        {
+          auto du = get<0>(v) - get<1>(v);
+          err += square(du);
+        }
+        err = std::sqrt(err/u0.size());
+        printf(std::cerr, " -- err_half= % \n" ,err);
+
+      }
+
+
+      auto x = x_coarse;
       for (auto k : expansionRange())
       {
         for (auto v : make_zip_iterator(x[k], _pde.state()))
@@ -823,6 +904,7 @@ class PDEDiffusion
     void set_dx(const Real dx) { _dx = dx;}
     void set_diff(const Real diff) { _diff = diff;}
     void set_cfl(const Real cfl) { _cfl = cfl;}
+    auto get_cfl() const { return _cfl; }
     Real dt() const {
       return  _cfl * 0.5*square(_dx)/_diff;
     }
@@ -966,7 +1048,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 7;
+  constexpr auto ORDER = 3;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
