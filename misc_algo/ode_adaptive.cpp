@@ -781,7 +781,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-7;
+      constexpr Real tol = 1.0e-8;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -884,11 +884,17 @@ class ODESolverT
           for (auto v : make_zip_iterator(du_err, x_coarse[k],x_fine1[k]))
             get<0>(v) += wmid*get<1>(v) - wone*get<2>(v);
         }
-        for (auto& x : du_err)
+        for (auto i : range_iterator{0,u0.size()})
         {
-          err1 += square(x);
+          auto u0 = _pde.state()[i];
+          auto u1 = u0;
+          for (auto k : expansionRange())
+            u1 += Expansion::oneVec(k)*x_fine1[k][i];
+          const auto um = std::max(std::abs(u0), std::abs(u1));
+          const auto sc1 = atol + rtol*um;
+          err1 += square(du_err[i]/sc1);
         }
-        err1 = std::sqrt(err1/du_err.size());
+        err1 = std::sqrt(err1/u0.size());
       }
 
       _pde.update(du);
@@ -946,6 +952,18 @@ class ODESolverT
         for (auto& x : du_err)
           err2 += square(x);
         err2 = std::sqrt(err2/du_err.size());
+        
+        for (auto i : range_iterator{0,u0.size()})
+        {
+          auto u0 = _pde.state()[i];
+          auto u1 = u0;
+          for (auto k : expansionRange())
+            u1 += Expansion::oneVec(k)*x_fine2[k][i];
+          const auto um = std::max(std::abs(u0), std::abs(u1));
+          const auto sc1 = atol + rtol*um;
+          err2 += square(du_err[i]/sc1);
+        }
+        err2 = std::sqrt(err2/u0.size());
       }
      
       /* update time-step */
@@ -953,7 +971,8 @@ class ODESolverT
       _time += _pde.dt();
       
       _pde.set_cfl(cfl0);
-      printf(std::cerr, " -- err1= %   err2= % \n", err1, err2);
+      if (_verbose)
+        printf(std::cerr, " -- err1= %   err2= % \n", err1, err2);
       
       std::fill(_y0.begin(), _y0.end(), 0);
       for (auto k : expansionRange())
@@ -974,6 +993,28 @@ class ODESolverT
           _y0[i] += Expansion::oneVec(k)*_x[k][i];
       }
 #endif
+
+      {
+#if 0
+        const auto p = Real{1}/Expansion::size();
+        const auto alpha = Real{0.7}*p;
+        const auto beta  = Real{0.4}*p;
+        const auto cfl_scale = 1.2*std::pow(1/err2,alpha)*std::pow(err1,beta);
+#elif 1
+        const auto p = Real{1}/Expansion::size();
+        const auto cfl_scale = 2*std::pow(1/err2,p)*std::pow(err1/err2,p);
+#else
+        const auto p = Real{1}/Expansion::size();
+        const auto alpha = Real{1.0}*p;
+        const auto cfl_scale = std::pow(1/err2,alpha);
+#endif
+
+        if (_verbose)
+          printf(std::cerr,"cfl_scale= % \n", cfl_scale);
+        _pde.set_cfl(_pde.get_cfl()*cfl_scale);
+      }
+
+
     }
 };
 
@@ -1143,7 +1184,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 5;
+  constexpr auto ORDER = 7;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -1157,28 +1198,34 @@ int main(int argc, char * argv[])
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
 
-  printf(std::cerr, "dt= %  tau= %   nstep= %\n",
-      dt, tau, nstep);
-
   solver.pde().set_ic();
   const auto mass0 = compute_mass(solver);
   dump2file(solver, "ic.txt");
-  for (size_t step = 1; step <= nstep; step++)
   {
-    auto verbose_step = (step-1)%1 == 0;
-    auto verbose_iter = (step-1)%1  == 0;
-    if (step == nstep || step == 1)
-      verbose_step = verbose_iter = true;
-    solver.update(verbose_iter);
-    if (verbose_step)
+    size_t kstep = 0;
+    while (true)
     {
-      const auto mass = compute_mass(solver);
-      printf(std::cerr, "step= % : time= % ORDER= % cost= % -- mass_err= %\n", step, solver.time(), ORDER,
-          solver.pde().cost(), (mass-mass0)/mass0);
+      auto verbose_step = kstep%1 == 0;
+      auto verbose_iter = kstep%1 == 0;
+      if (verbose_step)
+      {
+        const auto mass = compute_mass(solver);
+        printf(std::cerr, "step= % : time= % dt= % ORDER= % cost= % -- mass_err= %  Tend= % \n", 
+            kstep, solver.time(), solver.pde().dt(), ORDER,
+            solver.pde().cost(), (mass-mass0)/mass0, tau);
+      }
+      solver.update(verbose_iter);
+      if (solver.time() >= tau) break;
+      kstep++;
     }
+    const auto mass = compute_mass(solver);
+    printf(std::cerr, "step= % : time= % dt= % ORDER= % cost= % -- mass_err= %  Tend= % \n", 
+        kstep, solver.time(), solver.pde().dt(), ORDER,
+        solver.pde().cost(), (mass-mass0)/mass0, tau);
   }
   printf(std::cerr, " Writing output ... \n");
-  dump2file(solver);
+//  dump2file(solver);
+  dump2file(solver, "output.txt");
   printf(std::cerr, "cost= %\n", solver.pde().cost());
 
 
