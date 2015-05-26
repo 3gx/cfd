@@ -500,10 +500,10 @@ class ODESolverT
     PDE _pde;
     Real _time;
     bool _verbose;
-    typename Expansion::storage _x, _rhs, _rhs_pde;
+    typename Expansion::storage _x, _rhs;
     Vector _y0;
 
-    static constexpr Real omegaCFL = 0.9;
+    static constexpr Real omegaCFL = 0.8;
 
     std::array<bool,Expansion::size()> updateExpansion;
 
@@ -531,39 +531,32 @@ class ODESolverT
     {
       using std::get;
       auto x = _x;
-      auto& rhs = _rhs;
-
-      static auto rhs0 = rhs;
-      _rhs_pde = rhs;
 
       /* compute RHS */
       for (auto k : expansionRange())
-        if (updateExpansion[k])
-        {
-          for (auto v : make_zip_iterator(x[k], u0))
-            get<0>(v) += get<1>(v);
-          _pde.apply_bc(x[k]);
-          _pde.compute_rhs(_rhs_pde[k], x[k]);
+      {
+        for (auto v : make_zip_iterator(x[k], u0))
+          get<0>(v) += get<1>(v);
+        _pde.apply_bc(x[k]);
+        _pde.compute_rhs(_rhs[k], x[k]);
 
-          rhs[k] = _rhs_pde[k];
-          assert(_x[k].size() == u0.size());
-          for (auto l : expansionRange())
-            for (auto v : make_zip_iterator(rhs[k], _x[l]))
-            {
-              get<0>(v) += - Expansion::matrix(k,l) * get<1>(v);
-            }
-          rhs0[k] = rhs[k];
-        }
+        assert(_x[k].size() == u0.size());
+        for (auto l : expansionRange())
+          for (auto v : make_zip_iterator(_rhs[k], _x[l]))
+          {
+            get<0>(v) += - Expansion::matrix(k,l) * get<1>(v);
+          }
+      }
 
       /* precondition RHS */
+      auto rhs0 = _rhs;
       for (auto i : range_iterator{0,u0.size()})
         for (auto k : expansionRange())
-          if (updateExpansion[k])
-          {
-            _rhs[k][i] = 0;
-            for (auto l : expansionRange())
-              _rhs[k][i] += Expansion::preconditioner(k,l)*rhs0[l][i];
-          }
+        {
+          _rhs[k][i] = 0;
+          for (auto l : expansionRange())
+            _rhs[k][i] += Expansion::preconditioner(k,l)*rhs0[l][i];
+        }
     }
 
     void iterate(const Vector &u0, int n)
@@ -671,7 +664,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-7;
+      constexpr Real tol = 1.0e-11;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -685,32 +678,45 @@ class ODESolverT
         iterate(iter,niter, u0, verbose);
         verbose = false;
 
-#if 0
+#if 1
         auto err = Real{0};
         for (auto k : expansionRange())
         {
           for (auto i : range_iterator{0,u0.size()})
           {
             const auto aerr = std::abs(x0[k][i] - _x[k][i]);
-            err += square(aerr/(atol + rtol*std::abs(u0[i])));
+            const auto ym = std::abs(u0[i]);
+            err += square(aerr/(atol + rtol*ym));
           }
         }
         err = std::sqrt(err/(u0.size()-2)/Expansion::size());
 #else
+        auto x = _x;
+        for (auto k : expansionRange())
+        {
+          for (auto v : make_zip_iterator(x[k], _pde.state()))
+            get<0>(v) += get<1>(v);
+          _pde.apply_bc(x[k]);
+          _pde.compute_rhs(_rhs[k], x[k]);
+        }
+
         auto err = Real{0};
         for (auto i : range_iterator{0,u0.size()-0})
         {
           const auto y0 = _y0[i];
           auto y1 = Real{0};
           for (auto k : expansionRange())
-            y1 += Expansion::weight(k)*_rhs_pde[k][i];
+            y1 += Expansion::weight(k)*_rhs[k][i];
           _y0[i] = y1;
 
           const auto aerr = std::abs(y1-y0);
           const auto ym  = std::max(std::abs(u0[i]+y0), std::abs(u0[i]+y1));
 #if 1
-          if (i%1000 == 0)
-            printf(std::cerr, "(%,%,%) ", rtol*ym, atol,aerr);
+          if (i%200 == 0)
+          {
+//            printf(std::cerr, "(%,%,%) ", rtol*ym, atol,aerr);
+            printf(std::cerr, "% ",aerr);
+          }
 #endif
           err += square(aerr/(atol + rtol*ym));
         }
@@ -767,7 +773,6 @@ class ODESolverT
 
       solve_system(_pde.state());
 
-#if 0
       auto x = _x;
       for (auto k : expansionRange())
       {
@@ -776,13 +781,12 @@ class ODESolverT
         _pde.apply_bc(x[k]);
         _pde.compute_rhs(_rhs[k], x[k]);
       }
-#endif
 
       std::fill(du.begin(), du.end(), 0);
       for (auto k : expansionRange())
       {
         const auto w = Expansion::weight(k);
-        for (auto v : make_zip_iterator(du,_rhs_pde[k]))
+        for (auto v : make_zip_iterator(du,_rhs[k]))
         {
           get<0>(v) += w*get<1>(v);
         }
@@ -827,12 +831,15 @@ class PDEDiffusion
     void set_dx(const Real dx) { _dx = dx;}
     void set_diff(const Real diff) { _diff = diff;}
     void set_cfl(const Real cfl) { _cfl = cfl;}
-    Real dt() const {return _cfl * 0.5*square(_dx)/_diff;}
+//#define FOURTH
+    Real dt() const {
+      return  _cfl * 0.5*square(_dx)/_diff;
+    }
 
     auto cost() const { return n_rhs_calls; }
     Real AbsEV() const
     {
-#if 1
+#ifndef FOURTH
       return dt() * 4.0*_diff/square(_dx);  /* 2.0 * cfl */
 #else
       return dt() * 5.5*_diff/square(_dx);  /* 2.0 * cfl */
@@ -841,13 +848,13 @@ class PDEDiffusion
 
     auto dx() const { return _dx; }
 
-    PDEDiffusion(const size_t n) : _f{Vector(n+4)}, n_rhs_calls{0}
+    PDEDiffusion(const size_t n) : _f{Vector(n+2)}, n_rhs_calls{0}
     {
     }
 
     static void periodic_bc(Vector &f) 
     {
-#if 1
+#ifndef FOURTH
       const auto n = f.size();
       f[0  ] = f[n-2];
       f[n-1] = f[1  ];
@@ -862,7 +869,7 @@ class PDEDiffusion
 
     static void free_bc(Vector &f) 
     {
-#if 1
+#ifndef FOURTH
       const auto n = f.size();
       f[0  ] = f[  1];
       f[n-1] = f[n-2];
@@ -896,7 +903,7 @@ class PDEDiffusion
       {
         n_rhs_calls++;
         const auto c = dt() * _diff/square(_dx);
-#if 1
+#ifndef FOURTH
         for (auto i : range_iterator{1,x.size() - 1})
         {
           res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
@@ -975,8 +982,8 @@ auto compute_mass(const Solver &solver)
   const auto n = f.size();
   const auto dx = solver.pde().dx();
   typename Solver::Real sum = 0;
-  for (auto v : f)
-    sum += dx*v;
+  for (int i = 1; i < n-1; i++)
+    sum += f[i]*dx;
   return sum;
 }
 
