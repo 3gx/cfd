@@ -57,6 +57,10 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     { 
       return Real{0.5};
     }
+    static constexpr auto oneVec(const size_t i)
+    {
+      return Real{1};
+    }
 };
 template<typename T, typename Real>
 class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
@@ -99,6 +103,12 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
     { 
       constexpr Real maxAbsPEV = 0.25;
       return maxAbsPEV; 
+    }
+    static constexpr auto oneVec(const size_t i)
+    {
+      constexpr Real vec[N] = 
+      {-0.366025403784438646764,1.366025403784438646764};
+      return vec[i];
     }
 };
 template<typename T, typename Real>
@@ -161,6 +171,12 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
         {2.042338884597527704940,4.62432778206913896173,8.20631667954075021851}
       };
       return matrix[j][i];
+    }
+    static constexpr auto oneVec(const size_t i)
+    {
+      constexpr Real vec[N] = 
+      {0.187836108965430519137,-0.666666666666666666666,1.478830557701236147530};
+      return vec[i];
     }
 };
 template<typename T, typename Real>
@@ -230,6 +246,12 @@ class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
         {2.27307243283706310256,7.3226768140715753718,24.7175307651646205030,61.6791649149221396919,103.576850658626033458}
       };
       return matrix[j][i];
+    }
+    static constexpr auto oneVec(const size_t i)
+    {
+      constexpr Real vec[N] = 
+      {0.076358661795812900484,-0.267941652223387509304,0.53333333333333333333,-0.89315839200007173733,1.55140804909431301281};
+      return vec[i];
     }
 };
 template<typename T, typename Real>
@@ -301,6 +323,13 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
         {2.35310722757988102594,8.7577815257796596709,41.231418865465210839,167.698641721155219876,510.87022617994021401,1113.33078021877283523,1717.22290118222219128}
       };
       return matrix[j][i];
+    }
+    static constexpr auto oneVec(const size_t i)
+    {
+      constexpr Real vec[N] = 
+      {0.041115148862905928075,-0.144070103612068846929,0.28405414676522996668,-0.45714285714285714286,0.67210786192236178693,-0.97072669650612219065,1.57466249971055049874};
+
+      return vec[i];
     }
 };
 #elif defined DGF_  /* not PIF_ */
@@ -664,7 +693,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-5;
+      constexpr Real tol = 1.0e-11;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -710,13 +739,12 @@ class ODESolverT
             y1 += Expansion::weight(k)*_rhs[k][i];
 #else
           for (auto k : expansionRange())
-            y1 += Expansion::weight(k)*_x[k][i];
+            y1 += Expansion::oneVec(k)*_x[k][i];
 #endif
           _y0[i] = y1;
 
           const auto aerr = std::abs(y1-y0);
           const auto ym  = std::max(std::abs(u0[i]+y0), std::abs(u0[i]+y1));
-    //      const auto ym  = std::max(std::abs(y0), std::abs(y1));
 #if 0
           if (i%200 == 0)
           {
@@ -761,7 +789,7 @@ class ODESolverT
           const auto du = u0[i] - u1[i];
           for (auto k : expansionRange())
           {
-            _x[k][i] = du + xtmp[k][i];
+            _x[k][i] = du + 0.1*xtmp[k][i];
 //            for (auto l : expansionRange())
 //              _x[k][i] += Expansion::nodeMatrix(k,l)*xtmp[l][i];
           }
@@ -773,7 +801,7 @@ class ODESolverT
           for (auto& x : _x[k])
             x = 0;
       }
-//      firstRun = false;
+      firstRun = false;
         
       u0 = _pde.state();
 
@@ -1005,7 +1033,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 7;
+  constexpr auto ORDER = 3;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
