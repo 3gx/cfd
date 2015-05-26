@@ -151,6 +151,17 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       constexpr Real maxAbsPEV{0.22222};
       return maxAbsPEV; 
     }
+
+    static constexpr auto nodeMatrix(const size_t i, const size_t j)
+    {
+      constexpr Real matrix[N][N] = 
+      {
+        {0.460349987125916448154,2.042338884597527704940,4.62432778206913896173},
+        {-1.50268887172344415309,-5.66666666666666666667,-11.83064446160988918024},
+        {2.042338884597527704940,4.62432778206913896173,8.20631667954075021851}
+      };
+      return matrix[j][i];
+    }
 };
 template<typename T, typename Real>
 class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
@@ -208,6 +219,18 @@ class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
       constexpr Real maxAbsPEV{0.15};
       return maxAbsPEV; 
     }
+    static constexpr auto nodeMatrix(const size_t i, const size_t j)
+    {
+      constexpr Real matrix[N][N] = 
+      {
+        {0.213260005841349104302,1.71754726228747258129,9.3031177500426426728,29.2274326029943329589,54.3373967987902398687},
+        {-0.74002965114900785695,-5.7585639443127711100,-30.1637945111551133825,-92.666703922546651957,-170.315662745074820114},
+        {1.42879537949198108031,10.1954385103677075047,49.5333333333333333333,145.324986458118124091,261.184112985355520657},
+        {-2.17509816702138543022,-12.4770986424139843478,-52.3901873373854831267,-142.564880053487944785,-247.782697697696973869},
+        {2.27307243283706310256,7.3226768140715753718,24.7175307651646205030,61.6791649149221396919,103.576850658626033458}
+      };
+      return matrix[j][i];
+    }
 };
 template<typename T, typename Real>
 class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
@@ -264,6 +287,20 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
  //     return Real{1};
       constexpr Real maxAbsPEV{0.11};
       return maxAbsPEV; 
+    }
+    static constexpr auto nodeMatrix(const size_t i, const size_t j)
+    {
+      constexpr Real matrix[N][N] = 
+      {
+        {0.119754539292883770824,1.22728019371609711879,10.4575118331634874210,59.758130571637751289,221.822382804114009194,540.70851913149474530,881.03018324838731946},
+        {-0.41835867464874851868,-4.2412796572008277475,-35.651064814775981503,-201.262030327699632498,-740.30470969359352825,-1793.78716313596831775,-2913.54990834164420749},
+        {0.81929749536172830115,8.1119477463172599059,66.265956470439013599,365.023534153547473868,1318.94049172829736763,3159.48999676330457420,5101.1851673164638649},
+        {-1.30010385070212712168,-12.2809301491938185975,-95.170703437054145911,-502.657142857142857143,-1764.56772094090628785,-4152.27192312391146419,-6643.24378333339699150},
+        {1.85025477095430382384,15.8344513639069835156,111.529774812171960644,550.88130274216226410,1854.22609525154686867,4257.46607507546489964,6729.2444447210924098},
+        {-2.4239515078379212814,-16.4092510233253538662,-97.662893729409545089,-438.44243600366021949,-1399.98676532939864340,-3123.93628492915727242,-4870.8890047931245865},
+        {2.35310722757988102594,8.7577815257796596709,41.231418865465210839,167.698641721155219876,510.87022617994021401,1113.33078021877283523,1717.22290118222219128}
+      };
+      return matrix[j][i];
     }
 };
 #elif defined DGF_  /* not PIF_ */
@@ -538,7 +575,7 @@ class ODESolverT
       rhs(u0);
       static auto res = _x;
 
-#if 1
+#if 0
 #define WP   /* prefered for high resolution & large time step, use scaleing 1x for nstate with cfl */
 #elif 1
 #define OPT
@@ -616,9 +653,9 @@ class ODESolverT
     }
 
 
-    void iterate(const Vector &u0, bool verbose)
+    void iterate(const int iter, const int niter, const Vector &u0, bool verbose)
     {
-      const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));  /* stiffff */
+      const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));  /* stiffff */
       iterate(u0, nstage);
       if (verbose)
       {
@@ -631,60 +668,39 @@ class ODESolverT
       using std::get;
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      std::array<Real,Expansion::size()> error;
       constexpr Real tol = 1.0e-9;
+      constexpr Real atol = tol;
+      constexpr Real rtol = tol;
+
       bool verbose = _verbose;
       for (auto k : expansionRange())
         updateExpansion[k] = true;
 
       for (auto iter : range_iterator{0,niter})
       {
-        for (auto k : expansionRange())
-        {
-          error[k] = 0;
-        }
-
-        iterate(u0, verbose);
+        const auto x0 = _x;
+        iterate(iter,niter, u0, verbose);
         verbose = false;
 
-        Real err = 0;
-        int cnt = 0;
         constexpr auto eps = Real{1.0e-7};
+        auto err = Real{0};
         for (auto k : expansionRange())
         {
           for (auto i : range_iterator{1,u0.size()-1})
           {
-            auto err = square(_rhs[k][i]);
-    //        err *= 1.0/square(_x[k][i] + eps);
-            error[k] += err;
-         //   error[k] = std::max(error[k], std::abs(_rhs[k][i]));
-            cnt += 1;
+            const auto aerr = std::abs(x0[k][i] - _x[k][i]);
+            err += square(aerr/(atol + rtol*std::abs(u0[i])));
           }
-          error[k] = std::sqrt(error[k]);
-          error[k] *= std::sqrt(Real{1}/cnt);
-          err = std::max(err,error[k]);
         }
+        err = std::sqrt(err/(u0.size()-2)/Expansion::size());
         if (_verbose)
         {
-          printf(std::cerr, " >>  iter= %  ", iter);
-          for (auto k : expansionRange())
-          {
-            updateExpansion[k] = error[k] > tol;
-            printf(std::cerr, "e[%]= % ", k, error[k]);
-          }
-          printf(std::cerr, "\n");
-        }
-        auto n2conv = std::count_if(updateExpansion.begin(), updateExpansion.end(), [](const auto x) { return x == true; });
-        if (n2conv == 0) //err <= tol)
-        {
-          if (_verbose)
-          {
-            printf(std::cerr, "   >> iter= %  err= % \n", iter, err);
-          }
-          break;
+          printf(std::cerr, " >>  iter= %  err= % \n", iter, err);
+          if (err < 1)
+            break;
         }
         if (iter == niter - 1 && _verbose)
-          printf(std::cerr, "   ** iter= %  err= % \n", iter, err);
+          printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
       }
     }
 
@@ -693,25 +709,43 @@ class ODESolverT
       _verbose = verbose;
       using std::get;
       auto du = _pde.state();
-        
+      static auto u0 = _pde.state();
 
-      for (auto k : expansionRange())
+      static bool firstRun = true;
+      if (!firstRun)
       {
-        _pde.apply_bc(du);
-        _pde.compute_rhs(_x[k], du);
-        const Real omega = omegaCFL/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
-        for (auto& x : _x[k])
-          x *= 0.0*omega;
+        auto xtmp = _x;
+        const auto& u1 = _pde.state();
+        for (auto i : range_iterator{0,u0.size()})
+        {
+          const auto du = u0[i] - u1[i];
+          for (auto k : expansionRange())
+          {
+            _x[k][i] = du + xtmp[k][i];
+//            for (auto l : expansionRange())
+//              _x[k][i] += Expansion::nodeMatrix(k,l)*xtmp[l][i];
+          }
+        }
       }
+      else
+      {
+        for (auto k : expansionRange())
+          for (auto& x : _x[k])
+            x = 0;
+      }
+//      firstRun = false;
+        
+      u0 = _pde.state();
 
       solve_system(_pde.state());
 
+      auto x = _x;
       for (auto k : expansionRange())
       {
-        for (auto v : make_zip_iterator(_x[k], _pde.state()))
+        for (auto v : make_zip_iterator(x[k], _pde.state()))
           get<0>(v) += get<1>(v);
-        _pde.apply_bc(_x[k]);
-        _pde.compute_rhs(_rhs[k], _x[k]);
+        _pde.apply_bc(x[k]);
+        _pde.compute_rhs(_rhs[k], x[k]);
       }
 
       std::fill(du.begin(), du.end(), 0);
