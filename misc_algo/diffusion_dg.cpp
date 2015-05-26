@@ -518,11 +518,12 @@ class ODESolverT
       /* precondition RHS */
       for (auto i : range_iterator{0,u0.size()})
         for (auto k : expansionRange())
-        {
-          _rhs[k][i] = 0;
-          for (auto l : expansionRange())
-            _rhs[k][i] += Expansion::preconditioner(k,l)*rhs0[l][i];
-        }
+          if (updateExpansion[k])
+          {
+            _rhs[k][i] = 0;
+            for (auto l : expansionRange())
+              _rhs[k][i] += Expansion::preconditioner(k,l)*rhs0[l][i];
+          }
     }
 
     void iterate(const Vector &u0, int n)
@@ -631,7 +632,7 @@ class ODESolverT
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
       std::array<Real,Expansion::size()> error;
-      constexpr Real tol = 1.0e-7;
+      constexpr Real tol = 1.0e-9;
       bool verbose = _verbose;
       for (auto k : expansionRange())
         updateExpansion[k] = true;
@@ -889,7 +890,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 7;
+  constexpr auto ORDER = 3;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -898,7 +899,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64*64/8); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64*64); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
