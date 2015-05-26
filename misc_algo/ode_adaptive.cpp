@@ -335,7 +335,6 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
     }
     static constexpr auto preconditioner(const size_t i, const size_t j) 
     {
-//      return static_cast<Real>(i==j);
       constexpr Real preconditioner[N][N] = 
       {{0.03237124154221742,0,0,0,0,0,0},{0.07004354137872608,0.06992634787231917,0,0,0,0,0},{0.06215393578734986,0.15200552205783099,0.09545751262627974,0,0,0,0},{0.06633292861768470,0.13359576922388229,0.20770188076597078,0.10448979591836735,0,0,0},{0.06366576746880693,0.14380627590344877,0.18220246265408429,0.22735483605218653,0.09545751262627974,0,0},{0.06548633327460677,0.13720685187790830,0.19631211718445561,0.19962996905329136,0.20750503183140724,0.06992634787231917,0},{0.06428437356068539,0.14145951478168444,0.18773996647887383,0.21411332539996004,0.18328182138013593,0.15130371302782220,0.03237124154221742}};
       return preconditioner[i][j];
@@ -347,7 +346,6 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
     }
     static constexpr auto maxAbsPEV() 
     { 
- //     return Real{1};
       constexpr Real maxAbsPEV{0.11};
       return maxAbsPEV; 
     }
@@ -1068,7 +1066,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 7;
+  constexpr auto ORDER = 5;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
