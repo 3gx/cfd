@@ -1015,7 +1015,7 @@ class ODESolverT
         const auto cfl_scale = 2.0*std::pow(1/err2,alpha)*std::pow(err1,beta);
 #elif 1
         const auto p = Real{1}/(Expansion::size()+0);
-        const auto cfl_scale = 1.2*std::pow(1/err2,p)*std::pow(err1/err2,p);
+        const auto cfl_scale = 2*std::pow(1/err2,p)*std::pow(err1/err2,p);
 #else
         const auto p = Real{1}/Expansion::size();
         const auto alpha = Real{1.0}*p;
