@@ -172,9 +172,9 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
     {
       constexpr Real matrix[N][N] = 
       {
-        {1.228830557701236147530, 0.531081945517284740432, 0.0833333333333333333333}, 
-        {-0.312163891034569480863, 0.583333333333333333333, 0.978830557701236147530}, 
-        {0.083333333333333333333, -0.1144152788506180737649,  -0.0621638910345694808632}
+        {1.228830557701236147530,-0.312163891034569480863,0.083333333333333333333},
+        {0.531081945517284740432,0.583333333333333333333,-0.1144152788506180737649},
+        {0.0833333333333333333333,0.978830557701236147530,-0.0621638910345694808632}
       };
       return matrix[j][i];
     }
@@ -184,6 +184,7 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       {
         0., 1., 0.
       };
+      return vec[i];
     }
     static constexpr auto oneVec(const size_t i)
     {
@@ -773,7 +774,7 @@ class ODESolverT
           for (auto& x : _x[k])
             x = 0;
       }
-      firstRun = false;
+//      firstRun = false;
         
       u0 = _pde.state();
 
@@ -782,16 +783,22 @@ class ODESolverT
 
       const auto cfl0 = _pde.get_cfl();
       _pde.set_cfl(0.5*cfl0);
+
       for (auto i : range_iterator{0,u0.size()})
         for (auto k : expansionRange())
         {
           _x[k][i] = 0;
           for (auto l : expansionRange())
             _x[k][i] += Expansion::prolongateMatrix(k,l)*x_coarse[l][i];
+          _y0[i] = 0;
+          for (auto k : expansionRange())
+            _y0[i] += Expansion::oneVec(k)*_x[k][i];
         }
+
       solve_system(_pde.state());
-      _pde.set_cfl(cfl0);
       auto x_fine = _x;
+
+      _pde.set_cfl(cfl0);
 
 
       {
@@ -800,6 +807,7 @@ class ODESolverT
         auto rhs = _rhs;
 
         auto x = x_fine;
+        _pde.set_cfl(0.5*cfl0);
         for (auto k : expansionRange())
         {
           for (auto v : make_zip_iterator(x[k], _pde.state()))
@@ -810,13 +818,22 @@ class ODESolverT
         std::fill(du_fine.begin(), du_fine.end(), 0);
         for (auto k : expansionRange())
         {
+#if 0
+#undef MID
           const auto w = Expansion::weight(k);
           for (auto v : make_zip_iterator(du_fine,rhs[k]))
           {
             get<0>(v) += w*get<1>(v);
           }
+#else
+#define MID
+          const auto w = Expansion::oneVec(k);
+          for (auto v : make_zip_iterator(du_fine,x_fine[k]))
+            get<0>(v) += w*get<1>(v);
+#endif
         }
 
+        _pde.set_cfl(cfl0);
         x = x_coarse;
         for (auto k : expansionRange())
         {
@@ -828,17 +845,23 @@ class ODESolverT
         std::fill(du_coarse.begin(), du_coarse.end(), 0);
         for (auto k : expansionRange())
         {
+#ifndef MID
           const auto w = Expansion::weight_half(k);
           for (auto v : make_zip_iterator(du_coarse,rhs[k]))
           {
             get<0>(v) += w*get<1>(v);
           }
+#else
+          const auto w = Expansion::midVec(k);
+          for (auto v : make_zip_iterator(du_coarse,x_coarse[k]))
+            get<0>(v) += w*get<1>(v);
+#endif
         }
 
         auto err = Real{0};
-        for (auto v : make_zip_iterator(du_fine, du_coarse))
+        for (auto i : range_iterator(1,u0.size()-1))
         {
-          auto du = get<0>(v) - get<1>(v);
+          auto du = du_coarse[i] - du_fine[i];
           err += square(du);
         }
         err = std::sqrt(err/u0.size());
@@ -1057,7 +1080,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
