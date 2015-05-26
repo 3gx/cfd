@@ -801,6 +801,7 @@ class ODESolverT
 
 
       static bool firstRun = true;
+#if 0
       if (!firstRun)
       {
         auto xtmp = _x;
@@ -817,20 +818,19 @@ class ODESolverT
         }
       }
       else
-      {
+#endif
         for (auto k : expansionRange())
           for (auto& x : _x[k])
             x = 0;
-      }
-//      firstRun = false;
+
+      firstRun = false;
         
       u0 = _pde.state();
 
+      const auto cfl0 = _pde.get_cfl();
+      _pde.set_cfl(2.0*cfl0);
       solve_system(_pde.state());
       auto x_coarse = _x;
-
-      const auto cfl0 = _pde.get_cfl();
-      _pde.set_cfl(0.5*cfl0);
 
       for (auto i : range_iterator{0,u0.size()})
         for (auto k : expansionRange())
@@ -843,83 +843,30 @@ class ODESolverT
             _y0[i] += Expansion::oneVec(k)*_x[k][i];
         }
 
+      _pde.set_cfl(cfl0);
       solve_system(_pde.state());
       auto x_fine = _x;
 
-      _pde.set_cfl(cfl0);
-
-
       {
-        auto du_fine = du;
-        auto du_coarse = du;
-        auto rhs = _rhs;
-
-        auto x = x_fine;
-        _pde.set_cfl(0.5*cfl0);
+        auto du_err = u0;
+        std::fill(du_err.begin(), du_err.end(), 0);
         for (auto k : expansionRange())
         {
-          for (auto v : make_zip_iterator(x[k], _pde.state()))
-            get<0>(v) += get<1>(v);
-          _pde.compute_rhs(rhs[k], x[k]);
-        }
-
-        std::fill(du_fine.begin(), du_fine.end(), 0);
-        for (auto k : expansionRange())
-        {
-#if 0
-#undef MID
-          const auto w = Expansion::weight(k);
-          for (auto v : make_zip_iterator(du_fine,rhs[k]))
-          {
-            get<0>(v) += w*get<1>(v);
-          }
-#else
-#define MID
-          const auto w = Expansion::oneVec(k);
-          for (auto v : make_zip_iterator(du_fine,x_fine[k]))
-            get<0>(v) += w*get<1>(v);
-#endif
-        }
-
-        _pde.set_cfl(cfl0);
-        x = x_coarse;
-        for (auto k : expansionRange())
-        {
-          for (auto v : make_zip_iterator(x[k], _pde.state()))
-            get<0>(v) += get<1>(v);
-          _pde.compute_rhs(rhs[k], x[k]);
-        }
-
-        std::fill(du_coarse.begin(), du_coarse.end(), 0);
-        for (auto k : expansionRange())
-        {
-#ifndef MID
-          const auto w = Expansion::weight_half(k);
-          for (auto v : make_zip_iterator(du_coarse,rhs[k]))
-          {
-            get<0>(v) += w*get<1>(v);
-          }
-#else
-#undef MID
-          const auto w = Expansion::midVec(k);
-          for (auto v : make_zip_iterator(du_coarse,x_coarse[k]))
-            get<0>(v) += w*get<1>(v);
-#endif
+          const auto wone = Expansion::oneVec(k);
+          const auto wmid = Expansion::midVec(k);
+          for (auto v : make_zip_iterator(du_err, x_coarse[k],x_fine[k]))
+            get<0>(v) += wmid*get<1>(v) - wone*get<2>(v);
         }
 
         auto err = Real{0};
-        for (auto i : range_iterator(1,u0.size()-1))
-        {
-          auto du = du_coarse[i] - du_fine[i];
-          err += square(du);
-        }
-        err = std::sqrt(err/u0.size());
+        for (auto& x : du_err)
+          err += square(x);
+        err = std::sqrt(err/du_err.size());
         printf(std::cerr, " -- err_half= % \n" ,err);
-
       }
 
 
-      auto x = x_coarse;
+      auto x = x_fine;
       for (auto k : expansionRange())
       {
         for (auto v : make_zip_iterator(x[k], _pde.state()))
@@ -1120,7 +1067,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 5;
+  constexpr auto ORDER = 7;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
