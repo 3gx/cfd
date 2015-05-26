@@ -702,7 +702,7 @@ class ODESolverT
       rhs(u0);
       static auto res = _x;
 
-#if 1
+#if 0
 #define WP   /* prefered for high resolution & large time step, use scaleing 1x for nstate with cfl */
 #elif 1
 #define OPT
@@ -792,7 +792,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-7;
+      constexpr Real tol = 1.0e-9;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -1008,13 +1008,13 @@ class ODESolverT
 #endif
 
       {
-#if 1
+#if 0
         const auto p = Real{1}/Expansion::size();
         const auto alpha = Real{0.7}*p;
         const auto beta  = Real{0.4}*p;
         const auto cfl_scale = 2.0*std::pow(1/err2,alpha)*std::pow(err1,beta);
 #elif 1
-        const auto p = Real{1}/Expansion::size();
+        const auto p = Real{1}/(Expansion::size()+0);
         const auto cfl_scale = 1.2*std::pow(1/err2,p)*std::pow(err1/err2,p);
 #else
         const auto p = Real{1}/Expansion::size();
