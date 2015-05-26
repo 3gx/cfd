@@ -852,6 +852,7 @@ class ODESolverT
             get<0>(v) += w*get<1>(v);
           }
 #else
+#undef MID
           const auto w = Expansion::midVec(k);
           for (auto v : make_zip_iterator(du_coarse,x_coarse[k]))
             get<0>(v) += w*get<1>(v);
