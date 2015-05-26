@@ -752,7 +752,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-7;
+      constexpr Real tol = 1.0e-9;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -1076,7 +1076,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
