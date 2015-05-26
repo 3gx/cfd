@@ -828,7 +828,7 @@ class ODESolverT
       u0 = _pde.state();
 
       const auto cfl0 = _pde.get_cfl();
-      _pde.set_cfl(cfl0);
+      _pde.set_cfl(1.0*cfl0);
       solve_system(_pde.state());
       auto x_coarse = _x;
 
@@ -1068,7 +1068,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 5;
+  constexpr auto ORDER = 7;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
