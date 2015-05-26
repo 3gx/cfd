@@ -664,7 +664,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-11;
+      constexpr Real tol = 1.0e-5;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -678,7 +678,7 @@ class ODESolverT
         iterate(iter,niter, u0, verbose);
         verbose = false;
 
-#if 1
+#if 0
         auto err = Real{0};
         for (auto k : expansionRange())
         {
@@ -694,7 +694,7 @@ class ODESolverT
         auto x = _x;
         for (auto k : expansionRange())
         {
-          for (auto v : make_zip_iterator(x[k], _pde.state()))
+          for (auto v : make_zip_iterator(x[k],u0))
             get<0>(v) += get<1>(v);
           _pde.apply_bc(x[k]);
           _pde.compute_rhs(_rhs[k], x[k]);
@@ -705,22 +705,28 @@ class ODESolverT
         {
           const auto y0 = _y0[i];
           auto y1 = Real{0};
+#if 0
           for (auto k : expansionRange())
             y1 += Expansion::weight(k)*_rhs[k][i];
+#else
+          for (auto k : expansionRange())
+            y1 += Expansion::weight(k)*_x[k][i];
+#endif
           _y0[i] = y1;
 
           const auto aerr = std::abs(y1-y0);
           const auto ym  = std::max(std::abs(u0[i]+y0), std::abs(u0[i]+y1));
-#if 1
+    //      const auto ym  = std::max(std::abs(y0), std::abs(y1));
+#if 0
           if (i%200 == 0)
           {
-//            printf(std::cerr, "(%,%,%) ", rtol*ym, atol,aerr);
-            printf(std::cerr, "% ",aerr);
+            printf(std::cerr, "(%,%,%) ", rtol*ym, atol,aerr);
+//            printf(std::cerr, "% ",aerr);
           }
 #endif
           err += square(aerr/(atol + rtol*ym));
         }
-        printf(std::cerr, "\n");
+    //    printf(std::cerr, "\n");
         err = std::sqrt(err/(u0.size()));
 #endif
         if (_verbose)
