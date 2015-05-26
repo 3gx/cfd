@@ -27,59 +27,7 @@ class ExpansionT;
 #define DGF_
 #endif
 
-#ifdef PIFT_
-template<typename T, typename Real>
-class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
-{
-  /* PIF */
-  protected:
-    using base_type  = ExpansionBaseT<3,T,Real>;
-    static constexpr size_t N = 3;
-
-  public:
-
-    static constexpr auto matrix(const size_t i, const size_t j) 
-    { 
-      constexpr Real matrix[N][N] = 
-      {
-        {11.464101615137755,  0.6188021535170061, -0.0829037686547607},
-        {-8.618802153517006,  2., 0.6188021535170061},
-        {16.08290376865476, -8.618802153517006, 4.535898384862246}
-      };
-      return matrix[j][i]; 
-    }
-    static constexpr auto weight(const size_t i)  
-    { 
-      constexpr Real weight[] =
-      {
-        0.22222222222222274,
-        0.5555555555555555,
-        0.22222222222222274
-      };
-      return weight[i];
-    }
-    static constexpr auto preconditioner(const size_t i, const size_t j) 
-    {
-      constexpr Real preconditioner[N][N] = 
-      {
-        {0.075026719286759500829, 0,0},
-        {0.25544867840851755224,0.27777777777777777778, 0},
-        {0.21936428658416594196,0.56645291237259066003, 0.147195502935462721393}
-      };
-      return preconditioner[j][i];
-    }
-    static constexpr auto maxAbsMEV() 
-    {
-      constexpr Real maxAbsMEV{10.8};
-      return maxAbsMEV;
-    }
-    static constexpr auto maxAbsPEV() 
-    { 
-      constexpr Real maxAbsPEV{0.28};
-      return maxAbsPEV; 
-    }
-};
-#elif defined PIF_  /* not PIFt_ */
+#if defined PIF_  /* not PIFt_ */
 template<typename T, typename Real>
 class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
 {
@@ -258,6 +206,61 @@ class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
     static constexpr auto maxAbsPEV() 
     { 
       constexpr Real maxAbsPEV{0.15};
+      return maxAbsPEV; 
+    }
+};
+template<typename T, typename Real>
+class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
+{
+  /* PIF */
+  protected:
+    static constexpr size_t N = 7;
+    using base_type  = ExpansionBaseT<N,T,Real>;
+
+  public:
+
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {20.162475126453963,5.939649595901784,-1.5713450065769194,0.6117568698401676,-0.2662682556100125,0.10823443910941748,-0.02751051928120109},
+        {-15.629383503722168,4.443146050695284,4.125140303481284,-1.2701515428956040,0.5100682216357629,-0.20014625792437366,0.05010533623170008},
+        {8.625187972409475,-8.605076196977838,2.3943788228507531,3.351834730017060,-1.0413621688017852,0.3736448491420073,-0.09029602574207080},
+        {-7.258551263394934,5.727243007023915,-7.245304978834095,2.0000000000000000,3.062096190825881,-0.8500070065068292,0.18952405088606242},
+        {8.182614584790622,-5.956895021669846,5.830119814503291,-7.930862828666295,2.3943788228507531,3.021826024450000,-0.5328694133609241},
+        {-12.929826694060736,9.086438359314942,-8.131847279980262,8.558125387465308,-11.746919361825783,4.443146050695284,2.749662145893132},
+        {40.35246077218913,-27.93020953980242,24.129196096015008,-23.429578355405607,25.43427284698192,-33.76162469659479,20.162475126453963}
+      };
+      return matrix[j][i]; 
+    }
+    static constexpr auto weight(const size_t i)  
+    { 
+      constexpr Real weight[] =
+      {
+        0.06474248308443512,
+        0.1398526957446387,
+        0.19091502525255918,
+        0.20897959183673512,
+        0.1909150252525592,
+        0.13985269574463888,
+        0.06474248308443513
+      };
+      return weight[i];
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    {
+      constexpr Real preconditioner[N][N] = 
+      {{0.03237124154221742,0,0,0,0,0,0},{0.07004354137872608,0.06992634787231917,0,0,0,0,0},{0.06215393578734986,0.15200552205783099,0.09545751262627974,0,0,0,0},{0.06633292861768470,0.13359576922388229,0.20770188076597078,0.10448979591836735,0,0,0},{0.06366576746880693,0.14380627590344877,0.18220246265408429,0.22735483605218653,0.09545751262627974,0,0},{0.06548633327460677,0.13720685187790830,0.19631211718445561,0.19962996905329136,0.20750503183140724,0.06992634787231917,0},{0.06428437356068539,0.14145951478168444,0.18773996647887383,0.21411332539996004,0.18328182138013593,0.15130371302782220,0.03237124154221742}};
+      return preconditioner[j][i];
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real maxAbsMEV{12.1};
+      return maxAbsMEV;
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real maxAbsPEV{0.11};
       return maxAbsPEV; 
     }
 };
@@ -460,7 +463,7 @@ class ODESolverT
     bool _verbose;
     typename Expansion::storage _x, _rhs;
 
-    static constexpr Real omegaCFL = 0.9;
+    static constexpr Real omegaCFL = 0.8;
 
     std::array<bool,Expansion::size()> updateExpansion;
 
@@ -521,7 +524,10 @@ class ODESolverT
           }
 
         for (auto k : expansionRange())
-          _rhs[k][i] = tmp[k];
+        {
+        //  if (updateExpansion[k])
+            _rhs[k][i] = tmp[k];
+        }
       }
     }
 
@@ -623,7 +629,7 @@ class ODESolverT
       size_t  niter = 5; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
       std::array<Real,Expansion::size()> error;
-      constexpr Real tol = 1.0e-5;
+      constexpr Real tol = 1.0e-7;
       bool verbose = _verbose;
       for (auto k : expansionRange())
         updateExpansion[k] = true;
@@ -665,6 +671,7 @@ class ODESolverT
           }
           printf(std::cerr, "\n");
         }
+//        auto n2conv = std::count_if(updateExpansion.begin(), updateExpansion.end(), [](const auto x) { return x == true; });
         if (err <= tol)
         {
           if (_verbose)
@@ -883,7 +890,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64*64); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64*64/8); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
