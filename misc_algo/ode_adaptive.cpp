@@ -690,7 +690,7 @@ class ODESolverT
       }
     }
 
-    void iterate(const Vector &u0, int n)
+    void iterateWP(const Vector &u0, int n)
     {
       using std::get;
 
@@ -702,23 +702,7 @@ class ODESolverT
       rhs(u0);
       static auto res = _x;
 
-#if 0
-#define WP   /* prefered for high resolution & large time step, use scaleing 1x for nstate with cfl */
-#elif 1
-#define OPT
-#endif
-
-#ifdef WP
       auto scale = Real{1}/(2*n+1);
-#elif defined OPT
-      auto frac = Real{1}/(1+n)/(2+n)/(3+4*n);
-      auto omega0 = frac*6;
-      auto omega1 = frac*3*n*(3+n);
-      auto omegak = [n,frac](const int k) 
-      {
-        return frac*3*(1-k+n)*(2+k+n);
-      };
-#endif
 
       for (auto k : expansionRange())
       {
@@ -726,13 +710,8 @@ class ODESolverT
         {
           auto&   x = get<0>(v);
           auto& rhs = get<1>(v);
-#ifdef OPT
-          auto& r = get<2>(v);
-          r = x*omega0 + (3*x + 4.0*omega*rhs)*omega1;
-#elif defined WP
           auto& r = get<2>(v);
           r = (3*x + 4.0*omega*rhs)*scale;
-#endif
           x = x + 2.0*omega*rhs;
         }
         y1[k] = _x[k];
@@ -751,48 +730,107 @@ class ODESolverT
             auto&  y1 = get<1>(v);
             auto&  y0 = get<2>(v);
             auto& rhs = get<3>(v);
-#ifdef OPT
-            x = 2*y1 - y0 + 4*omega*rhs;
-            auto& r = get<4>(v);
-            r += 2*omegak(i)*x;
-#elif defined WP
             x = 2*y1 - y0 + 4*omega*rhs;
             auto& r = get<4>(v);
             r += 2*scale*x;
-#else
-            const auto a = (Real{2}*i-1)/i;
-            const auto b = Real{-1}*(i-1)/i;
-            x = a*y1 + b*y0 + 2*omega*a*rhs;
-#endif
           }
           y0[k] = y1[k];
           y1[k] = _x[k];
         }
       }
-#if defined OPT || defined WP
       for (auto k : expansionRange())
         _x[k] = res[k];
-#endif
-
     }
 
-
-    void iterate(const int iter, const int niter, const Vector &u0, bool verbose)
+    void iterateOPT(const Vector &u0, int n)
     {
-      const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));  /* stiffff */
-      iterate(u0, nstage);
-      if (verbose)
+      using std::get;
+
+      const Real omega = omegaCFL/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
+
+      static decltype(_x) y0, y1,tmp;
+      y0  = _x;
+
+      rhs(u0);
+      static auto res = _x;
+
+
+      auto frac = Real{1}/(1+n)/(2+n)/(3+4*n);
+      auto omega0 = frac*6;
+      auto omega1 = frac*3*n*(3+n);
+      auto omegak = [n,frac](const int k) 
       {
-        printf(std::cerr, " nstage= % \n", nstage);
+        return frac*3*(1-k+n)*(2+k+n);
+      };
+
+      for (auto k : expansionRange())
+      {
+        for (auto v : make_zip_iterator(_x[k], _rhs[k],res[k]))
+        {
+          auto&   x = get<0>(v);
+          auto& rhs = get<1>(v);
+          auto& r = get<2>(v);
+          r = x*omega0 + (3*x + 4.0*omega*rhs)*omega1;
+          x = x + 2.0*omega*rhs;
+        }
+        y1[k] = _x[k];
       }
+
+
+
+      for (int i = 2; i <= n; i++)
+      {
+        rhs(u0);
+        for (auto k : expansionRange())
+        {
+          for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k],res[k]))
+          {
+            auto&   x = get<0>(v);
+            auto&  y1 = get<1>(v);
+            auto&  y0 = get<2>(v);
+            auto& rhs = get<3>(v);
+            x = 2*y1 - y0 + 4*omega*rhs;
+            auto& r = get<4>(v);
+            r += 2*omegak(i)*x;
+          }
+          y0[k] = y1[k];
+          y1[k] = _x[k];
+        }
+      }
+      for (auto k : expansionRange())
+        _x[k] = res[k];
     }
 
-    void solve_system(const Vector& u0)
+
+    void iterate(const bool OPT, const int iter, const int niter, const Vector &u0, bool verbose)
+    {
+      if (OPT)
+      {
+        const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));  /* stiffff */
+        iterateOPT(u0, nstage);
+        if (verbose)
+        {
+          printf(std::cerr, " nstage= % \n", nstage);
+        }
+      }
+      else
+      {
+        const int nstage = static_cast<int>(1+std::sqrt(_pde.cfl()));  /* stiffff */
+        iterateWP(u0, nstage);
+        if (verbose)
+        {
+          printf(std::cerr, " nstage= % \n", nstage);
+        }
+      }
+
+    }
+
+    void solve_system(const bool OPT, const Vector& u0)
     {
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-9;
+      constexpr Real tol = 1.0e-7;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -800,7 +838,7 @@ class ODESolverT
 
       for (auto iter : range_iterator{0,niter})
       {
-        iterate(iter,niter, u0, verbose);
+        iterate(OPT, iter,niter, u0, verbose);
         verbose = false;
 
         auto err = Real{0};
@@ -842,7 +880,7 @@ class ODESolverT
 
       /* coarse step */
       const auto cfl0 = _pde.get_cfl();
-      solve_system(_pde.state());
+      solve_system(/* OPT */ true, _pde.state());
       auto x_coarse = _x;
 
       /* interoplate _x for 1st fine step */
@@ -860,7 +898,7 @@ class ODESolverT
       }
 
       _pde.set_cfl(0.5*cfl0);
-      solve_system(_pde.state());
+      solve_system(/* OPT */ false, _pde.state());
       auto x_fine1 = _x;
 
       /* update state with 1st fine step */
@@ -926,7 +964,7 @@ class ODESolverT
           _y0[i] += Expansion::oneVec(k)*_x[k][i];
       }
 
-      solve_system(_pde.state());
+      solve_system(/* OPT */ false, _pde.state());
       auto x_fine2 = _x;
 
       /* update with 2nd fine step */
@@ -1206,7 +1244,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
