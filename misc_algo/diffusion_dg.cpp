@@ -832,27 +832,43 @@ class PDEDiffusion
     auto cost() const { return n_rhs_calls; }
     Real AbsEV() const
     {
+#if 1
       return dt() * 4.0*_diff/square(_dx);  /* 2.0 * cfl */
+#else
+      return dt() * 5.5*_diff/square(_dx);  /* 2.0 * cfl */
+#endif
     }
 
     auto dx() const { return _dx; }
 
-    PDEDiffusion(const size_t n) : _f{Vector(n)}, n_rhs_calls{0}
+    PDEDiffusion(const size_t n) : _f{Vector(n+4)}, n_rhs_calls{0}
     {
     }
 
     static void periodic_bc(Vector &f) 
     {
+#if 1
       const auto n = f.size();
       f[0  ] = f[n-2];
       f[n-1] = f[1  ];
+#else
+      const auto n = f.size();
+      f[0  ] = f[n-4];
+      f[1  ] = f[n-3];
+      f[n-2] = f[0  ];
+      f[n-1] = f[1  ];
+#endif
     }
 
     static void free_bc(Vector &f) 
     {
+#if 1
       const auto n = f.size();
       f[0  ] = f[  1];
       f[n-1] = f[n-2];
+#else
+      assert(0);
+#endif
     }
 
     auto cfl() const { return _cfl; }
@@ -880,11 +896,21 @@ class PDEDiffusion
       {
         n_rhs_calls++;
         const auto c = dt() * _diff/square(_dx);
+#if 1
         for (auto i : range_iterator{1,x.size() - 1})
         {
           res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
           res[i] = func(res[i]);
         }
+#else
+        for (auto i : range_iterator{2,x.size() - 2})
+        {
+          res[i] = -x[i+2] + 16*x[i+1] - 30*x[i] + 16*x[i-1] - x[i-2];
+          res[i] *= c/12.0;
+          res[i] = func(res[i]);
+        }
+#endif
+        apply_bc(res);
       }
     void compute_rhs(Vector &res, const Vector &x)
     {
@@ -971,7 +997,7 @@ int main(int argc, char * argv[])
   using Solver = ODESolverT<ORDER,PDE>;
 
 
-  Solver solver(PDE{ncell+2});
+  Solver solver(PDE{ncell});
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
