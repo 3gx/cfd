@@ -426,6 +426,12 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
       };
       return vec[i];
     }
+    static constexpr auto nodeVec(const size_t i)
+    {
+      constexpr Real vec[N] =
+      {0.0254460438286207377,0.129234407200302780,0.297077424311301417,0.500000000000000000,0.702922575688698583,0.870765592799697220,0.974553956171379262};
+      return vec[i];
+    }
 };
 #elif defined DGF_  /* not PIF_ */
 template<typename T, typename Real>
@@ -931,7 +937,7 @@ class ODESolverT
           get<0>(v) += w*get<1>(v);
         }
       }
-    
+
       const Real tol = 1.0e-9;  /* solver */
       const Real atol = tol;
       const Real rtol = tol;
@@ -1015,7 +1021,7 @@ class ODESolverT
         for (auto& x : du_err)
           err2 += square(x);
         err2 = std::sqrt(err2/du_err.size());
-        
+
         for (auto i : range_iterator{0,u0.size()})
         {
           auto u0 = _pde.state()[i];
@@ -1032,57 +1038,18 @@ class ODESolverT
       _err2 = err1;
 
 
-     
+
       /* update time-step */
       _pde.update(du);
       _time += _pde.dt();
-      
+      const auto u2 = _pde.state();
+
       _pde.set_cfl(cfl0);
       if (_verbose)
         printf(std::cerr, " -- err1= %   err2= % \n", _err1, _err2);
-      
-      std::fill(_y0.begin(), _y0.end(), 0);
-      for (auto k : expansionRange())
-        for (auto& x : _x[k])
-          x = 0;
-      for (auto &y : _y0)
-        y = 0;
 
-#if 0
-      for (auto i : range_iterator{0,u0.size()})
-      {
-        for (auto k : expansionRange())
-        {
-          _x[k][i] = u0[i] - _pde.state()[i];
-          for (auto l : expansionRange())
-            _x[k][i] += Expansion::nodeMatrix(k,l)*x_coarse[l][i];
-        }
-        _y0[i] = 0;
-        for (auto k : expansionRange())
-          _y0[i] += Expansion::oneVec(k)*_x[k][i];
-      }
-#endif
 
-#if 0
-      {
-#if 0
-        const auto p = Real{1}/Expansion::size();
-        const auto alpha = Real{0.7}*p;
-        const auto beta  = Real{0.4}*p;
-        const auto cfl_scale = 2.0*std::pow(1/err2,alpha)*std::pow(err1,beta);
-#elif 1
-        const auto p = Real{1}/(Expansion::size()+0);
-        const auto cfl_scale = 2*std::pow(1/err2,p)*std::pow(err1/err2,p);
-#else
-        const auto p = Real{1}/Expansion::size();
-        const auto alpha = Real{1.0}*p;
-        const auto cfl_scale = std::pow(1/err2,alpha);
-#endif
-
-      }
-#endif
-
-#if 1
+      Real cfl_scale = 1;
       if (_err1 > 0 && _err2 > 0)
       {
 #if 0
@@ -1090,20 +1057,42 @@ class ODESolverT
         const auto alpha = Real{0.7}*p;
         const auto beta  = Real{0.4}*p;
         const auto cfl_scale = 0.8*std::pow(1/err2,alpha)*std::pow(err1,beta);
-#elif 1
-        const auto p = Real{1}/Expansion::size();
-        auto cfl_scale = 0.8*std::pow(1/_err2,p)*std::pow(_err1/_err2,p);
-        cfl_scale = std::min(cfl_scale,2.0);
 #else
         const auto p = Real{1}/Expansion::size();
-        const auto alpha = Real{1.0}*p;
-        const auto cfl_scale = std::pow(1/err2,alpha);
+        cfl_scale = 0.8*std::pow(1/_err2,p)*std::pow(_err1/_err2,p);
+        cfl_scale = std::min(cfl_scale,2.0);
 #endif
         if (_verbose)
           printf(std::cerr,"cfl_scale= % \n", cfl_scale);
-        _pde.set_cfl(_pde.get_cfl()*cfl_scale);
       }
-#endif
+
+      {
+        static int count = 0;
+        {
+          const auto cfl0 = _pde.get_cfl();
+          const auto cfl1 = cfl0*cfl_scale;
+          printf(std::cerr, " ------ predict -------- \n");
+          for (auto i : range_iterator{0,u0.size()})
+          {
+            for (auto k : expansionRange())
+            {
+            
+              const auto x = cfl1/cfl0 * Expansion::nodeVec(k);
+//              _x[k][i] = (-u0[i] + u2[i])*x;
+              _x[k][i] = x*(u0[i]-4*u1[i]+3*u2[i]+2*(u0[i]-2*u1[i]+u2[i])*x);
+//
+//              _x[k][i] = (u0[i] - _pde.state()[i]); 
+ //             for (auto l : expansionRange())
+ //               _x[k][i] += Expansion::nodeMatrix(k,l)*x_coarse[l][i];
+            }
+            _y0[i] = 0;
+            for (auto k : expansionRange())
+              _y0[i] += Expansion::oneVec(k)*_x[k][i];
+          }
+          _pde.set_cfl(cfl1);
+        }
+        count++;
+      }
 
 
     }
