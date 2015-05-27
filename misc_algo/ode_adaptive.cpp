@@ -1048,6 +1048,32 @@ class ODESolverT
       if (_verbose)
         printf(std::cerr, " -- err1= %   err2= % \n", _err1, _err2);
 
+#if 0
+      /* update with coarse step */
+      _x = x_coarse;
+      /* update state with 1st fine step */
+      for (auto k : expansionRange())
+      {
+        for (auto v : make_zip_iterator(_x[k], u0))
+          get<0>(v) += get<1>(v);
+        _pde.compute_rhs(_rhs[k], _x[k]);
+      }
+      std::fill(du.begin(), du.end(), 0);
+      for (auto k : expansionRange())
+      {
+        const auto w = Expansion::weight(k);
+        for (auto v : make_zip_iterator(du,_rhs[k]))
+        {
+          get<0>(v) += w*get<1>(v);
+        }
+      }
+
+      for (auto v : make_zip_iterator(du,u2,u0))
+        get<0>(v) -= get<1>(v) - get<2>(v);
+      _pde.update(du);
+#endif
+
+
 
       Real cfl_scale = 1;
       if (_err1 > 0 && _err2 > 0)
@@ -1080,6 +1106,7 @@ class ODESolverT
               const auto x = cfl1/cfl0 * Expansion::nodeVec(k);
 //              _x[k][i] = (-u0[i] + u2[i])*x;
               _x[k][i] = x*(u0[i]-4*u1[i]+3*u2[i]+2*(u0[i]-2*u1[i]+u2[i])*x);
+              _x[k][i] = 0;
 //
 //              _x[k][i] = (u0[i] - _pde.state()[i]); 
  //             for (auto l : expansionRange())
