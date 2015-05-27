@@ -950,7 +950,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 256;
-      constexpr Real tol = 1.0e-14; //14;
+      constexpr Real tol = 1.0e-10; //14;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -1095,7 +1095,7 @@ class ODESolverT
         }
       }
 
-      const Real tol = 1.0e-14;  /* solver */
+      const Real tol = 1.0e-10;  /* solver */
       const Real atol = tol;
       const Real rtol = tol;
 
