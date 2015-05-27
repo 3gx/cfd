@@ -213,6 +213,12 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       {0.187836108965430519137,-0.666666666666666666666,1.478830557701236147530};
       return vec[i];
     }
+    static constexpr auto nodeVec(const size_t i)
+    {
+      constexpr Real vec[N] =
+      {0.112701665379258311,0.500000000000000000,0.887298334620741689};
+      return vec[i];
+    }
 };
 template<typename T, typename Real>
 class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
@@ -325,6 +331,12 @@ class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
     {
       constexpr Real vec[N] = 
       {0.076358661795812900484,-0.267941652223387509304,0.53333333333333333333,-0.89315839200007173733,1.55140804909431301281};
+      return vec[i];
+    }
+    static constexpr auto nodeVec(const size_t i)
+    {
+      constexpr Real vec[N] =
+      {0.0469100770306680036,0.230765344947158454,0.500000000000000000,0.769234655052841546,0.953089922969331996};
       return vec[i];
     }
 };
@@ -817,8 +829,8 @@ class ODESolverT
       }
       else
       {
-        const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));  /* stiffff */
-        iterateWP(u0, nstage);
+        const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));  /* stiffff */
+        iterateOPT(u0, nstage);
         if (verbose)
         {
           printf(std::cerr, " nstage= % \n", nstage);
@@ -1034,8 +1046,6 @@ class ODESolverT
         }
         err2 = std::sqrt(err2/u0.size());
       }
-      _err1 = _err2;
-      _err2 = err1;
 
 
 
@@ -1045,8 +1055,6 @@ class ODESolverT
       const auto u2 = _pde.state();
 
       _pde.set_cfl(cfl0);
-      if (_verbose)
-        printf(std::cerr, " -- err1= %   err2= % \n", _err1, _err2);
 
 #if 0
       /* update with coarse step */
@@ -1068,11 +1076,42 @@ class ODESolverT
         }
       }
 
-      for (auto v : make_zip_iterator(du,u2,u0))
-        get<0>(v) -= get<1>(v) - get<2>(v);
-      _pde.update(du);
+//      for (auto v : make_zip_iterator(du,u2,u0))
+//        get<0>(v) += get<2>(v) - get<1>(v);
+//     _pde.update(du);
 #endif
 
+#if 0
+      {
+        Real err3 = 0;
+        {
+          for (auto i : range_iterator{1,u0.size()-1})
+          {
+            const auto y0 = u0[i];
+#if 0
+            const auto y1 = _pde.state()[i]; 
+#else
+            const auto y1 = u0[i] + du[i]; 
+#endif
+            const auto y2 = u2[i];
+            
+            const auto um = std::max(std::abs(y0), std::abs(y1));
+            const auto sc1 = atol + rtol*um;
+            const auto du_err = std::abs(y1 - y2);
+            err3 += square(du_err/sc1);
+          }
+          err3 = std::sqrt(err3/(u0.size()-2));
+        }
+        _err1 = _err2;
+        _err2 = err3;
+      }
+#else
+      _err1 = _err2;
+      _err2 = err1;
+#endif
+      
+      if (_verbose)
+        printf(std::cerr, " -- err1= %   err2= % \n", _err1, _err2);
 
 
       Real cfl_scale = 1;
@@ -1106,7 +1145,6 @@ class ODESolverT
               const auto x = cfl1/cfl0 * Expansion::nodeVec(k);
 //              _x[k][i] = (-u0[i] + u2[i])*x;
               _x[k][i] = x*(u0[i]-4*u1[i]+3*u2[i]+2*(u0[i]-2*u1[i]+u2[i])*x);
-              _x[k][i] = 0;
 //
 //              _x[k][i] = (u0[i] - _pde.state()[i]); 
  //             for (auto l : expansionRange())
@@ -1291,7 +1329,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 7;
+  constexpr auto ORDER = 5;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
