@@ -744,9 +744,9 @@ class ODESolverT
     bool _verbose;
     typename Expansion::storage _x, _rhs;
     Vector _y0;
-    Real _err1, _err2;
+    Real _err, _err_pre, _cfl_pre, _cfl;
 
-    static constexpr Real omegaCFL = 0.8;
+    static constexpr Real omegaCFL = 0.5;
 
   public:
       auto expansionRange() const 
@@ -763,7 +763,8 @@ class ODESolverT
         _x  [k].resize(_pde.resolution());
         _rhs[k].resize(_pde.resolution());
         std::fill(_x[k].begin(), _x[k].end(), 0);
-        _err1 = _err2 = -1;
+        _err = _err_pre = -1;
+        _cfl = _cfl_pre = -1;
       }
     };
 
@@ -894,7 +895,10 @@ class ODESolverT
 
       for (int i = 2; i <= n; i++)
       {
+        //auto xtmp = _x;
+        //_x = res;
         rhs(u0);
+      //  _x = xtmp;
         for (auto k : expansionRange())
         {
           for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k],res[k]))
@@ -913,6 +917,7 @@ class ODESolverT
       }
       for (auto k : expansionRange())
         _x[k] = res[k];
+      rhs(u0);
     }
 
 
@@ -936,6 +941,7 @@ class ODESolverT
           printf(std::cerr, " nstage= % \n", nstage);
         }
       }
+//      rhs(u0);
 
     }
 
@@ -943,20 +949,21 @@ class ODESolverT
     {
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
-      niter = 31;
-      constexpr Real tol = 1.0e-11; //14;
+      niter = 256;
+      constexpr Real tol = 1.0e-14; //14;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
       bool verbose = _verbose;
 
+#if 1
       for (auto iter : range_iterator{0,niter})
       {
         auto x0 = _x;
         iterate(OPT, iter,niter, u0, verbose);
         verbose = false;
 
-#if 1
+#if 0
         auto err = Real{0};
         for (auto i : range_iterator{0,u0.size()})
         {
@@ -981,7 +988,6 @@ class ODESolverT
             const auto ym = std::max(
                 std::abs(x0[k][i]), std::abs(_x[k][i])
                   );
-                  
             err += square(aerr/(atol + rtol*ym));
           }
         }
@@ -997,6 +1003,45 @@ class ODESolverT
         if (iter == niter - 1 && _verbose)
           printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
       }
+#else
+      Real err0 = -1;
+      int ntry = 35;
+      for (auto iter : range_iterator{0,niter})
+      {
+        auto x = _x0;
+        iterate(OPT, iter,niter, u0, verbose);
+        verbose = false;
+
+#if 1
+        Real err = 0;
+        for (auto i : range_iterator{0,u0.size()})
+          for (auto k : expansionRange())
+            err += square(_rhs[k][i]/(atol + rtol*std::abs(u0[i] + _x[k][i])));
+        err = std::sqrt(err/(u0.size())/Expansion::size());
+#else
+        Real err = 0;
+        for (auto i : range_iterator{0,u0.size()})
+          for (auto k : expansionRange())
+            err = std::max(err, std::abs(_rhs[k][i]/(atol + rtol*std::abs(_x[k][i]))));
+#endif
+        if (err0 > 0)
+        {
+          const auto de = std::abs(err0-err)/err;
+          if (de < 0.5) ntry--;
+        }
+        err0 = err;
+
+        if (_verbose)
+        {
+//          printf(std::cerr, " >>  iter= %  err= % ntry=%\n", iter, err,ntry);
+          printf(std::cerr, " >>  iter= %  err= %\n", iter, err);
+          if (err < 1 || ntry <= 0)
+            break;
+        }
+        if (iter == niter - 1 && _verbose)
+          printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
+      }
+#endif
     }
 
     void update(const bool verbose = true)
@@ -1050,9 +1095,9 @@ class ODESolverT
         }
       }
 
-      const Real tol = 1.0e-7;  /* solver */
-      const Real atol = tol*10;
-      const Real rtol = tol*10;
+      const Real tol = 1.0e-14;  /* solver */
+      const Real atol = tol;
+      const Real rtol = tol;
 
       Real err1 = 0;
       {
@@ -1175,10 +1220,21 @@ class ODESolverT
           get<0>(v) += w*get<1>(v);
         }
       }
+      for (auto v : make_zip_iterator(du,u2,u0))
+        get<0>(v) += get<2>(v) - get<1>(v);
+     _pde.update(du);
 
-//      for (auto v : make_zip_iterator(du,u2,u0))
-//        get<0>(v) += get<2>(v) - get<1>(v);
-//     _pde.update(du);
+
+      std::fill(du.begin(), du.end(), 0);
+      for (auto k : expansionRange())
+      {
+        const auto w = Expansion::weight_half(k);
+//        const auto w = Expansion::weight(k);
+        for (auto v : make_zip_iterator(du,_rhs[k]))
+        {
+          get<0>(v) += w*get<1>(v);
+        }
+      }
 #endif
 
 #if 1
@@ -1193,29 +1249,33 @@ class ODESolverT
 #else
             const auto y1 = u0[i] + du[i]; 
 #endif
-            const auto y2 = u2[i];
+            const auto y2 = u1[i];
             
-            const auto um = std::max(std::abs(y0), std::abs(y1));
+            const auto um = std::max(std::abs(y1), std::abs(y1));
             const auto sc1 = atol + rtol*um;
             const auto du_err = std::abs(y1 - y2);
             err3 += square(du_err/sc1);
           }
           err3 = std::sqrt(err3/(u0.size()-2));
         }
-        _err1 = _err2;
-        _err2 = err3;
+        _err_pre  = _err;
+        _err      = err3;
       }
 #else
       _err1 = _err2;
       _err2 = err1;
 #endif
+
+      _cfl_pre  = _cfl;
+      _cfl      = _pde.get_cfl();
       
       if (_verbose)
-        printf(std::cerr, " -- err1= %   err2= % \n", _err1, _err2);
+        printf(std::cerr, "# -- err_pre= %   err= %  cfl_pre= %  cfl= %\n", _err_pre, _err,
+            _cfl_pre, _cfl);
 
 
       Real cfl_scale = 1;
-      if (_err1 > 0 && _err2 > 0)
+      if (_err > 0 && _err_pre > 0)
       {
 #if 0
         const auto p = Real{1}/Expansion::size();
@@ -1224,15 +1284,16 @@ class ODESolverT
         cfl_scale = 0.8*std::pow(1/_err2,alpha)*std::pow(_err1,beta);
 #else
         const auto p = Real{1}/(Expansion::size());
-        cfl_scale = 0.8*std::pow(1/_err2,p)*std::pow(_err1/_err2,p);
+        cfl_scale = 0.8*std::pow(1/_err,p)*_cfl/_cfl_pre*std::pow(_err_pre/_err,p);
 #endif
       }
-      else if (_err2 > 1)
+      else if (_err > 1)
       {
         const auto p = Real{1}/(Expansion::size());
-        cfl_scale = 0.8*std::pow(1/_err2,p);
+        cfl_scale = 0.8*std::pow(1/_err,p);
       }
       cfl_scale = std::min(cfl_scale,5.0);
+//      cfl_scale = 1;
       if (_verbose)
         printf(std::cerr,"cfl_scale= % \n", cfl_scale);
 
@@ -1241,7 +1302,8 @@ class ODESolverT
         {
           const auto cfl0 = _pde.get_cfl();
           const auto cfl1 = cfl0*cfl_scale;
-          printf(std::cerr, " ------ predict -------- \n");
+          if (_verbose)
+            printf(std::cerr, " ------ predict -------- \n");
           for (auto i : range_iterator{0,u0.size()})
           {
             for (auto k : expansionRange())
@@ -1269,130 +1331,6 @@ class ODESolverT
     }
 };
 
-template<typename real_type>
-class PDEDiffusion
-{
-  public:
-    using Real   = real_type;
-    using Vector = std::vector<Real>;
-
-  private:
-    using range_iterator = make_range_iterator<size_t>;
-
-    Vector _f;
-
-    Real _cfl;
-    Real _dx;
-    Real _diff;
-
-    size_t n_rhs_calls;
-
-  public:
-    void set_dx(const Real dx) { _dx = dx;}
-    void set_diff(const Real diff) { _diff = diff;}
-    void set_cfl(const Real cfl) { _cfl = cfl;}
-    auto get_cfl() const { return _cfl; }
-    Real dt() const {
-      return  _cfl * 0.5*square(_dx)/_diff;
-    }
-
-    auto cost() const { return n_rhs_calls; }
-    Real AbsEV() const
-    {
-      return dt() * 4.0*_diff/square(_dx);  /* 2.0 * cfl */
-    }
-
-    auto dx() const { return _dx; }
-
-    PDEDiffusion(const size_t n) : _f{Vector(n+2)}, n_rhs_calls{0}
-    {
-    }
-
-    static void periodic_bc(Vector &f) 
-    {
-      const auto n = f.size();
-      f[0  ] = f[n-2];
-      f[n-1] = f[1  ];
-    }
-
-    static void free_bc(Vector &f) 
-    {
-      const auto n = f.size();
-      f[0  ] = f[  1];
-      f[n-1] = f[n-2];
-    }
-
-    auto cfl() const { return _cfl; }
-    auto resolution() const { return _f.size(); }
-
-    void apply_bc(Vector &f) const
-    {
-      periodic_bc(f);
-      //free_bc(f);
-    }
-
-    const Vector& state() const { return _f; }
-
-    void update(const Vector &df) 
-    {
-      using std::get;
-      for (auto v: make_zip_iterator(_f,df))
-      {
-        get<0>(v) += get<1>(v);
-      }
-    }
-
-    template<typename Func>
-      void compute_rhs(Vector &res, Vector &x, Func func)
-      {
-        apply_bc(x);
-        n_rhs_calls++;
-        const auto c = dt() * _diff/square(_dx);
-        for (auto i : range_iterator{1,x.size() - 1})
-        {
-          res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
-          res[i] = func(res[i]);
-        }
-        apply_bc(res);
-      }
-    void compute_rhs(Vector &res, Vector &x)
-    {
-      compute_rhs(res, x, [](const auto x) { return x; });
-    }
-
-    void set_ic()
-    {
-      using std::max;
-
-      /* set  a profile of delta function */
-
-      auto &f = _f;
-
-      const int n = f.size();
-      const auto dx = _dx;
-      const auto L = dx*(n-2);
-      const auto dL = L * 0.1;
-      const auto ic = n>>1;
-
-      const auto ampl = Real{10.0};
-      const auto slope = ampl/dL;
-
-
-      const auto fmin = Real{1};
-      std::fill(f.begin(), f.end(), fmin);
-      const int m = static_cast<int>(dL/dx + 0.5);
-      for (int i = -m; i <= m; i++)
-      {
-        const auto x = L/2 + dx*i;
-        f[ic - ic/2 + i] = std::max(ampl - slope*(std::abs(L/2-x)),fmin);
-      }
-      for (int i = -m*2; i <= m*2; i++)
-      {
-        const auto x = L/2 + dx*i;
-        f[ic + ic/2 + i] = std::max(1.5*ampl - slope*(std::abs(L/2-x)),fmin);
-      }
-    }
-};
 
 template<typename real_type>
 class PDEBurger
@@ -1485,7 +1423,7 @@ class PDEBurger
       compute_rhs(res, x, [](const auto x) { return x; });
     }
 
-    void set_ic()
+    void wedge_ic()
     {
       using std::max;
 
@@ -1516,6 +1454,27 @@ class PDEBurger
         const auto x = L/2 + dx*i;
         f[ic + ic/2 + i] = std::max(1.5*ampl - slope*(std::abs(L/2-x)),fmin);
       }
+    }
+    void burger_ic()
+    {
+      using std::max;
+
+      /* set  a profile of delta function */
+
+      auto &f = _f;
+
+      const int n = f.size();
+      const auto dx = _dx;
+      for (int i = 0; i < n; i++)
+      {
+        const auto x = (i+1)*dx;
+        f[i] = 1.5*x*square(1-x);
+      }
+    }
+    void set_ic()
+    {
+    //  wedge_ic();
+        burger_ic();
     }
 };
 
@@ -1561,7 +1520,7 @@ int main(int argc, char * argv[])
 
 
   constexpr auto ORDER = 5;
-  using PDE = PDEDiffusion<Real>;
+  using PDE = PDEBurger<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
 
@@ -1569,7 +1528,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*64); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*2*2*2); //*2*2); //*8); //*8); //*64); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
 
@@ -1596,21 +1555,21 @@ int main(int argc, char * argv[])
       if (verbose_step)
       {
         const auto mass = compute_mass(solver);
-        printf(std::cerr, "step= % : time= % dt= % ORDER= % cost= % -- mass_err= %  Tend= % \n", 
-            kstep, solver.time(), solver.pde().dt(), ORDER,
+        printf(std::cerr, "step= % : time= % dt= % (cfl= %) ORDER= % cost= % -- mass_err= %  Tend= % \n", 
+            kstep, solver.time(), solver.pde().dt(), solver.pde().cfl(), ORDER,
             solver.pde().cost(), (mass-mass0)/mass0, tend);
       }
       solver.update(verbose_iter);
       kstep++;
     }
     const auto mass = compute_mass(solver);
-    printf(std::cerr, "step= % : time= % dt= % ORDER= % cost= % -- mass_err= %  Tend= % \n", 
-        kstep, solver.time(), solver.pde().dt(), ORDER,
+    printf(std::cerr, "step= % : time= % dt= % (cfl= %) ORDER= % cost= % -- mass_err= %  Tend= % \n", 
+        kstep, solver.time(), solver.pde().dt(), solver.pde().cfl(), ORDER,
         solver.pde().cost(), (mass-mass0)/mass0, tend);
   }
   printf(std::cerr, " Writing output ... \n");
 //  dump2file(solver);
-  dump2file(solver, "output.txt");
+  dump2file(solver, "burger");
   printf(std::cerr, "cost= %\n", solver.pde().cost());
 
 
