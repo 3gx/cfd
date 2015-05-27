@@ -929,8 +929,8 @@ class ODESolverT
       }
       else
       {
-        const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));  /* stiffff */
-        iterateWP(u0, nstage);
+        const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));  /* stiffff */
+        iterateOPT(u0, nstage);
         if (verbose)
         {
           printf(std::cerr, " nstage= % \n", nstage);
@@ -944,7 +944,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-10;
+      constexpr Real tol = 1.0e-11; //14;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -1050,9 +1050,9 @@ class ODESolverT
         }
       }
 
-      const Real tol = 1.0e-9;  /* solver */
-      const Real atol = tol;
-      const Real rtol = tol;
+      const Real tol = 1.0e-7;  /* solver */
+      const Real atol = tol*10;
+      const Real rtol = tol*10;
 
       Real err1 = 0;
       {
@@ -1156,7 +1156,7 @@ class ODESolverT
 
       _pde.set_cfl(cfl0);
 
-#if 0
+#if 1
       /* update with coarse step */
       _x = x_coarse;
       /* update state with 1st fine step */
@@ -1181,7 +1181,7 @@ class ODESolverT
 //     _pde.update(du);
 #endif
 
-#if 0
+#if 1
       {
         Real err3 = 0;
         {
@@ -1226,16 +1226,15 @@ class ODESolverT
         const auto p = Real{1}/(Expansion::size());
         cfl_scale = 0.8*std::pow(1/_err2,p)*std::pow(_err1/_err2,p);
 #endif
-        cfl_scale = std::min(cfl_scale,2.0);
-        if (_verbose)
-          printf(std::cerr,"cfl_scale= % \n", cfl_scale);
       }
-      else if (_err2 < 1)
+      else if (_err2 > 1)
       {
         const auto p = Real{1}/(Expansion::size());
-        cfl_scale = 0.8*std::pow(_err2,p);
-        assert(cfl_scale < 1);
+        cfl_scale = 0.8*std::pow(1/_err2,p);
       }
+      cfl_scale = std::min(cfl_scale,5.0);
+      if (_verbose)
+        printf(std::cerr,"cfl_scale= % \n", cfl_scale);
 
       {
         static int count = 0;
@@ -1556,8 +1555,8 @@ int main(int argc, char * argv[])
   const size_t ncell = argc > 1 ? atoi(argv[1]) : 128;
   printf(std::cerr, "ncell= %\n", ncell);
 
-  const Real tau = argc > 2 ? atof(argv[2]) : 0.005;
-  printf(std::cerr, "tau= %\n", tau);
+  const Real tend = argc > 2 ? atof(argv[2]) : 0.005;
+  printf(std::cerr, "tend= %\n", tend);
   
 
 
@@ -1570,35 +1569,44 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*64); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
-  const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
 
   solver.pde().set_ic();
   const auto mass0 = compute_mass(solver);
   dump2file(solver, "ic.txt");
   {
     size_t kstep = 0;
-    while (true)
+    bool keep_looping = true;
+    while (keep_looping)
     {
       auto verbose_step = kstep%1 == 0;
       auto verbose_iter = kstep%1 == 0;
+      const auto dt = solver.pde().dt();
+      bool break_loop = true;
+      if (solver.time() + dt > tend)
+      {
+        const auto dt_new = tend - solver.time();
+        assert(dt_new >= 0);
+        solver.pde().set_cfl(solver.pde().get_cfl() * dt_new/dt);
+        keep_looping = false;
+      }
+
       if (verbose_step)
       {
         const auto mass = compute_mass(solver);
         printf(std::cerr, "step= % : time= % dt= % ORDER= % cost= % -- mass_err= %  Tend= % \n", 
             kstep, solver.time(), solver.pde().dt(), ORDER,
-            solver.pde().cost(), (mass-mass0)/mass0, tau);
+            solver.pde().cost(), (mass-mass0)/mass0, tend);
       }
       solver.update(verbose_iter);
-      if (solver.time() >= tau) break;
       kstep++;
     }
     const auto mass = compute_mass(solver);
     printf(std::cerr, "step= % : time= % dt= % ORDER= % cost= % -- mass_err= %  Tend= % \n", 
         kstep, solver.time(), solver.pde().dt(), ORDER,
-        solver.pde().cost(), (mass-mass0)/mass0, tau);
+        solver.pde().cost(), (mass-mass0)/mass0, tend);
   }
   printf(std::cerr, " Writing output ... \n");
 //  dump2file(solver);
