@@ -342,13 +342,7 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
     { 
       constexpr Real matrix[N][N] = 
       {
-        {20.162475126453963,5.939649595901784,-1.5713450065769194,0.6117568698401676,-0.2662682556100125,0.10823443910941748,-0.02751051928120109},
-        {-15.629383503722168,4.443146050695284,4.125140303481284,-1.2701515428956040,0.5100682216357629,-0.20014625792437366,0.05010533623170008},
-        {8.625187972409475,-8.605076196977838,2.3943788228507531,3.351834730017060,-1.0413621688017852,0.3736448491420073,-0.09029602574207080},
-        {-7.258551263394934,5.727243007023915,-7.245304978834095,2.0000000000000000,3.062096190825881,-0.8500070065068292,0.18952405088606242},
-        {8.182614584790622,-5.956895021669846,5.830119814503291,-7.930862828666295,2.3943788228507531,3.021826024450000,-0.5328694133609241},
-        {-12.929826694060736,9.086438359314942,-8.131847279980262,8.558125387465308,-11.746919361825783,4.443146050695284,2.749662145893132},
-        {40.35246077218913,-27.93020953980242,24.129196096015008,-23.429578355405607,25.43427284698192,-33.76162469659479,20.162475126453963}
+        {20.162475126453963,5.939649595901784,-1.5713450065769194,0.6117568698401676,-0.2662682556100125,0.10823443910941748,-0.02751051928120109},{-15.629383503722168,4.443146050695284,4.125140303481284,-1.2701515428956040,0.5100682216357629,-0.20014625792437366,0.05010533623170008},{8.625187972409475,-8.605076196977838,2.3943788228507531,3.351834730017060,-1.0413621688017852,0.3736448491420073,-0.09029602574207080},{-7.258551263394934,5.727243007023915,-7.245304978834095,2.0000000000000000,3.062096190825881,-0.8500070065068292,0.18952405088606242},{8.182614584790622,-5.956895021669846,5.830119814503291,-7.930862828666295,2.3943788228507531,3.021826024450000,-0.5328694133609241},{-12.929826694060736,9.086438359314942,-8.131847279980262,8.558125387465308,-11.746919361825783,4.443146050695284,2.749662145893132},{40.35246077218913,-27.93020953980242,24.129196096015008,-23.429578355405607,25.43427284698192,-33.76162469659479,20.162475126453963}
       };
       return matrix[i][j]; 
     }
@@ -632,6 +626,7 @@ class ODESolverT
     bool _verbose;
     typename Expansion::storage _x, _rhs;
     Vector _y0;
+    Real _err1, _err2;
 
     static constexpr Real omegaCFL = 0.8;
 
@@ -650,6 +645,7 @@ class ODESolverT
         _x  [k].resize(_pde.resolution());
         _rhs[k].resize(_pde.resolution());
         std::fill(_x[k].begin(), _x[k].end(), 0);
+        _err1 = _err2 = -1;
       }
     };
 
@@ -806,7 +802,7 @@ class ODESolverT
     {
       if (OPT)
       {
-        const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));  /* stiffff */
+        const int nstage = static_cast<int>(1+3*std::sqrt(_pde.cfl()));  /* stiffff */
         iterateOPT(u0, nstage);
         if (verbose)
         {
@@ -815,7 +811,7 @@ class ODESolverT
       }
       else
       {
-        const int nstage = static_cast<int>(1+std::sqrt(_pde.cfl()));  /* stiffff */
+        const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));  /* stiffff */
         iterateWP(u0, nstage);
         if (verbose)
         {
@@ -830,7 +826,7 @@ class ODESolverT
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 31;
-      constexpr Real tol = 1.0e-5;
+      constexpr Real tol = 1.0e-10;
       constexpr Real atol = tol;
       constexpr Real rtol = tol;
 
@@ -838,9 +834,11 @@ class ODESolverT
 
       for (auto iter : range_iterator{0,niter})
       {
+        auto x0 = _x;
         iterate(OPT, iter,niter, u0, verbose);
         verbose = false;
 
+#if 1
         auto err = Real{0};
         for (auto i : range_iterator{0,u0.size()})
         {
@@ -851,10 +849,26 @@ class ODESolverT
           _y0[i] = y1;
 
           const auto aerr = std::abs(y1-y0);
-          const auto ym  = std::max(std::abs(u0[i]+y0), std::abs(u0[i]+y1));
+          const auto ym  = std::max(std::abs(y0), std::abs(y1));
           err += square(aerr/(atol + rtol*ym));
         }
         err = std::sqrt(err/(u0.size()));
+#else
+        auto err = Real{0};
+        for (auto k : expansionRange())
+        {
+          for (auto i : range_iterator{0,u0.size()})
+          {
+            const auto aerr = std::abs(x0[k][i] - _x[k][i]);
+            const auto ym = std::max(
+                std::abs(x0[k][i]), std::abs(_x[k][i])
+                  );
+                  
+            err += square(aerr/(atol + rtol*ym));
+          }
+        }
+        err = std::sqrt(err/u0.size()/Expansion::size());
+#endif
 
         if (_verbose)
         {
@@ -917,8 +931,8 @@ class ODESolverT
           get<0>(v) += w*get<1>(v);
         }
       }
-     
-      const Real tol = 1.0e-5;  /* solver */
+    
+      const Real tol = 1.0e-9;  /* solver */
       const Real atol = tol;
       const Real rtol = tol;
 
@@ -1014,6 +1028,10 @@ class ODESolverT
         }
         err2 = std::sqrt(err2/u0.size());
       }
+      _err1 = _err2;
+      _err2 = err1;
+
+
      
       /* update time-step */
       _pde.update(du);
@@ -1021,7 +1039,7 @@ class ODESolverT
       
       _pde.set_cfl(cfl0);
       if (_verbose)
-        printf(std::cerr, " -- err1= %   err2= % \n", err1, err2);
+        printf(std::cerr, " -- err1= %   err2= % \n", _err1, _err2);
       
       std::fill(_y0.begin(), _y0.end(), 0);
       for (auto k : expansionRange())
@@ -1045,6 +1063,7 @@ class ODESolverT
       }
 #endif
 
+#if 0
       {
 #if 0
         const auto p = Real{1}/Expansion::size();
@@ -1060,10 +1079,31 @@ class ODESolverT
         const auto cfl_scale = std::pow(1/err2,alpha);
 #endif
 
+      }
+#endif
+
+#if 1
+      if (_err1 > 0 && _err2 > 0)
+      {
+#if 0
+        const auto p = Real{1}/Expansion::size();
+        const auto alpha = Real{0.7}*p;
+        const auto beta  = Real{0.4}*p;
+        const auto cfl_scale = 0.8*std::pow(1/err2,alpha)*std::pow(err1,beta);
+#elif 1
+        const auto p = Real{1}/Expansion::size();
+        auto cfl_scale = 0.8*std::pow(1/_err2,p)*std::pow(_err1/_err2,p);
+        cfl_scale = std::min(cfl_scale,2.0);
+#else
+        const auto p = Real{1}/Expansion::size();
+        const auto alpha = Real{1.0}*p;
+        const auto cfl_scale = std::pow(1/err2,alpha);
+#endif
         if (_verbose)
           printf(std::cerr,"cfl_scale= % \n", cfl_scale);
         _pde.set_cfl(_pde.get_cfl()*cfl_scale);
       }
+#endif
 
 
     }
@@ -1235,7 +1275,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 5;
+  constexpr auto ORDER = 7;
   using PDE = PDEDiffusion<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -1244,7 +1284,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
   const size_t nstep = 1 + std::max(size_t{0}, static_cast<size_t>(tau/dt));
