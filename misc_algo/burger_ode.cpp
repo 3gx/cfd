@@ -960,6 +960,7 @@ class ODESolverT
     Vector _y0;
     Real _err, _err_pre, _cfl_pre, _cfl;
     Real _atol, _rtol;
+    Real _hh;
 
     static constexpr Real omegaCFL = 0.5;
 
@@ -985,6 +986,7 @@ class ODESolverT
       const Real tol = 1.0e-10;
       _atol = tol;
       _rtol = tol;
+      _hh    = 1;
     };
 
     PDE& pde() { return _pde; }
@@ -996,6 +998,7 @@ class ODESolverT
       auto x = _x;
 
       /* compute RHS */
+      const auto h = _pde.dt();
       for (auto k : expansionRange())
       {
 
@@ -1009,7 +1012,7 @@ class ODESolverT
           Real r = 0;
           for (auto l : expansionRange())
             r += Expansion::matrix(k,l) * _x[l][i];
-          _rhs[k][i] = _rhs_pde[k][i]  - r;
+          _rhs[k][i] = h*_rhs_pde[k][i]  - r;
         }
       }
 
@@ -1191,6 +1194,7 @@ class ODESolverT
 
       bool verbose = _verbose;
 
+      const auto h = _pde.dt();
       for (auto iter : range_iterator{0,niter})
       {
         auto x0 = _x;
@@ -1203,7 +1207,7 @@ class ODESolverT
         {
           auto du1 = 0*u0[i];
           for (auto k : expansionRange())
-            du1 += Expansion::weight(k)*_rhs_pde[k][i];
+            du1 += Expansion::weight(k)*h*_rhs_pde[k][i];
           auto du0 = _y0[i];
           _y0[i] = du1;
 
@@ -1252,17 +1256,19 @@ class ODESolverT
 
       /* coarse step */
       const auto cfl0 = _pde.get_cfl();
+//      _h = _pde.dt();
       solve_system(/* OPT */ true, _pde.state());
       static auto du_coarse = u0;
       static auto duh_coarse = u0;
       for (auto i : range_iterator{u0.size()})
       {
+        const auto h = _pde.dt();
         auto du  = 0*u0[i];
         auto duh = du;
         for (auto k : expansionRange())
         {
-          du  += Expansion::weight     (k)*_rhs_pde[k][i];
-          duh += Expansion::weight_half(k)*_rhs_pde[k][i];
+          du  += Expansion::weight     (k)*h*_rhs_pde[k][i];
+          duh += Expansion::weight_half(k)*h*_rhs_pde[k][i];
         }
         du_coarse [i] = du;
         duh_coarse[i] = duh;
@@ -1287,15 +1293,17 @@ class ODESolverT
       }
 
       _pde.set_cfl(0.5*cfl0);
+//      _h = _pde.dt();
       solve_system(/* OPT */ false, _pde.state());
       const auto x_fine = _x;
       auto u1 = u0;
       for (auto k : expansionRange())
       {
+        const auto h = _pde.dt();
         const auto w = Expansion::weight(k);
         for (auto v : make_zip_iterator(u1,_rhs_pde[k]))
         {
-          get<0>(v) += w*get<1>(v);
+          get<0>(v) += h*w*get<1>(v);
         }
       }
 
@@ -1303,6 +1311,7 @@ class ODESolverT
       _pde.update(du_coarse);
       du = duh_coarse;
       _pde.set_cfl(cfl0);
+//      _h = _pde.dt();
       _time += _pde.dt();
 
 
@@ -1448,8 +1457,8 @@ class PDEBurger
       void compute_rhs(Vector &res, Vector &x, Func func)
       {
         n_rhs_calls++;
-        const auto c = dt() * _diff/square(_dx);
-//        const auto c =  _diff/square(_dx);
+//        const auto c = dt() * _diff/square(_dx);
+        const auto c =  _diff/square(_dx);
         const auto n = x.size();
         res[0] = c * (x[n-1] - Real{2.0} * x[0] + x[1]);
         res[0] = func(res[0]);
