@@ -742,7 +742,7 @@ class ODESolverT
     PDE _pde;
     Real _time;
     bool _verbose;
-    typename Expansion::storage _x, _rhs;
+    typename Expansion::storage _x, _rhs, _rhs_pde;
     Vector _y0;
     Real _err, _err_pre, _cfl_pre, _cfl;
     Real _atol, _rtol;
@@ -763,13 +763,14 @@ class ODESolverT
       {
         _x  [k].resize(_pde.resolution());
         _rhs[k].resize(_pde.resolution());
+        _rhs_pde[k].resize(_pde.resolution());
         std::fill(_x[k].begin(), _x[k].end(), 0);
-        _err = _err_pre = -1;
-        _cfl = _cfl_pre = -1;
-        const Real tol = 1.0e-10;
-        _atol = tol;
-        _rtol = tol;
       }
+      _err = _err_pre = -1;
+      _cfl = _cfl_pre = -1;
+      const Real tol = 1.0e-10;
+      _atol = tol;
+      _rtol = tol;
     };
 
     PDE& pde() { return _pde; }
@@ -786,8 +787,9 @@ class ODESolverT
 
         for (auto v : make_zip_iterator(x[k], u0))
           get<0>(v) += get<1>(v);
-        _pde.compute_rhs(_rhs[k], x[k]);
+        _pde.compute_rhs(_rhs_pde[k], x[k]);
 
+        _rhs[k] = _rhs_pde[k];
         assert(_x[k].size() == u0.size());
         for (auto l : expansionRange())
           for (auto v : make_zip_iterator(_rhs[k], _x[l]))
@@ -954,7 +956,7 @@ class ODESolverT
         {
           for (auto v : make_zip_iterator(x[k], u0))
             get<0>(v) += get<1>(v);
-          _pde.compute_rhs(_rhs[k], x[k]);
+          _pde.compute_rhs(_rhs_pde[k], x[k]);
         }
       }
     }
@@ -970,7 +972,6 @@ class ODESolverT
 
       bool verbose = _verbose;
 
-#if 1
       for (auto iter : range_iterator{0,niter})
       {
         auto x0 = _x;
@@ -1017,45 +1018,6 @@ class ODESolverT
         if (iter == niter - 1 && _verbose)
           printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
       }
-#else
-      Real err0 = -1;
-      int ntry = 35;
-      for (auto iter : range_iterator{0,niter})
-      {
-        auto x = _x0;
-        iterate(OPT, iter,niter, u0, verbose);
-        verbose = false;
-
-#if 1
-        Real err = 0;
-        for (auto i : range_iterator{0,u0.size()})
-          for (auto k : expansionRange())
-            err += square(_rhs[k][i]/(atol + rtol*std::abs(u0[i] + _x[k][i])));
-        err = std::sqrt(err/(u0.size())/Expansion::size());
-#else
-        Real err = 0;
-        for (auto i : range_iterator{0,u0.size()})
-          for (auto k : expansionRange())
-            err = std::max(err, std::abs(_rhs[k][i]/(atol + rtol*std::abs(_x[k][i]))));
-#endif
-        if (err0 > 0)
-        {
-          const auto de = std::abs(err0-err)/err;
-          if (de < 0.5) ntry--;
-        }
-        err0 = err;
-
-        if (_verbose)
-        {
-//          printf(std::cerr, " >>  iter= %  err= % ntry=%\n", iter, err,ntry);
-          printf(std::cerr, " >>  iter= %  err= %\n", iter, err);
-          if (err < 1 || ntry <= 0)
-            break;
-        }
-        if (iter == niter - 1 && _verbose)
-          printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
-      }
-#endif
     }
 
     void update(const bool verbose = true)
@@ -1099,13 +1061,13 @@ class ODESolverT
       {
         for (auto v : make_zip_iterator(_x[k], _pde.state()))
           get<0>(v) += get<1>(v);
-        _pde.compute_rhs(_rhs[k], _x[k]);
+        _pde.compute_rhs(_rhs_pde[k], _x[k]);
       }
       auto u1 = u0;
       for (auto k : expansionRange())
       {
         const auto w = Expansion::weight(k);
-        for (auto v : make_zip_iterator(u1,_rhs[k]))
+        for (auto v : make_zip_iterator(u1,_rhs_pde[k]))
         {
           get<0>(v) += w*get<1>(v);
         }
@@ -1137,13 +1099,13 @@ class ODESolverT
       {
         for (auto v : make_zip_iterator(_x[k], u0))
           get<0>(v) += get<1>(v);
-        _pde.compute_rhs(_rhs[k], _x[k]);
+        _pde.compute_rhs(_rhs_pde[k], _x[k]);
       }
       std::fill(du.begin(), du.end(), 0);
       for (auto k : expansionRange())
       {
         const auto w = Expansion::weight(k);
-        for (auto v : make_zip_iterator(du,_rhs[k]))
+        for (auto v : make_zip_iterator(du,_rhs_pde[k]))
         {
           get<0>(v) += w*get<1>(v);
         }
@@ -1153,7 +1115,7 @@ class ODESolverT
       for (auto k : expansionRange())
       {
         const auto w = Expansion::weight_half(k);
-        for (auto v : make_zip_iterator(du,_rhs[k]))
+        for (auto v : make_zip_iterator(du,_rhs_pde[k]))
         {
           get<0>(v) += w*get<1>(v);
         }
