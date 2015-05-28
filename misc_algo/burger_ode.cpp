@@ -1003,11 +1003,14 @@ class ODESolverT
           get<0>(v) += get<1>(v);
         _pde.compute_rhs(_rhs_pde[k], x[k]);
 
-        _rhs[k] = _rhs_pde[k];
         assert(_x[k].size() == u0.size());
-        for (auto l : expansionRange())
-          for (auto v : make_zip_iterator(_rhs[k], _x[l]))
-            get<0>(v) -= Expansion::matrix(k,l) * get<1>(v);
+        for (auto i : range_iterator{u0.size()})
+        {
+          Real r = 0;
+          for (auto l : expansionRange())
+            r += Expansion::matrix(k,l) * _x[l][i];
+          _rhs[k][i] = _rhs_pde[k][i]  - r;
+        }
       }
 
       /* precondition RHS */
@@ -1446,6 +1449,7 @@ class PDEBurger
       {
         n_rhs_calls++;
         const auto c = dt() * _diff/square(_dx);
+//        const auto c =  _diff/square(_dx);
         const auto n = x.size();
         res[0] = c * (x[n-1] - Real{2.0} * x[0] + x[1]);
         res[0] = func(res[0]);
