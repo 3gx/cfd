@@ -1001,9 +1001,9 @@ class ODESolverT
         if (_verbose)
         {
           printf(std::cerr, " >>  iter= %  err= % \n", iter, err);
-          if (err < 1)
-            break;
         }
+        if (err < 1)
+          break;
         if (iter == niter - 1 && _verbose)
           printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
       }
@@ -1089,64 +1089,20 @@ class ODESolverT
           get<0>(v) += get<1>(v);
         _pde.compute_rhs(_rhs[k], _x[k]);
       }
-      std::fill(du.begin(), du.end(), 0);
+      auto u1 = u0;
       for (auto k : expansionRange())
       {
         const auto w = Expansion::weight(k);
-        for (auto v : make_zip_iterator(du,_rhs[k]))
+        for (auto v : make_zip_iterator(u1,_rhs[k]))
         {
           get<0>(v) += w*get<1>(v);
         }
       }
 
-      _pde.update(du);
-      _time += _pde.dt();
-      const auto u1 = _pde.state();
-
-      /* interpolate _x for 2nd fine step */
-      for (auto i : range_iterator{0,u0.size()})
-      {
-        for (auto k : expansionRange())
-        {
-          _x[k][i] = u0[i] - _pde.state()[i];
-          for (auto l : expansionRange())
-            _x[k][i] += Expansion::prolongateMatrix1(k,l)*x_coarse[l][i];
-        }
-        _y0[i] = 0;
-        for (auto k : expansionRange())
-          _y0[i] += Expansion::oneVec(k)*_x[k][i];
-      }
-
-      solve_system(/* OPT */ false, _pde.state());
-      auto x_fine2 = _x;
-
-      /* update with 2nd fine step */
-      for (auto k : expansionRange())
-      {
-        for (auto v : make_zip_iterator(_x[k], _pde.state()))
-          get<0>(v) += get<1>(v);
-        _pde.compute_rhs(_rhs[k], _x[k]);
-      }
-      std::fill(du.begin(), du.end(), 0);
-      for (auto k : expansionRange())
-      {
-        const auto w = Expansion::weight(k);
-        for (auto v : make_zip_iterator(du,_rhs[k]))
-        {
-          get<0>(v) += w*get<1>(v);
-        }
-      }
-
-
-
-      /* update time-step */
-      _pde.update(du);
-      _time += _pde.dt();
-      const auto u2 = _pde.state();
 
       _pde.set_cfl(cfl0);
+      _time += _pde.dt();
 
-#if 1
       /* update with coarse step */
       _x = x_coarse;
       /* update state with 1st fine step */
@@ -1165,8 +1121,6 @@ class ODESolverT
           get<0>(v) += w*get<1>(v);
         }
       }
-      for (auto v : make_zip_iterator(du,u2,u0))
-        get<0>(v) += get<2>(v) - get<1>(v);
      _pde.update(du);
 
 
@@ -1174,13 +1128,11 @@ class ODESolverT
       for (auto k : expansionRange())
       {
         const auto w = Expansion::weight_half(k);
-//        const auto w = Expansion::weight(k);
         for (auto v : make_zip_iterator(du,_rhs[k]))
         {
           get<0>(v) += w*get<1>(v);
         }
       }
-#endif
 
       {
         Real err3 = 0;
@@ -1188,11 +1140,7 @@ class ODESolverT
           for (auto i : range_iterator{1,u0.size()-1})
           {
             const auto y0 = u0[i];
-#if 0
-            const auto y1 = _pde.state()[i]; 
-#else
             const auto y1 = u0[i] + du[i]; 
-#endif
             const auto y2 = u1[i];
             
             const auto um = std::max(std::abs(y1), std::abs(y1));
@@ -1217,15 +1165,8 @@ class ODESolverT
       Real cfl_scale = 1;
       if (_err > 0 && _err_pre > 0)
       {
-#if 0
-        const auto p = Real{1}/Expansion::size();
-        const auto alpha = Real{0.7}*p;
-        const auto beta  = Real{0.4}*p;
-        cfl_scale = 0.8*std::pow(1/_err2,alpha)*std::pow(_err1,beta);
-#else
         const auto p = Real{1}/(Expansion::size());
         cfl_scale = 0.8*std::pow(1/_err,p)*_cfl/_cfl_pre*std::pow(_err_pre/_err,p);
-#endif
       }
       else if (_err > 1)
       {
@@ -1452,7 +1393,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8*2*2*2); //*2*2); //*8); //*8); //*64); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8);//*2*2*2); //*2*2); //*8); //*8); //*64); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
 
@@ -1464,8 +1405,8 @@ int main(int argc, char * argv[])
     bool keep_looping = true;
     while (keep_looping)
     {
-      auto verbose_step = kstep%1 == 0;
-      auto verbose_iter = kstep%1 == 0;
+      auto verbose_step = (kstep%1) == 0;
+      auto verbose_iter = (kstep%1) == 0;
       const auto dt = solver.pde().dt();
       bool break_loop = true;
       if (solver.time() + dt > tend)
@@ -1474,6 +1415,7 @@ int main(int argc, char * argv[])
         assert(dt_new >= 0);
         solver.pde().set_cfl(solver.pde().get_cfl() * dt_new/dt);
         keep_looping = false;
+        verbose_step = verbose_iter = true;
       }
 
       if (verbose_step)
