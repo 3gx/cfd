@@ -221,113 +221,6 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
     }
 };
 template<typename T, typename Real>
-class ExpansionT<4,T,Real> : public ExpansionBaseT<4,T,Real>
-{
-  /* PIF */
-  protected:
-    static constexpr size_t N = 4;
-    using base_type  = ExpansionBaseT<N,T,Real>;
-
-  public:
-
-    static constexpr auto matrix(const size_t i, const size_t j) 
-    { 
-      constexpr Real matrix[N][N] = 
-      {
-        {7.73861278752583057,2.045089650303908785,-0.4370708023957989036,0.0866440235032616747},{-7.201340999706890565,2.261387212474169433,1.448782034533681252,-0.2331339812124165654},{6.343622218624971333,-5.971556459482020118,2.261387212474169433,1.090852762294335798},{-15.56386959855492281,11.89278387805684136,-13.50080272596495125,7.73861278752583057}
-      };
-      return matrix[i][j]; 
-    }
-    static constexpr auto weight(const size_t i)  
-    { 
-      constexpr Real weight[] =
-      {0.17392742256872748,0.32607257743127305,0.3260725774312732,0.17392742256872748};
-      return weight[i];
-    }
-    static constexpr auto preconditioner(const size_t i, const size_t j) 
-    {
-      constexpr Real preconditioner[N][N] = 
-      {
-        {0.0869637112843634643,0,0,0},{0.1881181174998680717,0.1630362887156365357,0,0},{0.1671919219741887732,0.3539530060337439665,0.1630362887156365357,0},{0.1774825722545226118,0.3134451147418683468,0.3526767575162718646,0.0869637112843634643}
-      };
-      return preconditioner[i][j];
-    }
-    static constexpr auto maxAbsMEV() 
-    {
-      constexpr Real maxAbsMEV{6.8};
-      return maxAbsMEV;
-    }
-    static constexpr auto maxAbsPEV() 
-    { 
-      constexpr Real maxAbsPEV{0.17};
-      return maxAbsPEV; 
-    }
-#if 0
-    static constexpr auto nodeMatrix(const size_t i, const size_t j)
-    {
-      constexpr Real matrix[N][N] = 
-      {
-        {0.213260005841349104302,1.71754726228747258129,9.3031177500426426728,29.2274326029943329589,54.3373967987902398687},
-        {-0.74002965114900785695,-5.7585639443127711100,-30.1637945111551133825,-92.666703922546651957,-170.315662745074820114},
-        {1.42879537949198108031,10.1954385103677075047,49.5333333333333333333,145.324986458118124091,261.184112985355520657},
-        {-2.17509816702138543022,-12.4770986424139843478,-52.3901873373854831267,-142.564880053487944785,-247.782697697696973869},
-        {2.27307243283706310256,7.3226768140715753718,24.7175307651646205030,61.6791649149221396919,103.576850658626033458}
-      };
-      return matrix[i][j];
-    }
-#endif
-    static constexpr auto prolongateMatrix0(const size_t i, const size_t j)
-    {
-      constexpr Real matrix[N][N] = 
-      {
-        {1.24706002059021446916,-0.37134646293290967052,0.172612312282314955982,-0.048325869939619754622},{0.473360762073713481246,0.69446086758875954880,-0.226915961206226974307,0.059094331543753944264},{-0.007381463003215998440,0.99585142579386540219,0.014821400117421237263,-0.0032913629080706410102},{-0.095609594648018673259,0.70865608285499706932,0.468295800089416859158,-0.081342288296395255222}
-      };
-      return matrix[i][j];
-    }
-#if 0
-    static constexpr auto prolongateMatrix1(const size_t i, const size_t j)
-    {
-      constexpr Real matrix[N][N] = 
-      {
-        {0.0132947968907241018546,-0.061303468206632007628,0.98975108007096365837,0.073003992669698522501,-0.0147464014247542751011},
-        {0.0422868805434346915484,-0.177008133472200604271,0.76339820471556343181,0.442505803988867987154,-0.071182755775665506236},
-        {0.0092997052433059524822,-0.035663443357677330307,0.095833333333333333333,0.96272564592129313619,-0.032195241140255091699},
-        {-0.036438324731477269318,0.132214204855823862172,-0.290802660952930342018,0.74923312241633579261,0.445793658412247956549},
-        {0.031693059246729092442,-0.111885279656663511252,0.226542265055292140728,-0.40249692547716509839,1.25614688083180737647}
-      };
-      return matrix[i][j];
-    }
-#endif
-    static constexpr auto weight_half(const size_t i)  
-    { 
-      constexpr Real weight[] =
-      {0.1761059379386620,0.3049159394838622,0.02115663794741092,-0.002178515369935093};
-      return weight[i];
-    }
-#if 0
-    static constexpr auto midVec(const size_t i)
-    {
-      constexpr Real vec[N] =
-      {
-        0., 0., 1., 0., 0.
-      };
-      return vec[i];
-    }
-    static constexpr auto oneVec(const size_t i)
-    {
-      constexpr Real vec[N] = 
-      {0.076358661795812900484,-0.267941652223387509304,0.53333333333333333333,-0.89315839200007173733,1.55140804909431301281};
-      return vec[i];
-    }
-#endif
-    static constexpr auto nodeVec(const size_t i)
-    {
-      constexpr Real vec[N] =
-      {0.0694318442029737124,0.330009478207571868,0.669990521792428132,0.930568155797026288};
-      return vec[i];
-    }
-};
-template<typename T, typename Real>
 class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
 {
   /* PIF */
@@ -549,113 +442,6 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
     {
       constexpr Real vec[N] =
       {0.0254460438286207377,0.129234407200302780,0.297077424311301417,0.500000000000000000,0.702922575688698583,0.870765592799697220,0.974553956171379262};
-      return vec[i];
-    }
-};
-template<typename T, typename Real>
-class ExpansionT<8,T,Real> : public ExpansionBaseT<8,T,Real>
-{
-  /* PIF */
-  protected:
-    static constexpr size_t N = 8;
-    using base_type  = ExpansionBaseT<N,T,Real>;
-
-  public:
-
-    static constexpr auto matrix(const size_t i, const size_t j) 
-    { 
-      constexpr Real matrix[N][N] = 
-      {
-        {25.6926112963098,7.66481813729873,-2.066766305200644,0.834967836032650,-0.391322735056362,0.1880860790263934,-0.0807844483958189,0.02109496564232081},{-19.49249456998672,5.47461453891780,5.28490391970636,-1.686816817555106,0.728229725420268,-0.337061781204938,0.1420577647099491,-0.0367733313510094},{10.23940120319752,-10.29567243097482,2.76313437016009,4.22037639163604,-1.405147920784982,0.591814510044655,-0.238937072465555,0.0606926207226390},{-7.93798136827535,6.30583618258298,-8.09856974148034,2.069639794612294,3.76153680354670,-1.215395508135759,0.446517013113076,-0.1092219434734880},{7.81415574865183,-5.71807461470441,5.66351220252970,-7.90081639277129,2.069639794612294,3.65045304708640,-1.034278580991645,0.233047563097002},{-9.63317863204001,6.78823557067877,-6.11808325036483,6.54772240184721,-9.36295087269827,2.76313437016009,3.74637393276161,-0.666915191880153},{16.04021892340721,-11.09128684254554,9.57597223855476,-9.32567356743535,10.28426065957019,-14.52381437705618,5.47461453891780,3.48904897793052},{-51.4063175582620,35.2374993036919,-29.8531646168542,27.9967257720613,-28.4403708730376,31.7318448430285,-42.8215329925948,25.6926112963098}
-      };
-      return matrix[i][j]; 
-    }
-    static constexpr auto weight(const size_t i)  
-    { 
-      constexpr Real weight[] =
-      {0.050614268145188344,0.11119051722668769,0.15685332293894347,0.18134189168918116,0.18134189168918102,0.15685332293894338,0.11119051722668757,0.05061426814518831};
-      return weight[i];
-    }
-    static constexpr auto preconditioner(const size_t i, const size_t j) 
-    {
-      constexpr Real preconditioner[N][N] = 
-      {
-        {0.0253071340725941,0,0,0,0,0,0,0},{0.0547593217675543,0.0555952586133436,0,0,0,0,0,0},{0.0485875359989129,0.1208595249971732,0.0784266614694718,0,0,0,0,0},{0.0518655209705812,0.1061934901483484,0.1706711342745536,0.0906709458445905,0,0,0,0},{0.0497550315609233,0.1143883315370480,0.1496121163777214,0.1973629330102060,0.0906709458445905,0,0,0},{0.0512330738404386,0.1089648024514023,0.1614967888010481,0.1729701589689548,0.1973169950510594,0.0784266614694718,0,0},{0.0501714658408459,0.1127554521376362,0.1537135699534800,0.1865572437783281,0.1731921828308204,0.1704931191747253,0.0555952586133436,0},{0.0508917764723050,0.1102177595626280,0.1587709981935806,0.1782634003208542,0.1858249073022357,0.1505724917919132,0.1202964605326573,0.0253071340725941}
-      };
-      return preconditioner[i][j];
-    }
-    static constexpr auto maxAbsMEV() 
-    {
-      constexpr Real maxAbsMEV{14};
-      return maxAbsMEV;
-    }
-    static constexpr auto maxAbsPEV() 
-    { 
-      constexpr Real maxAbsPEV{0.1};
-      return maxAbsPEV; 
-    }
-#if 0
-    static constexpr auto nodeMatrix(const size_t i, const size_t j)
-    {
-      constexpr Real matrix[N][N] = 
-      {
-        {0.213260005841349104302,1.71754726228747258129,9.3031177500426426728,29.2274326029943329589,54.3373967987902398687},
-        {-0.74002965114900785695,-5.7585639443127711100,-30.1637945111551133825,-92.666703922546651957,-170.315662745074820114},
-        {1.42879537949198108031,10.1954385103677075047,49.5333333333333333333,145.324986458118124091,261.184112985355520657},
-        {-2.17509816702138543022,-12.4770986424139843478,-52.3901873373854831267,-142.564880053487944785,-247.782697697696973869},
-        {2.27307243283706310256,7.3226768140715753718,24.7175307651646205030,61.6791649149221396919,103.576850658626033458}
-      };
-      return matrix[i][j];
-    }
-#endif
-    static constexpr auto prolongateMatrix0(const size_t i, const size_t j)
-    {
-      constexpr Real matrix[N][N] = 
-      {
-        {1.2667216760481973813,-0.4401415240710046768,0.2969783393715519976,-0.2105336739304248071,0.1441537370843078294,-0.08966733265469603239,0.04545022883543457920,-0.01296145068336627119},{0.41490655262792268778,0.8118648725847198983,-0.37014733589743248910,0.23980756608717489619,-0.15847955493554803889,0.09691309972298874265,-0.04869597995704274630,0.013830779767217049377},{-0.04815692902513715565,0.9009474192201377160,0.21523596172681909178,-0.10950149034375946202,0.06704461284676733102,-0.03963463395860823545,0.019585560393126666889,-0.005520500859345952564},{-0.032613123227877596079,0.18831892714910526555,0.9749220024255523589,-0.19634675859913031694,0.10341840608648581512,-0.05775353932591742268,0.027799089305470619693,-0.007745003813688723542},{0.029441484775008944050,-0.13435940518671140305,0.74405678161523287230,0.48204176111430480302,-0.18317216597888620216,0.09342369669743169845,-0.04330723491965141799,0.011875081883270705382},{0.010877920556896627447,-0.04514345185328127625,0.14644980573860945045,0.9750160157835397554,-0.12469448783744002616,0.05535284058028693745,-0.024426652197144925977,0.006568009228533457623},{-0.012966734128447276671,0.05143672266093486468,-0.14099978563985939255,0.9080708988035842742,0.26043727736879297260,-0.09528865524600410117,0.03979426131329276699,-0.010483985132294108078},{-0.017992131001317680342,0.06993916450111980020,-0.17961859688365467779,0.68984505415695273003,0.55509231373168212999,-0.16654040844384589565,0.06653779161436315022,-0.017263187675299556663}
-      };
-      return matrix[i][j];
-    }
-#if 0
-    static constexpr auto prolongateMatrix1(const size_t i, const size_t j)
-    {
-      constexpr Real matrix[N][N] = 
-      {
-        {0.0132947968907241018546,-0.061303468206632007628,0.98975108007096365837,0.073003992669698522501,-0.0147464014247542751011},
-        {0.0422868805434346915484,-0.177008133472200604271,0.76339820471556343181,0.442505803988867987154,-0.071182755775665506236},
-        {0.0092997052433059524822,-0.035663443357677330307,0.095833333333333333333,0.96272564592129313619,-0.032195241140255091699},
-        {-0.036438324731477269318,0.132214204855823862172,-0.290802660952930342018,0.74923312241633579261,0.445793658412247956549},
-        {0.031693059246729092442,-0.111885279656663511252,0.226542265055292140728,-0.40249692547716509839,1.25614688083180737647}
-      };
-      return matrix[i][j];
-    }
-#endif
-    static constexpr auto weight_half(const size_t i)  
-    { 
-      constexpr Real weight[] =
-      {0.05073647053793456,0.1106371236279321,0.1587799218056337,0.1697302482589022,0.01161164343027877,-0.001926598866690093,0.000553393598755149,-0.0001222023927464280};
-      return weight[i];
-    }
-#if 0
-    static constexpr auto midVec(const size_t i)
-    {
-      constexpr Real vec[N] =
-      {
-        0., 0., 1., 0., 0.
-      };
-      return vec[i];
-    }
-    static constexpr auto oneVec(const size_t i)
-    {
-      constexpr Real vec[N] = 
-      {0.076358661795812900484,-0.267941652223387509304,0.53333333333333333333,-0.89315839200007173733,1.55140804909431301281};
-      return vec[i];
-    }
-#endif
-    static constexpr auto nodeVec(const size_t i)
-    {
-      constexpr Real vec[N] =
-      {0.0198550717512318842,0.101666761293186630,0.237233795041835507,0.408282678752175098,0.591717321247824902,0.762766204958164493,0.898333238706813370,0.980144928248768116};
       return vec[i];
     }
 };
@@ -956,10 +742,9 @@ class ODESolverT
     PDE _pde;
     Real _time;
     bool _verbose;
-    typename Expansion::storage _x, _rhs, _rhs_pde;
+    typename Expansion::storage _x, _rhs;
     Vector _y0;
     Real _err, _err_pre, _cfl_pre, _cfl;
-    Real _atol, _rtol;
 
     static constexpr Real omegaCFL = 0.5;
 
@@ -977,14 +762,10 @@ class ODESolverT
       {
         _x  [k].resize(_pde.resolution());
         _rhs[k].resize(_pde.resolution());
-        _rhs_pde[k].resize(_pde.resolution());
         std::fill(_x[k].begin(), _x[k].end(), 0);
+        _err = _err_pre = -1;
+        _cfl = _cfl_pre = -1;
       }
-      _err = _err_pre = -1;
-      _cfl = _cfl_pre = -1;
-      const Real tol = 1.0e-12;
-      _atol = tol;
-      _rtol = tol;
     };
 
     PDE& pde() { return _pde; }
@@ -1001,9 +782,8 @@ class ODESolverT
 
         for (auto v : make_zip_iterator(x[k], u0))
           get<0>(v) += get<1>(v);
-        _pde.compute_rhs(_rhs_pde[k], x[k]);
+        _pde.compute_rhs(_rhs[k], x[k]);
 
-        _rhs[k] = _rhs_pde[k];
         assert(_x[k].size() == u0.size());
         for (auto l : expansionRange())
           for (auto v : make_zip_iterator(_rhs[k], _x[l]))
@@ -1024,168 +804,6 @@ class ODESolverT
           _rhs[k][i] = tmp[k];
       }
     }
-   
-    void iterateL(const Vector &u0, int n)
-    {
-      using std::get;
-
-      const Real omega = omegaCFL/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
-
-      static decltype(_x) y0, y1,converged;
-      y0  = _x;
-      y1 = _x;
-      for (auto k : expansionRange())
-      {
-        converged[k].resize(_x[k].size());
-        for (auto& c : converged[k])
-          c = false;
-      }
-
-      rhs(u0);
-      for (auto k : expansionRange())
-      {
-        for (auto v : make_zip_iterator(_x[k], _rhs[k], converged[k]))
-        {
-          auto&   x = get<0>(v);
-          auto& rhs = get<1>(v);
-          x = x + 2.0*omega*rhs;
-        }
-        y1[k] = _x[k];
-      }
-
-      for (int i = 2; i <= n; i++)
-      {
-        rhs(u0);
-        for (auto k : expansionRange())
-        {
-          for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k], converged[k]))
-          {
-            auto&   x = get<0>(v);
-            auto&  y1 = get<1>(v);
-            auto&  y0 = get<2>(v);
-            auto& rhs = get<3>(v);
-            const auto a = (Real{2}*i-1)/i;
-            const auto b = Real{-1}*(i-1)/i;
-            x = a*y1 + b*y0 + 2*omega*a*rhs;
-          }
-          y0[k] = y1[k];
-          y1[k] = _x[k];
-        }
-      }
-    }
-    
-    
-    void iterateLiter(const Vector &u0, int n)
-    {
-      using std::get;
-
-      const Real omega = omegaCFL/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
-
-      static decltype(_x) y0, y1,converged;
-      y0  = _x;
-      for (auto k : expansionRange())
-      {
-        converged[k].resize(_x[k].size());
-        for (auto& c : converged[k])
-          c = false;
-      }
-      
-      constexpr Real tol = 1.0e-10; //14;
-      const Real atol = tol;
-      const Real rtol = tol;
-
-      rhs(u0);
-      for (auto k : expansionRange())
-      {
-        for (auto v : make_zip_iterator(_x[k], _rhs[k], converged[k]))
-          if (!get<2>(v))
-          {
-            auto&   x = get<0>(v);
-            auto& rhs = get<1>(v);
-            auto xnew = x + 2.0*omega*rhs;
-            auto dx = xnew - x;
-            auto err = std::abs(dx)/(atol + rtol*(std::abs(x)+std::abs(xnew)));
-            get<2>(v) = err < 1;
-            x = xnew;
-          }
-        y1[k] = _x[k];
-      }
-
-      for (int i = 2; i <= n; i++)
-      {
-        rhs(u0);
-        for (auto k : expansionRange())
-        {
-          const auto n2conv = std::count_if(converged[k].begin(), converged[k].end(), [](const auto x) { return x == false;});
-          if (_verbose)
-            printf(std::cerr,  " L: i= %  k= %  n2conv= % \n",
-                i,k,n2conv);
-          for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k], converged[k]))
-            if (!get<4>(v))
-            {
-              auto&   x = get<0>(v);
-              auto&  y1 = get<1>(v);
-              auto&  y0 = get<2>(v);
-              auto& rhs = get<3>(v);
-              const auto a = (Real{2}*i-1)/i;
-              const auto b = Real{-1}*(i-1)/i;
-              auto xnew = a*y1 + b*y0 + 2*omega*a*rhs;
-              auto dx = xnew - x;
-              auto err = std::abs(dx)/(atol + rtol*(std::abs(x)+std::abs(xnew)));
-              get<2>(v) = err < 1;
-//              if (err < 1)
- //               assert(0);
-              x = xnew;
-            }
-          y0[k] = y1[k];
-          y1[k] = _x[k];
-        }
-      }
-    }
-
-    void iterateT(const Vector &u0, int n)
-    {
-      using std::get;
-
-      const Real omega = omegaCFL/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
-
-      static decltype(_x) y0, y1,tmp;
-      y0  = _x;
-
-      rhs(u0);
-
-      for (auto k : expansionRange())
-      {
-        for (auto v : make_zip_iterator(_x[k], _rhs[k]))
-        {
-          auto&   x = get<0>(v);
-          auto& rhs = get<1>(v);
-          x = x + 2.0*omega*rhs;
-        }
-        y1[k] = _x[k];
-      }
-
-
-
-      for (int i = 2; i <= n; i++)
-      {
-        rhs(u0);
-        for (auto k : expansionRange())
-        {
-          for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k]))
-          {
-            auto&   x = get<0>(v);
-            auto&  y1 = get<1>(v);
-            auto&  y0 = get<2>(v);
-            auto& rhs = get<3>(v);
-            x = 2*y1 - y0 + 4*omega*rhs;
-          }
-          y0[k] = y1[k];
-          y1[k] = _x[k];
-        }
-      }
-    }
-
 
     void iterateWP(const Vector &u0, int n)
     {
@@ -1299,6 +917,7 @@ class ODESolverT
       }
       for (auto k : expansionRange())
         _x[k] = res[k];
+      rhs(u0);
     }
 
 
@@ -1322,50 +941,40 @@ class ODESolverT
           printf(std::cerr, " nstage= % \n", nstage);
         }
       }
+//      rhs(u0);
 
-      {
-        using std::get;
-        auto x = _x;
-
-        /* compute RHS */
-        for (auto k : expansionRange())
-        {
-          for (auto v : make_zip_iterator(x[k], u0))
-            get<0>(v) += get<1>(v);
-          _pde.compute_rhs(_rhs_pde[k], x[k]);
-        }
-      }
     }
 
     void solve_system(const bool OPT, const Vector& u0)
     {
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
-      niter = 32;
-      constexpr Real tol = 1.0e-12; //14;
-      const Real atol = tol;
-      const Real rtol = tol;
+      niter = 256;
+      constexpr Real tol = 1.0e-10; //14;
+      constexpr Real atol = tol;
+      constexpr Real rtol = tol;
 
       bool verbose = _verbose;
 
+#if 1
       for (auto iter : range_iterator{0,niter})
       {
         auto x0 = _x;
         iterate(OPT, iter,niter, u0, verbose);
         verbose = false;
 
-#if 1
+#if 0
         auto err = Real{0};
         for (auto i : range_iterator{0,u0.size()})
         {
-          auto du1 = 0*u0[i];
+          const auto y0 = _y0[i];
+          auto y1 = Real{0};
           for (auto k : expansionRange())
-            du1 += Expansion::weight(k)*_rhs_pde[k][i];
-          auto du0 = _y0[i];
-          _y0[i] = du1;
+            y1 += Expansion::oneVec(k)*_x[k][i];
+          _y0[i] = y1;
 
-          const auto aerr = std::abs(du1-du0);
-          const auto ym  = std::max(std::abs(u0[i]+du0), std::abs(u0[i]+du1));
+          const auto aerr = std::abs(y1-y0);
+          const auto ym  = std::max(std::abs(u0[i]+y0), std::abs(u0[i]+y1));
           err += square(aerr/(atol + rtol*ym));
         }
         err = std::sqrt(err/(u0.size()));
@@ -1388,12 +997,51 @@ class ODESolverT
         if (_verbose)
         {
           printf(std::cerr, " >>  iter= %  err= % \n", iter, err);
+          if (err < 1)
+            break;
         }
-        if (err < 1)
-          break;
         if (iter == niter - 1 && _verbose)
           printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
       }
+#else
+      Real err0 = -1;
+      int ntry = 35;
+      for (auto iter : range_iterator{0,niter})
+      {
+        auto x = _x0;
+        iterate(OPT, iter,niter, u0, verbose);
+        verbose = false;
+
+#if 1
+        Real err = 0;
+        for (auto i : range_iterator{0,u0.size()})
+          for (auto k : expansionRange())
+            err += square(_rhs[k][i]/(atol + rtol*std::abs(u0[i] + _x[k][i])));
+        err = std::sqrt(err/(u0.size())/Expansion::size());
+#else
+        Real err = 0;
+        for (auto i : range_iterator{0,u0.size()})
+          for (auto k : expansionRange())
+            err = std::max(err, std::abs(_rhs[k][i]/(atol + rtol*std::abs(_x[k][i]))));
+#endif
+        if (err0 > 0)
+        {
+          const auto de = std::abs(err0-err)/err;
+          if (de < 0.5) ntry--;
+        }
+        err0 = err;
+
+        if (_verbose)
+        {
+//          printf(std::cerr, " >>  iter= %  err= % ntry=%\n", iter, err,ntry);
+          printf(std::cerr, " >>  iter= %  err= %\n", iter, err);
+          if (err < 1 || ntry <= 0)
+            break;
+        }
+        if (iter == niter - 1 && _verbose)
+          printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
+      }
+#endif
     }
 
     void update(const bool verbose = true)
@@ -1410,21 +1058,6 @@ class ODESolverT
       /* coarse step */
       const auto cfl0 = _pde.get_cfl();
       solve_system(/* OPT */ true, _pde.state());
-      static auto du_coarse = u0;
-      static auto duh_coarse = u0;
-      for (auto i : range_iterator{u0.size()})
-      {
-        auto du  = 0*u0[i];
-        auto duh = du;
-        for (auto k : expansionRange())
-        {
-          du  += Expansion::weight     (k)*_rhs_pde[k][i];
-          duh += Expansion::weight_half(k)*_rhs_pde[k][i];
-        }
-        du_coarse [i] = du;
-        duh_coarse[i] = duh;
-      }
-
       auto x_coarse = _x;
 
       /* interoplate _x for 1st fine step */
@@ -1437,45 +1070,189 @@ class ODESolverT
             _x[k][i] += Expansion::prolongateMatrix0(k,l)*x_coarse[l][i];
         }
         _y0[i] = 0;
-#if 0
         for (auto k : expansionRange())
           _y0[i] += Expansion::oneVec(k)*_x[k][i];
-#endif
       }
 
       _pde.set_cfl(0.5*cfl0);
       solve_system(/* OPT */ false, _pde.state());
-      const auto x_fine = _x;
-      auto u1 = u0;
+      auto x_fine1 = _x;
+
+      /* update state with 1st fine step */
+      for (auto k : expansionRange())
+      {
+        for (auto v : make_zip_iterator(_x[k], _pde.state()))
+          get<0>(v) += get<1>(v);
+        _pde.compute_rhs(_rhs[k], _x[k]);
+      }
+      std::fill(du.begin(), du.end(), 0);
       for (auto k : expansionRange())
       {
         const auto w = Expansion::weight(k);
-        for (auto v : make_zip_iterator(u1,_rhs_pde[k]))
+        for (auto v : make_zip_iterator(du,_rhs[k]))
         {
           get<0>(v) += w*get<1>(v);
         }
       }
 
+      const Real tol = 1.0e-10;  /* solver */
+      const Real atol = tol;
+      const Real rtol = tol;
 
-      _pde.update(du_coarse);
-      du = duh_coarse;
-      _pde.set_cfl(cfl0);
+      Real err1 = 0;
+      {
+        auto du_err = u0;
+        std::fill(du_err.begin(), du_err.end(), 0);
+        for (auto k : expansionRange())
+        {
+          const auto wone = Expansion::oneVec(k);
+          const auto wmid = Expansion::midVec(k);
+          for (auto v : make_zip_iterator(du_err, x_coarse[k],x_fine1[k]))
+            get<0>(v) += wmid*get<1>(v) - wone*get<2>(v);
+        }
+        for (auto i : range_iterator{0,u0.size()})
+        {
+          auto u0 = _pde.state()[i];
+          auto u1 = u0;
+          for (auto k : expansionRange())
+            u1 += Expansion::oneVec(k)*x_fine1[k][i];
+          const auto um = std::max(std::abs(u0), std::abs(u1));
+          const auto sc1 = atol + rtol*um;
+          err1 += square(du_err[i]/sc1);
+        }
+        err1 = std::sqrt(err1/u0.size());
+      }
+
+      _pde.update(du);
       _time += _pde.dt();
+      const auto u1 = _pde.state();
+
+      /* interpolate _x for 2nd fine step */
+      for (auto i : range_iterator{0,u0.size()})
+      {
+        for (auto k : expansionRange())
+        {
+          _x[k][i] = u0[i] - _pde.state()[i];
+          for (auto l : expansionRange())
+            _x[k][i] += Expansion::prolongateMatrix1(k,l)*x_coarse[l][i];
+        }
+        _y0[i] = 0;
+        for (auto k : expansionRange())
+          _y0[i] += Expansion::oneVec(k)*_x[k][i];
+      }
+
+      solve_system(/* OPT */ false, _pde.state());
+      auto x_fine2 = _x;
+
+      /* update with 2nd fine step */
+      for (auto k : expansionRange())
+      {
+        for (auto v : make_zip_iterator(_x[k], _pde.state()))
+          get<0>(v) += get<1>(v);
+        _pde.compute_rhs(_rhs[k], _x[k]);
+      }
+      std::fill(du.begin(), du.end(), 0);
+      for (auto k : expansionRange())
+      {
+        const auto w = Expansion::weight(k);
+        for (auto v : make_zip_iterator(du,_rhs[k]))
+        {
+          get<0>(v) += w*get<1>(v);
+        }
+      }
+
+      Real err2 = 0;
+      {
+        auto du_err = u0;
+        std::fill(du_err.begin(), du_err.end(), 0);
+        for (auto k : expansionRange())
+        {
+          const auto wone = Expansion::oneVec(k);
+          const auto wmid = Expansion::oneVec(k);
+          for (auto v : make_zip_iterator(du_err, x_coarse[k],x_fine2[k]))
+            get<0>(v) += wmid*get<1>(v) - wone*get<2>(v);
+        }
+        for (auto v : make_zip_iterator(du_err, u0, _pde.state()))
+          get<0>(v) += get<1>(v) - get<2>(v);
+
+        for (auto& x : du_err)
+          err2 += square(x);
+        err2 = std::sqrt(err2/du_err.size());
+
+        for (auto i : range_iterator{0,u0.size()})
+        {
+          auto u0 = _pde.state()[i];
+          auto u1 = u0;
+          for (auto k : expansionRange())
+            u1 += Expansion::oneVec(k)*x_fine2[k][i];
+          const auto um = std::max(std::abs(u0), std::abs(u1));
+          const auto sc1 = atol + rtol*um;
+          err2 += square(du_err[i]/sc1);
+        }
+        err2 = std::sqrt(err2/u0.size());
+      }
 
 
 
+      /* update time-step */
+      _pde.update(du);
+      _time += _pde.dt();
+      const auto u2 = _pde.state();
 
+      _pde.set_cfl(cfl0);
+
+#if 1
+      /* update with coarse step */
+      _x = x_coarse;
+      /* update state with 1st fine step */
+      for (auto k : expansionRange())
+      {
+        for (auto v : make_zip_iterator(_x[k], u0))
+          get<0>(v) += get<1>(v);
+        _pde.compute_rhs(_rhs[k], _x[k]);
+      }
+      std::fill(du.begin(), du.end(), 0);
+      for (auto k : expansionRange())
+      {
+        const auto w = Expansion::weight(k);
+        for (auto v : make_zip_iterator(du,_rhs[k]))
+        {
+          get<0>(v) += w*get<1>(v);
+        }
+      }
+      for (auto v : make_zip_iterator(du,u2,u0))
+        get<0>(v) += get<2>(v) - get<1>(v);
+     _pde.update(du);
+
+
+      std::fill(du.begin(), du.end(), 0);
+      for (auto k : expansionRange())
+      {
+        const auto w = Expansion::weight_half(k);
+//        const auto w = Expansion::weight(k);
+        for (auto v : make_zip_iterator(du,_rhs[k]))
+        {
+          get<0>(v) += w*get<1>(v);
+        }
+      }
+#endif
+
+#if 1
       {
         Real err3 = 0;
         {
           for (auto i : range_iterator{1,u0.size()-1})
           {
             const auto y0 = u0[i];
+#if 0
+            const auto y1 = _pde.state()[i]; 
+#else
             const auto y1 = u0[i] + du[i]; 
+#endif
             const auto y2 = u1[i];
             
             const auto um = std::max(std::abs(y1), std::abs(y1));
-            const auto sc1 = _atol + _rtol*um;
+            const auto sc1 = atol + rtol*um;
             const auto du_err = std::abs(y1 - y2);
             err3 += square(du_err/sc1);
           }
@@ -1484,6 +1261,10 @@ class ODESolverT
         _err_pre  = _err;
         _err      = err3;
       }
+#else
+      _err1 = _err2;
+      _err2 = err1;
+#endif
 
       _cfl_pre  = _cfl;
       _cfl      = _pde.get_cfl();
@@ -1496,8 +1277,15 @@ class ODESolverT
       Real cfl_scale = 1;
       if (_err > 0 && _err_pre > 0)
       {
+#if 0
+        const auto p = Real{1}/Expansion::size();
+        const auto alpha = Real{0.7}*p;
+        const auto beta  = Real{0.4}*p;
+        cfl_scale = 0.8*std::pow(1/_err2,alpha)*std::pow(_err1,beta);
+#else
         const auto p = Real{1}/(Expansion::size());
         cfl_scale = 0.8*std::pow(1/_err,p)*_cfl/_cfl_pre*std::pow(_err_pre/_err,p);
+#endif
       }
       else if (_err > 1)
       {
@@ -1523,8 +1311,7 @@ class ODESolverT
             
               const auto x = cfl1/cfl0 * Expansion::nodeVec(k);
 //              _x[k][i] = (-u0[i] + u2[i])*x;
-              _x[k][i] = (-u0[i] + _pde.state()[i])*x;
-//              _x[k][i] = x*(u0[i]-4*u1[i]+3*u2[i]+2*(u0[i]-2*u1[i]+u2[i])*x);
+              _x[k][i] = x*(u0[i]-4*u1[i]+3*u2[i]+2*(u0[i]-2*u1[i]+u2[i])*x);
 //              _x[k][i] = 0;
 //
 //              _x[k][i] = (u0[i] - _pde.state()[i]); 
@@ -1532,10 +1319,8 @@ class ODESolverT
  //               _x[k][i] += Expansion::nodeMatrix(k,l)*x_coarse[l][i];
             }
             _y0[i] = 0;
-#if 0
             for (auto k : expansionRange())
               _y0[i] += Expansion::oneVec(k)*_x[k][i];
-#endif
           }
           _pde.set_cfl(cfl1);
         }
@@ -1585,9 +1370,29 @@ class PDEBurger
     PDEBurger(const size_t n) : _f{Vector(n+2)}, n_rhs_calls{0}
     {
     }
+
+    static void periodic_bc(Vector &f) 
+    {
+      const auto n = f.size();
+      f[0  ] = f[n-2];
+      f[n-1] = f[1  ];
+    }
+
+    static void free_bc(Vector &f) 
+    {
+      const auto n = f.size();
+      f[0  ] = f[  1];
+      f[n-1] = f[n-2];
+    }
+
     auto cfl() const { return _cfl; }
     auto resolution() const { return _f.size(); }
 
+    void apply_bc(Vector &f) const
+    {
+      periodic_bc(f);
+      //free_bc(f);
+    }
 
     const Vector& state() const { return _f; }
 
@@ -1603,18 +1408,15 @@ class PDEBurger
     template<typename Func>
       void compute_rhs(Vector &res, Vector &x, Func func)
       {
+        apply_bc(x);
         n_rhs_calls++;
         const auto c = dt() * _diff/square(_dx);
-        const auto n = x.size();
-        res[0] = c * (x[n-1] - Real{2.0} * x[0] + x[1]);
-        res[0] = func(res[0]);
-        for (auto i : range_iterator{1,x.size()-1})
+        for (auto i : range_iterator{1,x.size() - 1})
         {
-          res[i] = c * (x[i-1] - Real{2.0} * x[i] + x[i+1]);
+          res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
           res[i] = func(res[i]);
         }
-        res[n-1] = c * (x[n-2] - Real{2.0} * x[n-1] + x[0]);
-        res[n-1] = func(res[n-1]);
+        apply_bc(res);
       }
     void compute_rhs(Vector &res, Vector &x)
     {
@@ -1700,7 +1502,7 @@ auto compute_mass(const Solver &solver)
   const auto n = f.size();
   const auto dx = solver.pde().dx();
   typename Solver::Real sum = 0;
-  for (int i = 0; i < n; i++)
+  for (int i = 1; i < n-1; i++)
     sum += f[i]*dx;
   return sum;
 }
@@ -1717,7 +1519,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 4;
+  constexpr auto ORDER = 5;
   using PDE = PDEBurger<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -1726,7 +1528,7 @@ int main(int argc, char * argv[])
 
   solver.pde().set_dx(1.0/ncell);
   solver.pde().set_diff(1);
-  solver.pde().set_cfl(0.8);//*2*2*2); //*2*2); //*8); //*8); //*64); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
+  solver.pde().set_cfl(0.8*2*2*2); //*2*2); //*8); //*8); //*64); //*16); //*64); //*64); //*64); //*64); //*64);//*64); //*64);//*64); //*4); //*64/4); //*64); //*64); //*64/4); //*64*4);//*64); //*64); //*64); //*4*4*4);  /* stable for cfl <= 0.5 */
 
   const auto dt = solver.pde().dt();
 
@@ -1738,8 +1540,8 @@ int main(int argc, char * argv[])
     bool keep_looping = true;
     while (keep_looping)
     {
-      auto verbose_step = (kstep%1) == 0;
-      auto verbose_iter = (kstep%1) == 0;
+      auto verbose_step = kstep%1 == 0;
+      auto verbose_iter = kstep%1 == 0;
       const auto dt = solver.pde().dt();
       bool break_loop = true;
       if (solver.time() + dt > tend)
@@ -1748,7 +1550,6 @@ int main(int argc, char * argv[])
         assert(dt_new >= 0);
         solver.pde().set_cfl(solver.pde().get_cfl() * dt_new/dt);
         keep_looping = false;
-        verbose_step = verbose_iter = true;
       }
 
       if (verbose_step)
