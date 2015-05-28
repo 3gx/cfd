@@ -745,6 +745,7 @@ class ODESolverT
     typename Expansion::storage _x, _rhs;
     Vector _y0;
     Real _err, _err_pre, _cfl_pre, _cfl;
+    Real _atol, _rtol;
 
     static constexpr Real omegaCFL = 0.5;
 
@@ -765,6 +766,9 @@ class ODESolverT
         std::fill(_x[k].begin(), _x[k].end(), 0);
         _err = _err_pre = -1;
         _cfl = _cfl_pre = -1;
+        const Real tol = 1.0e-10;
+        _atol = tol;
+        _rtol = tol;
       }
     };
 
@@ -1095,34 +1099,6 @@ class ODESolverT
         }
       }
 
-      const Real tol = 1.0e-10;  /* solver */
-      const Real atol = tol;
-      const Real rtol = tol;
-
-      Real err1 = 0;
-      {
-        auto du_err = u0;
-        std::fill(du_err.begin(), du_err.end(), 0);
-        for (auto k : expansionRange())
-        {
-          const auto wone = Expansion::oneVec(k);
-          const auto wmid = Expansion::midVec(k);
-          for (auto v : make_zip_iterator(du_err, x_coarse[k],x_fine1[k]))
-            get<0>(v) += wmid*get<1>(v) - wone*get<2>(v);
-        }
-        for (auto i : range_iterator{0,u0.size()})
-        {
-          auto u0 = _pde.state()[i];
-          auto u1 = u0;
-          for (auto k : expansionRange())
-            u1 += Expansion::oneVec(k)*x_fine1[k][i];
-          const auto um = std::max(std::abs(u0), std::abs(u1));
-          const auto sc1 = atol + rtol*um;
-          err1 += square(du_err[i]/sc1);
-        }
-        err1 = std::sqrt(err1/u0.size());
-      }
-
       _pde.update(du);
       _time += _pde.dt();
       const auto u1 = _pde.state();
@@ -1159,37 +1135,6 @@ class ODESolverT
         {
           get<0>(v) += w*get<1>(v);
         }
-      }
-
-      Real err2 = 0;
-      {
-        auto du_err = u0;
-        std::fill(du_err.begin(), du_err.end(), 0);
-        for (auto k : expansionRange())
-        {
-          const auto wone = Expansion::oneVec(k);
-          const auto wmid = Expansion::oneVec(k);
-          for (auto v : make_zip_iterator(du_err, x_coarse[k],x_fine2[k]))
-            get<0>(v) += wmid*get<1>(v) - wone*get<2>(v);
-        }
-        for (auto v : make_zip_iterator(du_err, u0, _pde.state()))
-          get<0>(v) += get<1>(v) - get<2>(v);
-
-        for (auto& x : du_err)
-          err2 += square(x);
-        err2 = std::sqrt(err2/du_err.size());
-
-        for (auto i : range_iterator{0,u0.size()})
-        {
-          auto u0 = _pde.state()[i];
-          auto u1 = u0;
-          for (auto k : expansionRange())
-            u1 += Expansion::oneVec(k)*x_fine2[k][i];
-          const auto um = std::max(std::abs(u0), std::abs(u1));
-          const auto sc1 = atol + rtol*um;
-          err2 += square(du_err[i]/sc1);
-        }
-        err2 = std::sqrt(err2/u0.size());
       }
 
 
@@ -1237,7 +1182,6 @@ class ODESolverT
       }
 #endif
 
-#if 1
       {
         Real err3 = 0;
         {
@@ -1252,7 +1196,7 @@ class ODESolverT
             const auto y2 = u1[i];
             
             const auto um = std::max(std::abs(y1), std::abs(y1));
-            const auto sc1 = atol + rtol*um;
+            const auto sc1 = _atol + _rtol*um;
             const auto du_err = std::abs(y1 - y2);
             err3 += square(du_err/sc1);
           }
@@ -1261,10 +1205,6 @@ class ODESolverT
         _err_pre  = _err;
         _err      = err3;
       }
-#else
-      _err1 = _err2;
-      _err2 = err1;
-#endif
 
       _cfl_pre  = _cfl;
       _cfl      = _pde.get_cfl();
@@ -1311,7 +1251,8 @@ class ODESolverT
             
               const auto x = cfl1/cfl0 * Expansion::nodeVec(k);
 //              _x[k][i] = (-u0[i] + u2[i])*x;
-              _x[k][i] = x*(u0[i]-4*u1[i]+3*u2[i]+2*(u0[i]-2*u1[i]+u2[i])*x);
+              _x[k][i] = (-u0[i] + _pde.state()[i])*x;
+//              _x[k][i] = x*(u0[i]-4*u1[i]+3*u2[i]+2*(u0[i]-2*u1[i]+u2[i])*x);
 //              _x[k][i] = 0;
 //
 //              _x[k][i] = (u0[i] - _pde.state()[i]); 
