@@ -1370,29 +1370,9 @@ class PDEBurger
     PDEBurger(const size_t n) : _f{Vector(n+2)}, n_rhs_calls{0}
     {
     }
-
-    static void periodic_bc(Vector &f) 
-    {
-      const auto n = f.size();
-      f[0  ] = f[n-2];
-      f[n-1] = f[1  ];
-    }
-
-    static void free_bc(Vector &f) 
-    {
-      const auto n = f.size();
-      f[0  ] = f[  1];
-      f[n-1] = f[n-2];
-    }
-
     auto cfl() const { return _cfl; }
     auto resolution() const { return _f.size(); }
 
-    void apply_bc(Vector &f) const
-    {
-      periodic_bc(f);
-      //free_bc(f);
-    }
 
     const Vector& state() const { return _f; }
 
@@ -1408,15 +1388,18 @@ class PDEBurger
     template<typename Func>
       void compute_rhs(Vector &res, Vector &x, Func func)
       {
-        apply_bc(x);
         n_rhs_calls++;
         const auto c = dt() * _diff/square(_dx);
-        for (auto i : range_iterator{1,x.size() - 1})
+        const auto n = x.size();
+        res[0] = c * (x[n-1] - Real{2.0} * x[0] + x[1]);
+        res[0] = func(res[0]);
+        for (auto i : range_iterator{0,x.size()})
         {
-          res[i] = c * (x[i+1] - Real{2.0} * x[i] + x[i-1]);
+          res[i] = c * (x[i-1] - Real{2.0} * x[i] + x[i+1]);
           res[i] = func(res[i]);
         }
-        apply_bc(res);
+        res[n-1] = c * (x[n-2] - Real{2.0} * x[n-1] + x[0]);
+        res[n-1] = func(res[n-1]);
       }
     void compute_rhs(Vector &res, Vector &x)
     {
@@ -1502,7 +1485,7 @@ auto compute_mass(const Solver &solver)
   const auto n = f.size();
   const auto dx = solver.pde().dx();
   typename Solver::Real sum = 0;
-  for (int i = 1; i < n-1; i++)
+  for (int i = 0; i < n; i++)
     sum += f[i]*dx;
   return sum;
 }
