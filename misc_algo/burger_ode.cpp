@@ -1034,6 +1034,20 @@ class ODESolverT
       /* coarse step */
       const auto cfl0 = _pde.get_cfl();
       solve_system(/* OPT */ true, _pde.state());
+      static auto du_coarse = u0;
+      static auto duh_coarse = u0;
+      for (auto i : range_iterator{u0.size()})
+      {
+        auto du  = 0*u0[i];
+        auto duh = du;
+        for (auto k : expansionRange())
+        {
+          du  += Expansion::weight     (k)*_rhs_pde[k][i];
+          duh += Expansion::weight_half(k)*_rhs_pde[k][i];
+        }
+        du_coarse [i] = du;
+        duh_coarse[i] = duh;
+      }
 
       auto x_coarse = _x;
 
@@ -1054,15 +1068,6 @@ class ODESolverT
       _pde.set_cfl(0.5*cfl0);
       solve_system(/* OPT */ false, _pde.state());
       const auto x_fine = _x;
-
-#if 1
-      /* update state with 1st fine step */
-      for (auto k : expansionRange())
-      {
-        for (auto v : make_zip_iterator(_x[k], _pde.state()))
-          get<0>(v) += get<1>(v);
-        _pde.compute_rhs(_rhs_pde[k], _x[k]);
-      }
       auto u1 = u0;
       for (auto k : expansionRange())
       {
@@ -1072,79 +1077,13 @@ class ODESolverT
           get<0>(v) += w*get<1>(v);
         }
       }
-#else
-      static auto u1 = u0;
-      for (auto i : range_iterator{0,u1.size()})
-      {
-        Real du = 0;
-        for (auto k : expansionRange())
-        {
-          Real r = 0;
-          for (auto l : expansionRange())
-            r += Expansion::matrix(k,l)*x_fine[l][i];
-          du += Expansion::weight(k)*r;
-        }
-        u1[i] = u0[i] + du;
-      }
-#endif
 
 
+      _pde.update(du_coarse);
+      du = duh_coarse;
       _pde.set_cfl(cfl0);
       _time += _pde.dt();
 
-      /* update with coarse step */
-      _x = x_coarse;
-#if 1
-      for (auto k : expansionRange())
-      {
-        for (auto v : make_zip_iterator(_x[k], u0))
-          get<0>(v) += get<1>(v);
-        _pde.compute_rhs(_rhs_pde[k], _x[k]);
-      }
-      std::fill(du.begin(), du.end(), 0);
-      for (auto k : expansionRange())
-      {
-        const auto w = Expansion::weight(k);
-        for (auto v : make_zip_iterator(du,_rhs_pde[k]))
-        {
-          get<0>(v) += w*get<1>(v);
-        }
-      }
-     _pde.update(du);
-      std::fill(du.begin(), du.end(), 0);
-      for (auto k : expansionRange())
-      {
-        const auto w = Expansion::weight_half(k);
-        for (auto v : make_zip_iterator(du,_rhs_pde[k]))
-        {
-          get<0>(v) += w*get<1>(v);
-        }
-      }
-#else
-      for (auto i : range_iterator{0,u1.size()})
-      {
-        du[i] = 0;
-        for (auto k : expansionRange())
-        {
-          Real r = 0;
-          for (auto l : expansionRange())
-            r += Expansion::matrix(k,l)*x_coarse[l][i];
-          du[i] += Expansion::weight(k)*r;
-        }
-      }
-      _pde.update(du);
-      for (auto i : range_iterator{0,u1.size()})
-      {
-        du[i] = 0;
-        for (auto k : expansionRange())
-        {
-          Real r = 0;
-          for (auto l : expansionRange())
-            r += Expansion::matrix(k,l)*x_coarse[l][i];
-          du[i] += Expansion::weight_half(k)*r;
-        }
-      }
-#endif
 
 
 
