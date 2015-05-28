@@ -921,7 +921,6 @@ class ODESolverT
       }
       for (auto k : expansionRange())
         _x[k] = res[k];
-      rhs(u0);
     }
 
 
@@ -945,8 +944,19 @@ class ODESolverT
           printf(std::cerr, " nstage= % \n", nstage);
         }
       }
-//      rhs(u0);
 
+      {
+        using std::get;
+        auto x = _x;
+
+        /* compute RHS */
+        for (auto k : expansionRange())
+        {
+          for (auto v : make_zip_iterator(x[k], u0))
+            get<0>(v) += get<1>(v);
+          _pde.compute_rhs(_rhs[k], x[k]);
+        }
+      }
     }
 
     void solve_system(const bool OPT, const Vector& u0)
@@ -1062,6 +1072,7 @@ class ODESolverT
       /* coarse step */
       const auto cfl0 = _pde.get_cfl();
       solve_system(/* OPT */ true, _pde.state());
+
       auto x_coarse = _x;
 
       /* interoplate _x for 1st fine step */
@@ -1080,8 +1091,9 @@ class ODESolverT
 
       _pde.set_cfl(0.5*cfl0);
       solve_system(/* OPT */ false, _pde.state());
-      auto x_fine1 = _x;
+      const auto x_fine = _x;
 
+#if 1
       /* update state with 1st fine step */
       for (auto k : expansionRange())
       {
@@ -1098,6 +1110,21 @@ class ODESolverT
           get<0>(v) += w*get<1>(v);
         }
       }
+#else
+      static auto u1 = u0;
+      for (auto i : range_iterator{0,u1.size()})
+      {
+        Real du = 0;
+        for (auto k : expansionRange())
+        {
+          Real r = 0;
+          for (auto l : expansionRange())
+            r += Expansion::matrix(k,l)*x_fine[l][i];
+          du += Expansion::weight(k)*r;
+        }
+        u1[i] = u0[i] + du;
+      }
+#endif
 
 
       _pde.set_cfl(cfl0);
@@ -1105,7 +1132,7 @@ class ODESolverT
 
       /* update with coarse step */
       _x = x_coarse;
-      /* update state with 1st fine step */
+#if 1
       for (auto k : expansionRange())
       {
         for (auto v : make_zip_iterator(_x[k], u0))
@@ -1122,8 +1149,6 @@ class ODESolverT
         }
       }
      _pde.update(du);
-
-
       std::fill(du.begin(), du.end(), 0);
       for (auto k : expansionRange())
       {
@@ -1133,6 +1158,33 @@ class ODESolverT
           get<0>(v) += w*get<1>(v);
         }
       }
+#else
+      for (auto i : range_iterator{0,u1.size()})
+      {
+        du[i] = 0;
+        for (auto k : expansionRange())
+        {
+          Real r = 0;
+          for (auto l : expansionRange())
+            r += Expansion::matrix(k,l)*x_coarse[l][i];
+          du[i] += Expansion::weight(k)*r;
+        }
+      }
+      _pde.update(du);
+      for (auto i : range_iterator{0,u1.size()})
+      {
+        du[i] = 0;
+        for (auto k : expansionRange())
+        {
+          Real r = 0;
+          for (auto l : expansionRange())
+            r += Expansion::matrix(k,l)*x_coarse[l][i];
+          du[i] += Expansion::weight_half(k)*r;
+        }
+      }
+#endif
+
+
 
       {
         Real err3 = 0;
