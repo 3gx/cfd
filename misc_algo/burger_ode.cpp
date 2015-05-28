@@ -1334,7 +1334,7 @@ class PDEBurger
         const auto n = x.size();
         res[0] = c * (x[n-1] - Real{2.0} * x[0] + x[1]);
         res[0] = func(res[0]);
-        for (auto i : range_iterator{0,x.size()})
+        for (auto i : range_iterator{1,x.size()-1})
         {
           res[i] = c * (x[i-1] - Real{2.0} * x[i] + x[i+1]);
           res[i] = func(res[i]);
