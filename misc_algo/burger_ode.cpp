@@ -982,7 +982,7 @@ class ODESolverT
       }
       _err = _err_pre = -1;
       _cfl = _cfl_pre = -1;
-      const Real tol = 1.0e-12;
+      const Real tol = 1.0e-10;
       _atol = tol;
       _rtol = tol;
     };
@@ -1090,7 +1090,7 @@ class ODESolverT
           c = false;
       }
       
-      constexpr Real tol = 1.0e-10; //14;
+      constexpr Real tol = 1.0e-7; //14;
       const Real atol = tol;
       const Real rtol = tol;
 
@@ -1306,8 +1306,8 @@ class ODESolverT
     {
       if (OPT)
       {
-        const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));  /* stiffff */
-        iterateWP(u0, nstage);
+        const int nstage = static_cast<int>(1+3*std::sqrt(_pde.cfl()));  /* stiffff */
+        iterateOPT(u0, nstage);
         if (verbose)
         {
           printf(std::cerr, " nstage= % \n", nstage);
@@ -1315,8 +1315,8 @@ class ODESolverT
       }
       else
       {
-        const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));  /* stiffff */
-        iterateWP(u0, nstage);
+        const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));  /* stiffff */
+        iterateOPT(u0, nstage);
         if (verbose)
         {
           printf(std::cerr, " nstage= % \n", nstage);
@@ -1326,6 +1326,7 @@ class ODESolverT
       {
         using std::get;
         auto x = _x;
+        rhs(u0);
 
         /* compute RHS */
         for (auto k : expansionRange())
@@ -1337,12 +1338,94 @@ class ODESolverT
       }
     }
 
+#if 0
+    void solve_system(const bool OPT, const Vector& u0)
+    {
+      using std::get;
+      const size_t niter = 32;
+      std::vector<bool> converged(u0.size(), false);
+      auto y0 = _x;
+      auto y1 = _x;
+
+      constexpr Real tol = 1.0e-12; //14;
+      const Real atol = tol;
+      const Real rtol = tol;
+
+      const Real omega = omegaCFL/(Expansion::maxAbsPEV()*(Expansion::maxAbsMEV() + _pde.AbsEV()));
+
+      rhs(u0);
+      for (auto i : range_iterator{u0.size()})
+        if (!converged[i])
+        {
+          Real err = 0;
+          for (auto k : expansionRange())
+          {
+            auto&   x = _x  [k][i];
+            auto& rhs = _rhs[k][i];
+            auto xnew = x + 2.0*omega*rhs;
+            auto dx   = xnew - x;
+            err += square(dx/(atol + rtol*(std::max(std::abs(x),std::abs(xnew)))));
+            x = xnew;
+          }
+          err = std::sqrt(err/Expansion::size());
+//          converged[i] = err<1;
+        }
+      y1 = _x;
+
+
+      for (auto iter : range_iterator{niter})
+      {
+        const auto nconv = std::count_if(converged.begin(), converged.end(), [](const auto x) { return x; });
+        if (_verbose)
+          printf(std::cerr , "iter= % nconv= % \n", iter, nconv);
+        if (nconv == 0)
+          break;
+
+        rhs(u0);
+        for (auto i : range_iterator{u0.size()})
+          if (!converged[i])
+          {
+            Real err = 0;
+            for (auto k : expansionRange())
+            {
+              auto&   x = _x  [k][i];
+              auto& rhs = _rhs[k][i];
+
+              const auto a = (Real{2}*i-1)/i;
+              const auto b = Real{-1}*(i-1)/i;
+              auto xnew = a*y1[k][i] + b*y0[k][i] + 2*omega*a*rhs;
+              auto dx   = xnew - x;
+              err += square(dx/(atol + rtol*(std::max(std::abs(x),std::abs(xnew)))));
+              x = xnew;
+            }
+            err = std::sqrt(err/Expansion::size());
+//            converged[i] = err<1;
+          }
+        y0 = y1;
+        y1 = _x;
+      }
+
+      {
+        using std::get;
+        auto x = _x;
+        rhs(u0);
+
+        /* compute RHS */
+        for (auto k : expansionRange())
+        {
+          for (auto v : make_zip_iterator(x[k], u0))
+            get<0>(v) += get<1>(v);
+          _pde.compute_rhs(_rhs_pde[k], x[k]);
+        }
+      }
+    }
+#else
     void solve_system(const bool OPT, const Vector& u0)
     {
       using std::get;
       size_t  niter = 7; //8*2*2; // * 32; //*2; //16 ;//1; //32; //50;
       niter = 32;
-      constexpr Real tol = 1.0e-12; //14;
+      constexpr Real tol = 1.0e-10; //14;
       const Real atol = tol;
       const Real rtol = tol;
 
@@ -1395,6 +1478,7 @@ class ODESolverT
           printf(std::cerr, "   ** iter= %  err= % \n ", iter, err);
       }
     }
+#endif
 
     void update(const bool verbose = true)
     {
@@ -1513,7 +1597,8 @@ class ODESolverT
         static int count = 0;
         {
           const auto cfl0 = _pde.get_cfl();
-          const auto cfl1 = cfl0*cfl_scale;
+          auto cfl1 = cfl0*cfl_scale;
+//          cfl1 = 4; //// 128*16;
           if (_verbose)
             printf(std::cerr, " ------ predict -------- \n");
           for (auto i : range_iterator{0,u0.size()})
@@ -1742,7 +1827,8 @@ int main(int argc, char * argv[])
       auto verbose_iter = (kstep%1) == 0;
       const auto dt = solver.pde().dt();
       bool break_loop = true;
-      if (solver.time() + dt > tend)
+
+      if (solver.time() + dt >= tend)
       {
         const auto dt_new = tend - solver.time();
         assert(dt_new >= 0);
@@ -1761,10 +1847,12 @@ int main(int argc, char * argv[])
       solver.update(verbose_iter);
       kstep++;
     }
+#if 0
     const auto mass = compute_mass(solver);
     printf(std::cerr, "step= % : time= % dt= % (cfl= %) ORDER= % cost= % -- mass_err= %  Tend= % \n", 
         kstep, solver.time(), solver.pde().dt(), solver.pde().cfl(), ORDER,
         solver.pde().cost(), (mass-mass0)/mass0, tend);
+#endif
   }
   printf(std::cerr, " Writing output ... \n");
 //  dump2file(solver);
