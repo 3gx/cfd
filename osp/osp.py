@@ -108,7 +108,7 @@ def maximizeH(s,p,ev_space):
 
 
   if converged:
-    print " Converged with h= %g" % h
+    print " Converged with h= %g  h/s^2= %g" % (h, h/s**2)
     [poly, v] = minimizePoly(s,p,h,ev_space,max_iter,verbose=True)
     return [poly, h]
   else:
@@ -118,7 +118,7 @@ def maximizeH(s,p,ev_space):
 if True:
   npts = 10000;
   ev_space = -np.linspace(0,1,npts);
-  s = 20;
+  s = 30;
   p = 8;
 
   [poly, h] = maximizeH(s,p,ev_space);
