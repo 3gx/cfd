@@ -169,11 +169,11 @@ def maximizeH(s,p,ev_space):
 if True:
   npts = 100;
 
-#  ev_space = -np.linspace(0,1,npts);
+  ev_space = -np.linspace(0,1,npts);
 
-  ev_space = np.random.random(npts);
-  ev_space = np.sort(np.concatenate(([0],ev_space,[1])))
-  ev_space = -0.5*(1 + np.cos(ev_space*np.pi))
+#  ev_space = np.random.random(npts);
+#  ev_space = np.sort(np.concatenate(([0],ev_space,[1])))
+#  ev_space = -0.5*(1 + np.cos(ev_space*np.pi))
 
 #  ev_space = np.linspace(0,np.pi,npts)
 #  ev_space = -0.5*(1 + np.cos(ev_space))
