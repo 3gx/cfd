@@ -125,28 +125,30 @@ def maximizeH(s,p,ev_space):
     if ((h_max-h_min < tol_bisect*h_min) or (h_max < tol_bisect)) and converged:
       break;
 
-    h = 0.5*(h_max + h_min)
+    h = 0.25*h_max + 0.75*h_min
 
-    niter = max_iter;
-    conv = False;
-    while (not conv) and (niter > 0):
-      polyg=None
-      if (niter > max_iter):
-        polyg = poly;
-      [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,niter,verbose=False,poly_guess=polyg)
-      print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v)
-      if not conv:
-        print " >>>> Failed to converge "
-      if (not conv) and (v < 1):
-        niter *= 4;
-      if (not conv) and (v >= 1):
-        niter = -1;
-      if (niter > 8*max_iter):
-        niter = -1;
+    [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,max_iter,verbose=False)
+    print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v)
+#    niter = max_iter;
+#    conv = False;
+#    while (not conv) and (niter > 0):
+#      polyg=None
+#      if (niter > max_iter):
+#        polyg = poly;
+#      [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,niter,verbose=False,poly_guess=polyg)
+#      print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v)
+#      if not conv:
+#        print " >>>> Failed to converge "
+#      if (not conv) and (v < 1):
+#        niter *= 2;
+#      if (not conv) and (v >= 1):
+#        niter = -1;
+#      if (niter > 4*max_iter):
+#        niter = -1;
 
     if not conv:
       converged = False
-#      print " >>>> Failed to converge "
+      print " >>>> Failed to converge "
       h_max = h;
     else:
       converged = True
@@ -170,7 +172,7 @@ if True:
   ev_space = -0.5*(1 + np.cos(ev_space))
 
 #  ev_space = -np.linspace(0,1,npts);
-  s = 100;
+  s = 300;
   p = 8;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
