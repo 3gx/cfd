@@ -32,7 +32,7 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
 
   return [b,c]
 
-def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False):
+def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False,poly_guess=None):
   if verbose:
     print "============================================="
   hval = h*ev_space;
@@ -69,12 +69,14 @@ def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False):
   cons = ({'type': 'eq',
           'fun' : lambda x: cfunc(x,b,fixed_coefficients)}) 
   
-#  cons = ({'type': 'eq',
-#          'fun' : lambda x: cfunc(x,b,fixed_coefficients),
-#          'jac' : lambda x: cfunc_deriv(x,b)})
+  cons = ({'type': 'eq',
+          'fun' : lambda x: cfunc(x,b,fixed_coefficients),
+          'jac' : lambda x: cfunc_deriv(x,b)})
 
   x0 = np.zeros(s+1)
   x0 = np.ones(s+1)
+  if poly_guess != None:
+    x0 = poly_guess
   res=optimize.minimize(func, x0, args=(c,),constraints=cons,
 #  res=optimize.minimize(func, x0, args=(c,),constraints=cons,jac=func_deriv,
 #      method='SLSQP', options={'disp': True, 'maxiter': 1024, 'ftol': 1e-13, 'eps':1e-13},tol=1e-15)
@@ -98,15 +100,15 @@ def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False):
     print "\n============================================="
 
   if res.success:
-    return [res.x,func(res.x,c)]
+    return [True, res.x,func(res.x,c), res.nit]
   else:
-    return [None, None]
+    return [False, res.x, func(res.x,c), res.nit]
 
 def maximizeH(s,p,ev_space):
   h_min = 0;
   h_max = 2.01*s*s*max(abs(ev_space))
 
-  max_iter = 32 + s;
+  max_iter = 4;
   max_steps = 1000
   tol_bisect = 1e-3
   tol_feasible = 1e-12
@@ -125,16 +127,26 @@ def maximizeH(s,p,ev_space):
 
     h = 0.5*(h_max + h_min)
 
-    [poly, v] = minimizePoly(s,p,h,ev_space,max_iter,verbose=False)
+    niter = max_iter;
+    conv = False;
+    while (not conv) and (niter > 0):
+      polyg=None
+      if (niter > max_iter):
+        polyg = poly;
+      [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,niter,verbose=False,poly_guess=polyg)
+      print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v)
+      if not conv:
+        print " >>>> Failed to converge "
+      if (not conv) and (v < 1):
+        niter *= 4;
+      if (not conv) and (v >= 1):
+        niter = -1;
+      if (niter > 8*max_iter):
+        niter = -1;
 
-    if v == None:
-      print "%5d  h_min= %g   h_max= %g  -- h= %g   " % (step, h_min, h_max, h)
-    else:
-      print "%5d  h_min= %g   h_max= %g  -- h= %g   v= %g " % (step, h_min, h_max, h, v)
-
-    if v == None:
+    if not conv:
       converged = False
-      print " >>>> Failed to converge "
+#      print " >>>> Failed to converge "
       h_max = h;
     else:
       converged = True
@@ -146,17 +158,22 @@ def maximizeH(s,p,ev_space):
 
   if converged:
     print " Converged with h= %g  h/s^2= %g" % (h, h/s**2)
-    [poly, v] = minimizePoly(s,p,h,ev_space,max_iter,verbose=True)
+    [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,max_iter,verbose=True)
     return [poly, h]
   else:
     return [None, None]
 
 
 if True:
-  npts = 10000;
-  ev_space = -np.linspace(0,1,npts);
-  s = 100;
+  npts = 1000;
+  ev_space = np.linspace(0,np.pi,npts)
+  ev_space = -0.5*(1 + np.cos(ev_space))
+
+#  ev_space = -np.linspace(0,1,npts);
+  s = 1000;
   p = 8;
+
+  print "npts= %d  s= %d  p= %d " % (npts, s, p)
 
   [poly, h] = maximizeH(s,p,ev_space);
   if h != None:
@@ -179,9 +196,9 @@ if False:
   h= 1.613250732421875e+03*0.99;
   s = 100;
   p = 8;
-  [poly, v] = minimizePoly(s,p,h,ev_space,maxiter=128,verbose=True)
+  [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,maxiter=128,verbose=True)
 
-  if v != None:
+  if conv:
     print "------ Polynomial coefficients -------- "
     for x in poly:
       sys.stdout.write("%.16g," % x)
