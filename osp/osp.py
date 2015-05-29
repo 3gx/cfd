@@ -124,6 +124,7 @@ if True:
   [poly, h] = maximizeH(s,p,ev_space);
   if h != None:
     print "------ Polynomial coefficients -------- "
+    print "h= ", h
     for x in poly:
       sys.stdout.write("%.16g," % x)
     print ""
