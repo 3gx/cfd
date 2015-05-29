@@ -170,7 +170,7 @@ if True:
   ev_space = -0.5*(1 + np.cos(ev_space))
 
 #  ev_space = -np.linspace(0,1,npts);
-  s = 1000;
+  s = 100;
   p = 8;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
