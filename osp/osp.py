@@ -23,7 +23,7 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
   for k in range(0,s-1):
     b[k+2][:] = 2*(m1*np.concatenate((zero_arr,b[k+1][0:-1])) + m0*b[k+1][:]) - b[k][:]
 
-  c= np.zeros((s+1,len(z)))
+  c= np.zeros((s+1,len(z)),dtype=z.dtype)
   c[0][:] = 1;
   c[1][:] = m1*z+m0;
 
@@ -49,16 +49,16 @@ def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False,poly_guess=None):
     #return v[imax];
 
 
-  def func_deriv(x,c):
-    g = np.dot(x,c)
-    v = abs(g) - 1
-    imax = np.argmax(v);
-    fac = g[imax]/abs(g[imax]);
-    ct = c.T;
-    r = ct[imax][:]
-    return r
-
-
+#  def func_deriv(x,c):
+#    g = np.dot(x,c)
+#    v = abs(g) - 1
+#    imax = np.argmax(v);
+#    fac = g[imax]/abs(g[imax]);
+#    ct = c.T;
+#    r = ct[imax][:]
+#    return r
+#
+#
   def cfunc(x,b,coeff):
     return np.dot(x,b) - coeff
 
@@ -70,8 +70,8 @@ def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False,poly_guess=None):
           'fun' : lambda x: cfunc(x,b,fixed_coefficients)}) 
   
   cons = ({'type': 'eq',
-          'fun' : lambda x: cfunc(x,b,fixed_coefficients),
-          'jac' : lambda x: cfunc_deriv(x,b)})
+    'fun' : lambda x: cfunc(x,b,fixed_coefficients),
+    'jac' : lambda x: cfunc_deriv(x,b)})
 
   x0 = np.zeros(s+1)
   x0 = np.ones(s+1)
@@ -108,7 +108,7 @@ def maximizeH(s,p,ev_space):
   h_min = 0;
   h_max = 2.01*s*s*max(abs(ev_space))
 
-  max_iter = 4;
+  max_iter = 128;
   max_steps = 1000
   tol_bisect = 1e-3
   tol_feasible = 1e-12
@@ -167,7 +167,7 @@ def maximizeH(s,p,ev_space):
 
 
 if True:
-  npts = 100;
+  npts = 1000;
 
   ev_space = -np.linspace(0,1,npts);
 
@@ -177,7 +177,17 @@ if True:
 
 #  ev_space = np.linspace(0,np.pi,npts)
 #  ev_space = -0.5*(1 + np.cos(ev_space))
-#  ev_space = -np.linspace(0,1,npts);
+  ev_space = -np.linspace(0,1,npts);
+
+  if True:
+    kappa=1;
+    beta =0.1;
+
+    imag_lim = beta;
+    l1 = 1j*np.linspace(0,imag_lim,npts);
+    l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
+    l3 = -kappa + 1j*np.linspace(0,imag_lim,npts);
+    ev_space = np.concatenate((l1,l2,l3));
 
 
   s = 30;
@@ -188,7 +198,7 @@ if True:
   [poly, h] = maximizeH(s,p,ev_space);
   if h != None:
     print "------ Polynomial coefficients -------- "
-    print "h= %g , h/s^2= %g " % (h, h/(s*s))
+    print "h= %.16g , h/s^2= %g " % (h, h/(s*s))
     for x in poly:
       sys.stdout.write("%.16g," % x)
     print ""
