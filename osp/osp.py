@@ -41,16 +41,48 @@ def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False):
   fixed_coefficients = np.ones(p+1)/sp.misc.factorial(np.linspace(0,p,p+1))
 
   def func(x,c):
-    return LA.norm(np.dot(x,c),ord=np.inf)-1;
+    return max(abs(np.dot(x,c))-1)
+    #return LA.norm(np.dot(x,c),ord=np.inf)-1;
+    #g = np.dot(x,c)
+    #v = abs(g) - 1
+    #imax = np.argmax(v);
+    #return v[imax];
+
+
+  def func_deriv(x,c):
+    g = np.dot(x,c)
+    v = abs(g) - 1
+    imax = np.argmax(v);
+    fac = g[imax]/abs(g[imax]);
+    ct = c.T;
+    r = ct[imax][:]
+    return r
+
+
+  def cfunc(x,b,coeff):
+    return np.dot(x,b) - coeff
+
+  def cfunc_deriv(x,b):
+    return b.T
+
 
   cons = ({'type': 'eq',
-          'fun' : lambda x: np.dot(x,b) - fixed_coefficients})
+          'fun' : lambda x: cfunc(x,b,fixed_coefficients)}) 
+  
+#  cons = ({'type': 'eq',
+#          'fun' : lambda x: cfunc(x,b,fixed_coefficients),
+#          'jac' : lambda x: cfunc_deriv(x,b)})
 
   x0 = np.zeros(s+1)
   x0 = np.ones(s+1)
   res=optimize.minimize(func, x0, args=(c,),constraints=cons,
+#  res=optimize.minimize(func, x0, args=(c,),constraints=cons,jac=func_deriv,
 #      method='SLSQP', options={'disp': True, 'maxiter': 1024, 'ftol': 1e-13, 'eps':1e-13},tol=1e-15)
       method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
+#  method='L-BFGS-B', 
+#  options={'disp': verbose, 'maxiter': maxiter*100, 'maxfun': 100000},
+#  tol=1e-13)
+#  method='TNC',  options={'disp': verbose}, tol=1e-13)
 
   if verbose:
     print "------------------------------------"
@@ -74,10 +106,15 @@ def maximizeH(s,p,ev_space):
   h_min = 0;
   h_max = 2.01*s*s*max(abs(ev_space))
 
-  max_iter = 128;
+  max_iter = 32 + s;
   max_steps = 1000
   tol_bisect = 1e-3
   tol_feasible = 1e-12
+
+  print "max_iter= %d " % max_iter
+  print "max_steps= %d " % max_steps
+  print "tol_bisect= %g " % tol_bisect
+  print "tol_feasible= %g " % tol_feasible
 
   poly = None
   v    = None
@@ -118,13 +155,13 @@ def maximizeH(s,p,ev_space):
 if True:
   npts = 10000;
   ev_space = -np.linspace(0,1,npts);
-  s = 30;
+  s = 100;
   p = 8;
 
   [poly, h] = maximizeH(s,p,ev_space);
   if h != None:
     print "------ Polynomial coefficients -------- "
-    print "h= ", h
+    print "h= %g , h/s^2= %g " % (h, h/(s*s))
     for x in poly:
       sys.stdout.write("%.16g," % x)
     print ""
