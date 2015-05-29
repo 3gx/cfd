@@ -167,12 +167,20 @@ def maximizeH(s,p,ev_space):
 
 
 if True:
-  npts = 1000;
-  ev_space = np.linspace(0,np.pi,npts)
-  ev_space = -0.5*(1 + np.cos(ev_space))
+  npts = 100;
 
 #  ev_space = -np.linspace(0,1,npts);
-  s = 300;
+
+  ev_space = np.random.random(npts);
+  ev_space = np.sort(np.concatenate(([0],ev_space,[1])))
+  ev_space = -0.5*(1 + np.cos(ev_space*np.pi))
+
+#  ev_space = np.linspace(0,np.pi,npts)
+#  ev_space = -0.5*(1 + np.cos(ev_space))
+#  ev_space = -np.linspace(0,1,npts);
+
+
+  s = 30;
   p = 8;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
