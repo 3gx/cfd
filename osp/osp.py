@@ -81,8 +81,9 @@ def maximizeH(s,p,ev_space):
 
   poly = None
   v    = None
+  converged = False;
   for step in range(max_steps):
-    if (h_max-h_min < tol_bisect*h_min) or (h_max < tol_bisect):
+    if ((h_max-h_min < tol_bisect*h_min) or (h_max < tol_bisect)) and converged:
       break;
 
     h = 0.5*(h_max + h_min)
@@ -95,29 +96,39 @@ def maximizeH(s,p,ev_space):
       print "%5d  h_min= %g   h_max= %g  -- h= %g   v= %g " % (step, h_min, h_max, h, v)
 
     if v == None:
+      converged = False
       print " >>>> Failed to converge "
       h_max = h;
     else:
+      converged = True
       if v <= tol_feasible:
         h_min = h;
       else:
         h_max = h;
 
 
-  if v != None:
-    h = h_min
+  if converged:
     print " Converged with h= %g" % h
     [poly, v] = minimizePoly(s,p,h,ev_space,max_iter,verbose=True)
-  return poly
+    return [poly, h]
+  else:
+    return [None, None]
 
 
 if True:
-  npts = 1000;
+  npts = 10000;
   ev_space = -np.linspace(0,1,npts);
-  s = 100;
+  s = 20;
   p = 8;
 
-  poly = maximizeH(s,p,ev_space);
+  [poly, h] = maximizeH(s,p,ev_space);
+  if h != None:
+    print "------ Polynomial coefficients -------- "
+    for x in poly:
+      sys.stdout.write("%.16g," % x)
+    print ""
+  else:
+    print " ------- Not converged ------ "
 
 
 
@@ -132,11 +143,10 @@ if False:
   p = 8;
   [poly, v] = minimizePoly(s,p,h,ev_space,maxiter=128,verbose=True)
 
-
-if poly != None:
-  print "------ Polynomial coefficients -------- "
-  for x in poly:
-    sys.stdout.write("%.16g," % x)
-  print ""
-else:
-  print " ------- Not converged ------ "
+  if v != None:
+    print "------ Polynomial coefficients -------- "
+    for x in poly:
+      sys.stdout.write("%.16g," % x)
+    print ""
+  else:
+    print " ------- Not converged ------ "
