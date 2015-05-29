@@ -32,7 +32,7 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
 
   return [b,c]
 
-def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False,poly_guess=None):
+def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_guess=None):
   if verbose:
     print "============================================="
   hval = h*ev_space;
@@ -99,10 +99,13 @@ def minimizePoly(s,p,h,ev_space,maxiter=128,verbose=False,poly_guess=None):
       sys.stdout.write("%.16g," % x)
     print "\n============================================="
 
+
   if res.success:
-    return [True, res.x,func(res.x,c), res.nit]
+    return [True, res.x, res.fun, res.nit]
+  elif abs(res.fun) < tol_feasible:
+    return [True, res.x, res.fun, res.nit]
   else:
-    return [False, res.x, func(res.x,c), res.nit]
+    return [False, res.x, res.fun, res.nit]
 
 def maximizeH(s,p,ev_space):
   h_min = 0;
@@ -111,7 +114,7 @@ def maximizeH(s,p,ev_space):
   max_iter = 128;
   max_steps = 1000
   tol_bisect = 1e-3
-  tol_feasible = 1e-12
+  tol_feasible = 1.0e-12
 
   print "max_iter= %d " % max_iter
   print "max_steps= %d " % max_steps
@@ -122,12 +125,17 @@ def maximizeH(s,p,ev_space):
   v    = None
   converged = False;
   for step in range(max_steps):
-    if ((h_max-h_min < tol_bisect*h_min) or (h_max < tol_bisect)) and converged:
-      break;
-
     h = 0.25*h_max + 0.75*h_min
+    if ((h_max-h_min < tol_bisect*h_min) or (h_max < tol_bisect)):
+      if converged:
+        break;
+      else:
+        h = h_min
 
-    [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,max_iter,verbose=False)
+
+#    h = 0.5*h_max + 0.5*h_min
+
+    [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,tol_feasible,max_iter,verbose=False)
     print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v)
 #    niter = max_iter;
 #    conv = False;
@@ -158,7 +166,7 @@ def maximizeH(s,p,ev_space):
         h_max = h;
 
 
-  if converged:
+  if True or converged:
     print " Converged with h= %g  h/s^2= %g" % (h, h/s**2)
     [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,max_iter,verbose=True)
     return [poly, h]
@@ -167,7 +175,7 @@ def maximizeH(s,p,ev_space):
 
 
 if True:
-  npts = 1000;
+  npts = 2000;
 
   ev_space = -np.linspace(0,1,npts);
 
@@ -179,19 +187,20 @@ if True:
 #  ev_space = -0.5*(1 + np.cos(ev_space))
   ev_space = -np.linspace(0,1,npts);
 
-  if True:
+  if False:
     kappa=1;
-    beta =0.1;
+    beta =0.05;
+#    beta = 10;
 
     imag_lim = beta;
-    l1 = 1j*np.linspace(0,imag_lim,npts);
+    l1 = 1j*np.linspace(0,imag_lim,50);
     l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
-    l3 = -kappa + 1j*np.linspace(0,imag_lim,npts);
+    l3 = -kappa + 1j*np.linspace(0,imag_lim,50);
     ev_space = np.concatenate((l1,l2,l3));
 
 
-  s = 30;
-  p = 8;
+  s = 20;
+  p = 1;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
 
