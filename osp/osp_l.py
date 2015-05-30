@@ -66,10 +66,29 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   def cfunc_jac(x,b):
     return b.T
 
+  def func1(x):
+    return x[-1];
+
+  def func1_jac(x):
+    return np.concatenate((np.zeros(len(x)-1),[1]))
+
+  def cfunc1(x,b,coeff):
+    return np.dot(x[:-1],b) - coeff
+  
+  def cfunc1_jac(x,b):
+    return b.T
+
+  def cfunc2(x,c):
+    return x[-1] - (abs(np.dot(x[:-1],c)) - 1) 
+
+  def cfunc2_jac(x,c):
+    return 0;
+
   x0 = np.zeros(s+1)
-  x0 = np.ones(s+1)
+#  x0 = np.ones(s+2)
+  x0 = np.zeros(s+2);
 #  print func(x0,c,eta)
-  if True:
+  if False:
     cons = ({'type': 'eq',
       'fun' : lambda x: cfunc(x,b,fixed_coefficients),
       'jac' : lambda x: cfunc_jac(x,b)})
@@ -78,10 +97,16 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
         method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
   else:
     cons = ({'type': 'eq',
-      'fun' : lambda x: cfunc(x,b,fixed_coefficients)})
+      'fun' : lambda x: cfunc1(x,b,fixed_coefficients)},
+      {'type': 'ineq',
+      'fun' : lambda x: cfunc2(x,c)});
+#    cons = ({'type': 'eq',
+#      'fun' : lambda x: cfunc(x,b,fixed_coefficients)})
     
-    res=optimize.minimize(func, x0, args=(c,eta),constraints=cons,
+    res=optimize.minimize(func1, x0, constraints=cons, jac=func1_jac,
         method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
+#    res=optimize.minimize(func, x0, args=(c,0), constraints=cons,
+#        method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
 
   if verbose:
     print "------------------------------------"
@@ -89,7 +114,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     print "------------------------------------"
     print 'Value= ', res.fun-eta
     print "coeff= "
-    for x in np.dot(res.x,b):
+    for x in np.dot(res.x[:-1],b):
       sys.stdout.write("%.16g," % x)
     print ""
     for x in fixed_coefficients:
@@ -98,14 +123,14 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
 
 
   if res.success:
-    return [True, res.x, res.fun, res.nit]
+    return [True, res.x[:-1], res.fun, res.nit]
   elif abs(res.fun-eta) < tol:
-    return [True, res.x, res.fun, res.nit]
+    return [True, res.x[:-1], res.fun, res.nit]
   else:
     return [False, res.x, res.fun, res.nit]
 
 def maximizeH(s,p,ev_space):
-  h_min = 0; #60 #0.00*max(abs(ev_space))
+  h_min = 20; #60 #0.00*max(abs(ev_space))
   h_max = 2.01*s*s*max(abs(ev_space))
 
   max_iter = 1280;
@@ -184,7 +209,7 @@ if True:
   if True:
     kappa=1;
 #    beta =5.0;
-    beta = 0.1;
+    beta = 0.0;
 
     imag_lim = beta;
     l1 = 1j*np.linspace(0,imag_lim,50);
@@ -193,7 +218,7 @@ if True:
     ev_space = np.concatenate((l1,l2,l3));
 
 
-  s = 30;
+  s = 40;
   p = 8;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
@@ -218,17 +243,18 @@ if True:
   npts = 1000;
   kappa=1;
   beta = 0.5;
+#  beta= 0;
 
   imag_lim = beta;
-  l1 = 1j*np.linspace(0,imag_lim,npts);
+  l1 = 1j*np.linspace(0,imag_lim,50);
   l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
-  l3 = -kappa + 1j*np.linspace(0,imag_lim,npts);
+  l3 = -kappa + 1j*np.linspace(0,imag_lim,50);
   ev_space = np.concatenate((l1,l2,l3));
   eta=0
   tol=1.0e-12
   h=35.58
 
-  p=3
+  p=4
   s=30
 
   maxiter=1024
