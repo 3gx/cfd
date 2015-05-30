@@ -37,7 +37,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   if verbose:
     print "============================================="
   hval  = h*np.real(ev_space) + 1j*np.imag(ev_space)
-#  hval = h*ev_space;
+  hval = h*ev_space;
   [b,c] = scaled_chebyshev_basis(s,p,min(np.real(hval)),0,hval)
 
 
@@ -98,7 +98,7 @@ def maximizeH(s,p,ev_space):
   h_min = 0; #60 #0.00*max(abs(ev_space))
   h_max = 2.01*s*s*max(abs(ev_space))
 
-  max_iter = 128;
+  max_iter = 1280;
   max_steps = 1000
   tol_bisect = 1e-3
   tol_feasible = 1.0e-12
@@ -128,16 +128,25 @@ def maximizeH(s,p,ev_space):
     [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,eta,tol_feasible,max_iter,verbose=False)
     print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v-eta)
 
-    if not conv:
-      converged = False
-      print " >>>> Failed to converge "
-      h_max = h;
-    else:
-      converged = True
-      if abs(v-eta) <= tol_feasible:
-        h_min = h;
-      else:
+    if False:
+      if not conv:
+        converged = False
+        print " >>>> Failed to converge "
         h_max = h;
+      else:
+        converged = True
+        if abs(v-eta) <= tol_feasible:
+          h_min = h;
+        else:
+          h_max = h;
+    else:
+      if not conv or abs(v-eta) > tol_feasible:
+        converged = False
+        print " >>>> Failed to converge "
+        h_max = h;
+      else:
+        converged = True
+        h_min = h;
 
 
   if True or converged:
