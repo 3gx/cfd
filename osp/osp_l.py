@@ -164,12 +164,12 @@ if True:
   if True:
     kappa=1;
 #    beta =5.0;
-    beta = 0.5;
+    beta = 0.1;
 
     imag_lim = beta;
-    l1 = 1j*np.linspace(0,imag_lim,50);
+    l1 = 1j*np.linspace(0,imag_lim,npts/2);
     l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
-    l3 = -kappa + 1j*np.linspace(0,imag_lim,50);
+    l3 = -kappa + 1j*np.linspace(0,imag_lim,npts/2);
     ev_space = np.concatenate((l1,l2,l3));
 
 
@@ -189,23 +189,37 @@ if True:
   else:
     print " ------- Not converged ------ "
 
+  sys.exit(-1)
 
 
 
-if False:
+
+if True:
   npts = 1000;
-  ev_space = -np.linspace(0,1,npts);
-  h = 3.165161132812499e+01;
-  s = 10;
-  h= 1.613250732421875e+03*0.99;
-  s = 100;
-  p = 8;
-  [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,maxiter=128,verbose=True)
+  kappa=1;
+  beta = 0.1;
 
-  if conv:
-    print "------ Polynomial coefficients -------- "
-    for x in poly:
-      sys.stdout.write("%.16g," % x)
-    print ""
-  else:
+  imag_lim = beta;
+  l1 = 1j*np.linspace(0,imag_lim,npts/2);
+  l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
+  l3 = -kappa + 1j*np.linspace(0,imag_lim,npts/2);
+  ev_space = np.concatenate((l1,l2,l3));
+  eta=0
+  tol=1.0e-12
+  h=132.384704589844;
+
+  p=8
+  s=30
+
+  maxiter=1024
+  [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,eta,tol,maxiter,verbose=True)
+
+  if not conv:
     print " ------- Not converged ------ "
+
+  print "------ Polynomial coefficients -------- "
+  print "coeff= {"
+  for x in poly[:-1]:
+    sys.stdout.write("%.16g," % x)
+  sys.stdout.write("%.16g};\n" % poly[-1])
+  print "h= %.16g  h/s^2= %g " % (h, h/(s*s))
