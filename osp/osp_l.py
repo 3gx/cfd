@@ -43,30 +43,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   [b,c] = scaled_chebyshev_basis(s,p,min(np.real(hval)),0,hval)
 
 
-
   fixed_coefficients = np.ones(p+1)/sp.misc.factorial(np.linspace(0,p,p+1))
-
-  def func(x,c,eta):
-    g = np.dot(x,c);
-    f = g*np.conj(g)
-    imax = np.argmax(f-(1-eta))
-    return np.real(f[imax])-(1-eta);
-
-  def func_jac(x,c,eta):
-    g = np.dot(x,c)
-    f = g*np.conj(g)
-    imax = np.argmax(f-(1-eta))
-    ct = c.T
-    df = ct[imax]*np.conj(g[imax]) + np.conj(ct[imax])*g[imax];
-    return np.real(df)
-
-  def cfunc(x,b,coeff):
-    return np.dot(x,b) - coeff
-
-  def cfunc_jac(x,b):
-    return b.T
-
-#####################
 
   def func1(x):
     return x[-1];
@@ -77,12 +54,8 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   def cfunc1(x,b,coeff):
     return np.dot(x[:-1],b) - coeff
   
-  def cfunc1_jac(x,b):
-    m,n = b.shape
-    df = np.zeros((len(x),n))
-    for i in range(len(x)-1):
-      df[i] = b[i]
-    return df.T
+  def cfunc1_jac(x,J):
+    return J;
 
   def cfunc2(x,c):
     g = np.dot(x[:-1],c);
@@ -90,7 +63,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
 
   def cfunc2_jac(x,c):
     m,n = c.shape
-    df = np.zeros((len(x),n))
+    df = np.zeros((m+1,n))
 
     g = np.dot(x[:-1],c);
     for i in range(len(x)-1):
@@ -98,32 +71,23 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     df[-1] = 1;
     return np.real(df.T)
 
-  x0 = np.zeros(s+1)
-#  x0 = np.ones(s+2)
+  m,n = b.shape
+  J1 = np.zeros((s+2,n))
+  for i in range(s+1):
+    J1[i] = b[i]
+  J1 = J1.T
+
+
   x0 = np.zeros(s+2);
-#  print func(x0,c,eta)
-  if False:
-    cons = ({'type': 'eq',
-      'fun' : lambda x: cfunc(x,b,fixed_coefficients),
-      'jac' : lambda x: cfunc_jac(x,b)})
+  cons = ({'type': 'eq',
+    'fun' : lambda x: cfunc1(x,b,fixed_coefficients),
+    'jac' : lambda x: cfunc1_jac(x,J1)},
+    {'type': 'ineq',
+    'fun' : lambda x: cfunc2(x,c),
+    'jac' : lambda x: cfunc2_jac(x,c)})
     
-    res=optimize.minimize(func, x0, args=(c,eta),constraints=cons,jac=func_jac,
-        method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
-  else:
-    cons = ({'type': 'eq',
-      'fun' : lambda x: cfunc1(x,b,fixed_coefficients),
-      'jac' : lambda x: cfunc1_jac(x,b)},
-      {'type': 'ineq',
-      'fun' : lambda x: cfunc2(x,c),
-      'jac' : lambda x: cfunc2_jac(x,c)}
-      )
-#    cons = ({'type': 'eq',
-#      'fun' : lambda x: cfunc(x,b,fixed_coefficients)})
-    
-    res=optimize.minimize(func1, x0, constraints=cons, jac=func1_jac,
-        method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
-#    res=optimize.minimize(func, x0, args=(c,0), constraints=cons,
-#        method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
+  res=optimize.minimize(func1, x0, constraints=cons, jac=func1_jac,
+      method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
 
   if verbose:
     print "------------------------------------"
