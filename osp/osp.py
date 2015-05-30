@@ -32,7 +32,7 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
 
   return [b,c]
 
-def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_guess=None):
+def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=None):
   if verbose:
     print "============================================="
 #  hval  = h*np.real(ev_space) + 1j*np.imag(ev_space)
@@ -43,16 +43,16 @@ def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_gues
 
   fixed_coefficients = np.ones(p+1)/sp.misc.factorial(np.linspace(0,p,p+1))
 
-  def func(x,c):
+  def func(x,c,eta):
     g = np.dot(x,c);
     f = g*np.conj(g)
-    imax = np.argmax(f-1)
-    return np.real(f[imax])-1;
+    imax = np.argmax(f-(1-eta))
+    return np.real(f[imax])-(1-eta);
 
-  def func_jac(x,c):
+  def func_jac(x,c,eta):
     g = np.dot(x,c)
     f = g*np.conj(g)
-    imax = np.argmax(f-1)
+    imax = np.argmax(f-(1-eta))
     ct = c.T
     df = ct[imax]*np.conj(g[imax]) + np.conj(ct[imax])*g[imax];
     return np.real(df)
@@ -69,14 +69,14 @@ def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_gues
   
   x0 = np.zeros(s+1)
   x0 = np.ones(s+1)
-  res=optimize.minimize(func, x0, args=(c,),constraints=cons,jac=func_jac,
+  res=optimize.minimize(func, x0, args=(c,eta),constraints=cons,jac=func_jac,
       method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
 
   if verbose:
     print "------------------------------------"
     print res
     print "------------------------------------"
-    print 'Value= ', func(res.x,c)
+    print 'Value= ', res.fun-eta
     print "coeff= "
     for x in np.dot(res.x,b):
       sys.stdout.write("%.16g," % x)
@@ -88,7 +88,7 @@ def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_gues
 
   if res.success:
     return [True, res.x, res.fun, res.nit]
-  elif abs(res.fun) < tol_feasible:
+  elif abs(res.fun-eta) < tol:
     return [True, res.x, res.fun, res.nit]
   else:
     return [False, res.x, res.fun, res.nit]
@@ -101,11 +101,13 @@ def maximizeH(s,p,ev_space):
   max_steps = 1000
   tol_bisect = 1e-3
   tol_feasible = 1.0e-12
+  eta = 0.0
 
   print "max_iter= %d " % max_iter
   print "max_steps= %d " % max_steps
   print "tol_bisect= %g " % tol_bisect
   print "tol_feasible= %g " % tol_feasible
+  print "eta= %g" % eta
 
   poly = None
   v    = None
@@ -122,24 +124,8 @@ def maximizeH(s,p,ev_space):
 
 #    h = 0.5*h_max + 0.5*h_min
 
-    [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,tol_feasible,max_iter,verbose=False)
-    print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v)
-#    niter = max_iter;
-#    conv = False;
-#    while (not conv) and (niter > 0):
-#      polyg=None
-#      if (niter > max_iter):
-#        polyg = poly;
-#      [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,niter,verbose=False,poly_guess=polyg)
-#      print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v)
-#      if not conv:
-#        print " >>>> Failed to converge "
-#      if (not conv) and (v < 1):
-#        niter *= 2;
-#      if (not conv) and (v >= 1):
-#        niter = -1;
-#      if (niter > 4*max_iter):
-#        niter = -1;
+    [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,eta,tol_feasible,max_iter,verbose=False)
+    print "%5d  h_min= %g   h_max= %g  -- h= %g nit= %d  v= %g " % (step, h_min, h_max, h, nit, v-eta)
 
     if not conv:
       converged = False
@@ -147,7 +133,7 @@ def maximizeH(s,p,ev_space):
       h_max = h;
     else:
       converged = True
-      if v <= tol_feasible:
+      if abs(v-eta) <= tol_feasible:
         h_min = h;
       else:
         h_max = h;
@@ -155,7 +141,7 @@ def maximizeH(s,p,ev_space):
 
   if True or converged:
     print " Converged with h= %g  h/s^2= %g" % (h, h/s**2)
-    [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,max_iter,verbose=True)
+    [conv, poly, v, nit] = minimizePoly(s,p,h,ev_space,eta,tol_feasible,max_iter,verbose=True)
     return [poly, h]
   else:
     return [None, None]
