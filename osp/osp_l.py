@@ -95,7 +95,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     return [False, res.x, res.fun, res.nit]
 
 def maximizeH(s,p,ev_space):
-  h_min = 30; #60 #0.00*max(abs(ev_space))
+  h_min = 0; #60 #0.00*max(abs(ev_space))
   h_max = 2.01*s*s*max(abs(ev_space))
 
   max_iter = 128;
@@ -163,8 +163,8 @@ if True:
 
   if True:
     kappa=1;
-    beta =5.0;
-#    beta = 10;
+#    beta =5.0;
+    beta = 0.5;
 
     imag_lim = beta;
     l1 = 1j*np.linspace(0,imag_lim,50);
