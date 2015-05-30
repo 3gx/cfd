@@ -22,14 +22,16 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
   # L_{n} = (2n-1)/n*(m1*x+m0)*L_{n} - (n-1)/n*L_{n-1}
   zero_arr = np.zeros(1)
   for k in range(0,s-1):
-    b[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*np.concatenate((zero_arr,b[k+1][0:-1])) + m0*b[k+1][:]) - (k+2-1.0)/(k+2)*b[k][:]
+#    b[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*np.concatenate((zero_arr,b[k+1][0:-1])) + m0*b[k+1][:]) - (k+2-1.0)/(k+2)*b[k][:]
+    b[k+2][:] = 2*(m1*np.concatenate((zero_arr,b[k+1][0:-1])) + m0*b[k+1][:]) - b[k][:]
 
   c= np.zeros((s+1,len(z)),dtype=z.dtype)
   c[0][:] = 1;
   c[1][:] = m1*z+m0;
 
   for k in range(0,s-1):
-    c[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*z + m0)*c[k+1][:] - (k+2.0-1)/(k+2)*c[k][:]
+#    c[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*z + m0)*c[k+1][:] - (k+2.0-1)/(k+2)*c[k][:]
+    c[k+2][:] = 2*(m1*z + m0)*c[k+1][:] - c[k][:]
 
   return [b,c]
 
@@ -121,6 +123,7 @@ def maximizeH(s,p,ev_space):
         h = h_min
     else:
       h = 0.25*h_max + 0.75*h_min
+      h = 0.5*h_max + 0.5*h_min
 
 
 #    h = 0.5*h_max + 0.5*h_min
@@ -176,9 +179,9 @@ if True:
     beta = 0.1;
 
     imag_lim = beta;
-    l1 = 1j*np.linspace(0,imag_lim,npts/2);
+    l1 = 1j*np.linspace(0,imag_lim,50);
     l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
-    l3 = -kappa + 1j*np.linspace(0,imag_lim,npts/2);
+    l3 = -kappa + 1j*np.linspace(0,imag_lim,50);
     ev_space = np.concatenate((l1,l2,l3));
 
 
