@@ -38,6 +38,8 @@ def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_gues
   hval = h*ev_space;
   [b,c] = scaled_chebyshev_basis(s,p,min(np.real(hval)),0,hval)
 
+
+
   fixed_coefficients = np.ones(p+1)/sp.misc.factorial(np.linspace(0,p,p+1))
 
   def func(x,c):
@@ -175,7 +177,7 @@ def maximizeH(s,p,ev_space):
 
 
 if True:
-  npts = 2000;
+  npts = 1000;
 
   ev_space = -np.linspace(0,1,npts);
 
@@ -187,9 +189,9 @@ if True:
 #  ev_space = -0.5*(1 + np.cos(ev_space))
   ev_space = -np.linspace(0,1,npts);
 
-  if False:
+  if True:
     kappa=1;
-    beta =0.05;
+    beta =1;
 #    beta = 10;
 
     imag_lim = beta;
@@ -199,7 +201,7 @@ if True:
     ev_space = np.concatenate((l1,l2,l3));
 
 
-  s = 20;
+  s = 10;
   p = 1;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
