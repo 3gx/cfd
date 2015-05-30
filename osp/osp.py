@@ -78,16 +78,21 @@ def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_gues
 
   x0 = np.zeros(s+1)
   x0 = np.ones(s+1)
-  if poly_guess != None:
-    x0 = poly_guess
-  res=optimize.minimize(func, x0, args=(c,),constraints=cons,
+#  if poly_guess != None:
+#    x0 = poly_guess
+#  res=optimize.minimize(func, x0, args=(c,),constraints=cons,
 #  res=optimize.minimize(func, x0, args=(c,),constraints=cons,jac=func_deriv,
 #      method='SLSQP', options={'disp': True, 'maxiter': 1024, 'ftol': 1e-13, 'eps':1e-13},tol=1e-15)
-      method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
+#      method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
 #  method='L-BFGS-B', 
 #  options={'disp': verbose, 'maxiter': maxiter*100, 'maxfun': 100000},
 #  tol=1e-13)
 #  method='TNC',  options={'disp': verbose}, tol=1e-13)
+  nit = maxiter
+  for it in range(0,maxiter,nit):
+    res=optimize.minimize(func, x0, args=(c,),constraints=cons,
+        method='SLSQP', options={'disp': verbose, 'maxiter': nit}, tol=1e-13)
+    x0 = res.x;
 
   if verbose:
     print "------------------------------------"
@@ -128,12 +133,13 @@ def maximizeH(s,p,ev_space):
   v    = None
   converged = False;
   for step in range(max_steps):
-    h = 0.25*h_max + 0.75*h_min
     if ((h_max-h_min < tol_bisect*h_min) or (h_max < tol_bisect)):
       if converged:
         break;
       else:
         h = h_min
+    else:
+      h = 0.25*h_max + 0.75*h_min
 
 
 #    h = 0.5*h_max + 0.5*h_min
@@ -192,7 +198,7 @@ if True:
 
   if True:
     kappa=1;
-    beta =0.01;
+    beta =0.1;
 #    beta = 10;
 
     imag_lim = beta;
