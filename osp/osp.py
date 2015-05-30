@@ -35,7 +35,8 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
 def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_guess=None):
   if verbose:
     print "============================================="
-  hval = h*ev_space;
+  hval  = h*np.real(ev_space) + 1j*np.imag(ev_space)
+#  hval = h*ev_space;
   [b,c] = scaled_chebyshev_basis(s,p,min(np.real(hval)),0,hval)
 
 
@@ -110,7 +111,7 @@ def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_gues
     return [False, res.x, res.fun, res.nit]
 
 def maximizeH(s,p,ev_space):
-  h_min = 0;
+  h_min = 0; #60 #0.00*max(abs(ev_space))
   h_max = 2.01*s*s*max(abs(ev_space))
 
   max_iter = 128;
@@ -191,7 +192,7 @@ if True:
 
   if True:
     kappa=1;
-    beta =1;
+    beta =8;
 #    beta = 10;
 
     imag_lim = beta;
@@ -201,8 +202,8 @@ if True:
     ev_space = np.concatenate((l1,l2,l3));
 
 
-  s = 10;
-  p = 1;
+  s = 30;
+  p = 8;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
 
