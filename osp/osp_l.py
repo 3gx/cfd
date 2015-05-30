@@ -229,9 +229,9 @@ if True:
     beta = 0.5;
 
     imag_lim = beta;
-    l1 = 1j*np.linspace(0,imag_lim,npts);
+    l1 = 1j*np.linspace(0,imag_lim,npts/2);
     l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
-    l3 = -kappa + 1j*np.linspace(0,imag_lim,npts);
+    l3 = -kappa + 1j*np.linspace(0,imag_lim,npts/2);
     ev_space = np.concatenate((l1,l2,l3));
 
 
