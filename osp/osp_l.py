@@ -22,7 +22,7 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
   # L_{n} = (2n-1)/n*(m1*x+m0)*L_{n} - (n-1)/n*L_{n-1}
   zero_arr = np.zeros(1)
   for k in range(0,s-1):
-#    b[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*np.concatenate((zero_arr,b[k+1][0:-1])) + m0*b[k+1][:]) - (k+2-1.0)/(k+2)*b[k][:]
+    b[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*np.concatenate((zero_arr,b[k+1][0:-1])) + m0*b[k+1][:]) - (k+2-1.0)/(k+2)*b[k][:]
     b[k+2][:] = 2*(m1*np.concatenate((zero_arr,b[k+1][0:-1])) + m0*b[k+1][:]) - b[k][:]
 
   c= np.zeros((s+1,len(z)),dtype=z.dtype)
@@ -30,7 +30,7 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
   c[1][:] = m1*z+m0;
 
   for k in range(0,s-1):
-#    c[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*z + m0)*c[k+1][:] - (k+2.0-1)/(k+2)*c[k][:]
+    c[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*z + m0)*c[k+1][:] - (k+2.0-1)/(k+2)*c[k][:]
     c[k+2][:] = 2*(m1*z + m0)*c[k+1][:] - c[k][:]
 
   return [b,c]

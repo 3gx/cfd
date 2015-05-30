@@ -162,7 +162,7 @@ if True:
 
   if True:
     kappa=1;
-    beta =0.5;
+    beta =0.1;
 #    beta = 10;
 
     imag_lim = beta;
