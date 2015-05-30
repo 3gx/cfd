@@ -67,7 +67,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     return b.T
 
   x0 = np.zeros(s+1)
-#  x0 = np.ones(s+1)
+  x0 = np.ones(s+1)
 #  print func(x0,c,eta)
   if True:
     cons = ({'type': 'eq',
@@ -226,9 +226,9 @@ if True:
   ev_space = np.concatenate((l1,l2,l3));
   eta=0
   tol=1.0e-12
-  h=27.0
+  h=35.58
 
-  p=1
+  p=3
   s=30
 
   maxiter=1024
