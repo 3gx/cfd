@@ -45,39 +45,34 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
 
   fixed_coefficients = np.ones(p+1)/sp.misc.factorial(np.linspace(0,p,p+1))
 
-  def func1(x):
+  def func(x):
     return x[-1];
-
-  def func1_jac(x):
+  def func_jac(x):
     return np.concatenate((np.zeros(len(x)-1),[1]))
 
   def cfunc1(x,b,coeff):
     return np.dot(x[:-1],b) - coeff
-  
   def cfunc1_jac(x,J):
     return J;
 
   def cfunc2(x,c):
     g = np.dot(x[:-1],c);
     return np.real(x[-1]*np.ones(len(g)) - (g*np.conj(g) - 1))
-
-  def cfunc2_jac(x,c,cc):
+  def cfunc2_jac(x,c):
     g  = np.dot(x[:-1],c[:-1]);
-    df = np.zeros(c.shape)
-    df[:-1] = -np.real(c[:-1]*np.conj(g) + cc[:-1]*g)
-    df[-1] = 1;
-    return df.T
+    df = -c*np.conj(g);
+    df[-1] = 0.5;
+    return np.real(df + np.conj(df)).T
 
   m,n = b.shape
+  m,k = c.shape
   J1 = np.zeros((s+2,n))
+  J2 = np.zeros((s+2,k),dtype=c.dtype)
+
   for i in range(s+1):
     J1[i] = b[i]
-  J1 = J1.T
-
-  m,n = c.shape
-  J2 = np.zeros((s+2,n),dtype=c.dtype)
-  for i in range(s+1):
     J2[i] = c[i]
+  J1 = J1.T
 
   x0 = np.zeros(s+2);
   cons = ({'type': 'eq',
@@ -85,9 +80,9 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     'jac' : lambda x: cfunc1_jac(x,J1)},
     {'type': 'ineq',
     'fun' : lambda x: cfunc2(x,c),
-    'jac' : lambda x: cfunc2_jac(x,J2,np.conj(J2))})
+    'jac' : lambda x: cfunc2_jac(x,J2)})
     
-  res=optimize.minimize(func1, x0, constraints=cons, jac=func1_jac,
+  res=optimize.minimize(func, x0, constraints=cons, jac=func_jac,
       method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
 
   if verbose:
@@ -117,7 +112,7 @@ def maximizeH(s,p,ev_space):
 
   max_iter = 1280;
   max_steps = 1000
-  tol_bisect = 1e-3
+  tol_bisect = 0.01
   tol_feasible = 1.0e-12
   eta = 0.0
 
