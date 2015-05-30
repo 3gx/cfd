@@ -66,14 +66,22 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   def cfunc_jac(x,b):
     return b.T
 
-  cons = ({'type': 'eq',
-    'fun' : lambda x: cfunc(x,b,fixed_coefficients),
-    'jac' : lambda x: cfunc_jac(x,b)})
-  
   x0 = np.zeros(s+1)
-  x0 = np.ones(s+1)
-  res=optimize.minimize(func, x0, args=(c,eta),constraints=cons,jac=func_jac,
-      method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
+#  x0 = np.ones(s+1)
+#  print func(x0,c,eta)
+  if True:
+    cons = ({'type': 'eq',
+      'fun' : lambda x: cfunc(x,b,fixed_coefficients),
+      'jac' : lambda x: cfunc_jac(x,b)})
+    
+    res=optimize.minimize(func, x0, args=(c,eta),constraints=cons,jac=func_jac,
+        method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
+  else:
+    cons = ({'type': 'eq',
+      'fun' : lambda x: cfunc(x,b,fixed_coefficients)})
+    
+    res=optimize.minimize(func, x0, args=(c,eta),constraints=cons,
+        method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
 
   if verbose:
     print "------------------------------------"
@@ -209,18 +217,18 @@ if True:
 if True:
   npts = 1000;
   kappa=1;
-  beta = 0.1;
+  beta = 0.5;
 
   imag_lim = beta;
-  l1 = 1j*np.linspace(0,imag_lim,npts/2);
+  l1 = 1j*np.linspace(0,imag_lim,50);
   l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
-  l3 = -kappa + 1j*np.linspace(0,imag_lim,npts/2);
+  l3 = -kappa + 1j*np.linspace(0,imag_lim,50);
   ev_space = np.concatenate((l1,l2,l3));
   eta=0
   tol=1.0e-12
-  h=132.384704589844;
+  h=27.0
 
-  p=8
+  p=1
   s=30
 
   maxiter=1024
