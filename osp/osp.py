@@ -35,8 +35,8 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
 def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_guess=None):
   if verbose:
     print "============================================="
-  hval  = h*np.real(ev_space) + 1j*np.imag(ev_space)
-#  hval = h*ev_space;
+#  hval  = h*np.real(ev_space) + 1j*np.imag(ev_space)
+  hval = h*ev_space;
   [b,c] = scaled_chebyshev_basis(s,p,min(np.real(hval)),0,hval)
 
 
@@ -192,7 +192,7 @@ if True:
 
   if True:
     kappa=1;
-    beta =8;
+    beta =0.01;
 #    beta = 10;
 
     imag_lim = beta;
@@ -210,10 +210,10 @@ if True:
   [poly, h] = maximizeH(s,p,ev_space);
   if h != None:
     print "------ Polynomial coefficients -------- "
-    print "h= %.16g , h/s^2= %g " % (h, h/(s*s))
     for x in poly:
       sys.stdout.write("%.16g," % x)
     print ""
+    print "h= %.16g , h/s^2= %g " % (h, h/(s*s))
   else:
     print " ------- Not converged ------ "
 
