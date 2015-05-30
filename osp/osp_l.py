@@ -112,7 +112,7 @@ def maximizeH(s,p,ev_space):
 
   max_iter = 1280;
   max_steps = 1000
-  tol_bisect = 0.01
+  tol_bisect = 0.001
   tol_feasible = 1.0e-12
   eta = 0.0
 
