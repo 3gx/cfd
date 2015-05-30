@@ -44,55 +44,33 @@ def minimizePoly(s,p,h,ev_space,tol_feasible,maxiter=128,verbose=False,poly_gues
   fixed_coefficients = np.ones(p+1)/sp.misc.factorial(np.linspace(0,p,p+1))
 
   def func(x,c):
-    return max(abs(np.dot(x,c))-1)
-    #return LA.norm(np.dot(x,c),ord=np.inf)-1;
-    #g = np.dot(x,c)
-    #v = abs(g) - 1
-    #imax = np.argmax(v);
-    #return v[imax];
+    g = np.dot(x,c);
+    f = g*np.conj(g)
+    imax = np.argmax(f-1)
+    return np.real(f[imax])-1;
 
+  def func_jac(x,c):
+    g = np.dot(x,c)
+    f = g*np.conj(g)
+    imax = np.argmax(f-1)
+    ct = c.T
+    df = ct[imax]*np.conj(g[imax]) + np.conj(ct[imax])*g[imax];
+    return np.real(df)
 
-#  def func_deriv(x,c):
-#    g = np.dot(x,c)
-#    v = abs(g) - 1
-#    imax = np.argmax(v);
-#    fac = g[imax]/abs(g[imax]);
-#    ct = c.T;
-#    r = ct[imax][:]
-#    return r
-#
-#
   def cfunc(x,b,coeff):
     return np.dot(x,b) - coeff
 
-  def cfunc_deriv(x,b):
+  def cfunc_jac(x,b):
     return b.T
 
-
-  cons = ({'type': 'eq',
-          'fun' : lambda x: cfunc(x,b,fixed_coefficients)}) 
-  
   cons = ({'type': 'eq',
     'fun' : lambda x: cfunc(x,b,fixed_coefficients),
-    'jac' : lambda x: cfunc_deriv(x,b)})
-
+    'jac' : lambda x: cfunc_jac(x,b)})
+  
   x0 = np.zeros(s+1)
   x0 = np.ones(s+1)
-#  if poly_guess != None:
-#    x0 = poly_guess
-#  res=optimize.minimize(func, x0, args=(c,),constraints=cons,
-#  res=optimize.minimize(func, x0, args=(c,),constraints=cons,jac=func_deriv,
-#      method='SLSQP', options={'disp': True, 'maxiter': 1024, 'ftol': 1e-13, 'eps':1e-13},tol=1e-15)
-#      method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
-#  method='L-BFGS-B', 
-#  options={'disp': verbose, 'maxiter': maxiter*100, 'maxfun': 100000},
-#  tol=1e-13)
-#  method='TNC',  options={'disp': verbose}, tol=1e-13)
-  nit = maxiter
-  for it in range(0,maxiter,nit):
-    res=optimize.minimize(func, x0, args=(c,),constraints=cons,
-        method='SLSQP', options={'disp': verbose, 'maxiter': nit}, tol=1e-13)
-    x0 = res.x;
+  res=optimize.minimize(func, x0, args=(c,),constraints=cons,jac=func_jac,
+      method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
 
   if verbose:
     print "------------------------------------"
@@ -196,7 +174,7 @@ if True:
 #  ev_space = -0.5*(1 + np.cos(ev_space))
   ev_space = -np.linspace(0,1,npts);
 
-  if True:
+  if False:
     kappa=1;
     beta =0.1;
 #    beta = 10;
