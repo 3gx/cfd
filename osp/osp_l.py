@@ -62,11 +62,11 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     return np.real(x[-1]*np.ones(len(g)) - (g*np.conj(g) - 1))
 
   def cfunc2_jac(x,c,cc):
-    df = np.zeros(c.shape)
     g  = np.dot(x[:-1],c[:-1]);
+    df = np.zeros(c.shape)
     df[:-1] = -np.real(c[:-1]*np.conj(g) + cc[:-1]*g)
     df[-1] = 1;
-    return np.real(df.T)
+    return df.T
 
   m,n = b.shape
   J1 = np.zeros((s+2,n))
