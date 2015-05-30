@@ -61,13 +61,10 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     g = np.dot(x[:-1],c);
     return np.real(x[-1]*np.ones(len(g)) - (g*np.conj(g) - 1))
 
-  def cfunc2_jac(x,c):
-    m,n = c.shape
-    df = np.zeros((m+1,n))
-
-    g = np.dot(x[:-1],c);
-    for i in range(len(x)-1):
-      df[i] = -np.real(c[i]*np.conj(g) + np.conj(c[i])*g);
+  def cfunc2_jac(x,c,cc):
+    df = np.zeros(c.shape)
+    g  = np.dot(x[:-1],c[:-1]);
+    df = -np.real(c*np.conj(g) + cc*g)
     df[-1] = 1;
     return np.real(df.T)
 
@@ -77,6 +74,10 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     J1[i] = b[i]
   J1 = J1.T
 
+  m,n = c.shape
+  J2 = np.zeros((s+2,n),dtype=c.dtype)
+  for i in range(s+1):
+    J2[i] = c[i]
 
   x0 = np.zeros(s+2);
   cons = ({'type': 'eq',
@@ -84,7 +85,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     'jac' : lambda x: cfunc1_jac(x,J1)},
     {'type': 'ineq',
     'fun' : lambda x: cfunc2(x,c),
-    'jac' : lambda x: cfunc2_jac(x,c)})
+    'jac' : lambda x: cfunc2_jac(x,J2,np.conj(J2))})
     
   res=optimize.minimize(func1, x0, constraints=cons, jac=func1_jac,
       method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
