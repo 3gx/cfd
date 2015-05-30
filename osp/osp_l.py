@@ -66,6 +66,8 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   def cfunc_jac(x,b):
     return b.T
 
+#####################
+
   def func1(x):
     return x[-1];
 
@@ -76,13 +78,25 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     return np.dot(x[:-1],b) - coeff
   
   def cfunc1_jac(x,b):
-    return b.T
+    m,n = b.shape
+    df = np.zeros((len(x),n))
+    for i in range(len(x)-1):
+      df[i] = b[i]
+    return df.T
 
   def cfunc2(x,c):
-    return x[-1] - (abs(np.dot(x[:-1],c)) - 1) 
+    g = np.dot(x[:-1],c);
+    return np.real(x[-1]*np.ones(len(g)) - (g*np.conj(g) - 1))
 
   def cfunc2_jac(x,c):
-    return 0;
+    m,n = c.shape
+    df = np.zeros((len(x),n))
+
+    g = np.dot(x[:-1],c);
+    for i in range(len(x)-1):
+      df[i] = -np.real(c[i]*np.conj(g) + np.conj(c[i])*g);
+    df[-1] = 1;
+    return np.real(df.T)
 
   x0 = np.zeros(s+1)
 #  x0 = np.ones(s+2)
@@ -97,9 +111,12 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
         method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
   else:
     cons = ({'type': 'eq',
-      'fun' : lambda x: cfunc1(x,b,fixed_coefficients)},
+      'fun' : lambda x: cfunc1(x,b,fixed_coefficients),
+      'jac' : lambda x: cfunc1_jac(x,b)},
       {'type': 'ineq',
-      'fun' : lambda x: cfunc2(x,c)});
+      'fun' : lambda x: cfunc2(x,c),
+      'jac' : lambda x: cfunc2_jac(x,c)}
+      )
 #    cons = ({'type': 'eq',
 #      'fun' : lambda x: cfunc(x,b,fixed_coefficients)})
     
@@ -130,7 +147,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     return [False, res.x, res.fun, res.nit]
 
 def maximizeH(s,p,ev_space):
-  h_min = 20; #60 #0.00*max(abs(ev_space))
+  h_min = 0; #60 #0.00*max(abs(ev_space))
   h_max = 2.01*s*s*max(abs(ev_space))
 
   max_iter = 1280;
@@ -209,16 +226,16 @@ if True:
   if True:
     kappa=1;
 #    beta =5.0;
-    beta = 0.0;
+    beta = 0.5;
 
     imag_lim = beta;
-    l1 = 1j*np.linspace(0,imag_lim,50);
+    l1 = 1j*np.linspace(0,imag_lim,npts);
     l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
-    l3 = -kappa + 1j*np.linspace(0,imag_lim,50);
+    l3 = -kappa + 1j*np.linspace(0,imag_lim,npts);
     ev_space = np.concatenate((l1,l2,l3));
 
 
-  s = 40;
+  s = 30;
   p = 8;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
