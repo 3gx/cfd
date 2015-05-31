@@ -81,8 +81,8 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   struct func_eq_data_type
   {
     std::vector<real_type>* bmat_ptr;
-    size_t s;
     size_t p;
+    size_t s;
   } func_eq_data;
   struct func_ineq_data_type
   {
@@ -91,8 +91,8 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   } func_ineq_data;
 
   func_eq_data.bmat_ptr = &bmat;
-  func_eq_data.s        = s;
   func_eq_data.p        = p;
+  func_eq_data.s        = s;
 
   func_ineq_data.cmat_ptr = &cmat;
   func_ineq_data.z_ptr    = &h_space;
@@ -103,7 +103,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   for (size_t i = 0; i < p+1; i++)
   {
     factorial *= std::max(size_t{1},i);
-    fixed_coeff[i] /= factorial;
+    fixed_coeff[i] = 1.0/factorial;
   }
 
   auto func = [](const std::vector<real_type> &x,
@@ -186,6 +186,9 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
 
   nlopt::opt opt(nlopt::LD_SLSQP, s+2);
+
+  opt.set_min_objective(func,NULL);
+
   const real_type tol = 1.0e-12;
   opt.add_equality_mconstraint(
       func_eq, 
@@ -196,7 +199,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   opt.add_inequality_mconstraint(
       func_ineq, 
       &func_ineq_data, 
-      std::vector<real_type>(s+1,tol)); 
+      std::vector<real_type>(h_space.size(),tol)); 
 
   opt.set_xtol_rel(tol);
 
