@@ -193,7 +193,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
   opt.set_min_objective(func,NULL);
 
-  const real_type tol = 1.0e-12;
+  const real_type tol = 1.0e-7;
   opt.add_equality_mconstraint(
       func_eq, 
       &func_eq_data, 
