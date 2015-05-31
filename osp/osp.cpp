@@ -123,6 +123,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       double *grad, /* NULL if not needed */
       void *func_data)
   {
+    assert(func_data);
     const auto &data = *reinterpret_cast<func_eq_data_type*>(func_data);
     const auto& bmat = *data.bmat_ptr;
     const auto s = data.s;
@@ -146,6 +147,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       double *grad, /* NULL if not needed */
       void *func_data)
   {
+    assert(func_data);
     const auto &data = *reinterpret_cast<func_ineq_data_type*>(func_data);
     const auto& cmat = *data.cmat_ptr;
     const auto&    z = *data.z_ptr;
@@ -187,13 +189,13 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   const real_type tol = 1.0e-12;
   opt.add_equality_mconstraint(
       func_eq, 
-      NULL, 
+      &func_eq_data, 
       std::vector<real_type>(p+1,tol));
   
   std::vector<real_type> x(s+2, 1);
   opt.add_inequality_mconstraint(
       func_ineq, 
-      NULL, 
+      &func_ineq_data, 
       std::vector<real_type>(s+1,tol)); 
 
   opt.set_xtol_rel(tol);
