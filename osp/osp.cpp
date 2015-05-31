@@ -18,7 +18,7 @@ static auto scaled_chebyshev_basis(
   const auto m1 = 2/(zmax - zmin);
   const auto m0 = -(1 + zmin*m1);
 
-  std::vector<real_type> _b((p+1)*(s+2),0);
+  std::vector<real_type> _b((s+2)*(p+1),0);
   {
     auto b = [&](const size_t _s, const size_t _p) -> real_type&
     {
@@ -115,7 +115,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   {
     if (grad)
     {
-      std::fill(grad, grad+n, 0.0);
+      std::fill(grad, grad+n-1, 0);
       grad[n-1] = 1;
     }
     return x[n-1];
@@ -143,7 +143,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     for (size_t i = 0; i < m; i++)
     {
       result[i] = -coeff[i] +
-        std::inner_product(x, x+n-1, bmat.begin() + i*n, 0);
+        std::inner_product(x, x+n-1, bmat.begin() + i*n, 0.0);
     }
   };
 
@@ -160,6 +160,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     assert(m == data.npts);
     assert(n == s+2);
     using std::conj;
+    using std::real;
     if (grad)
     {
       for (size_t i = 0; i < m; i++)
@@ -169,11 +170,11 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
         for (size_t j = 0; j < s+1; j++)
         {
           const auto df = cmat[i*n+j]*conj(g);
-          grad[i*n+j] = (df + conj(df)).real();
+          grad[i*n+j] = real(df + conj(df));
         }
         grad[i*n+s+1] = -1;
 
-        const auto re = (g*conj(g)).real();
+        const auto re = real(g*conj(g));
         result[i] = (re-1)-x[n-1];
       }
     }
@@ -183,7 +184,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       {
         const auto g = 
           std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
-        const auto re = (g*conj(g)).real();
+        const auto re = real(g*conj(g));
         result[i] = (re-1)-x[n-1];
       }
     }
