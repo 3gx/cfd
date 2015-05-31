@@ -252,10 +252,10 @@ void test()
   using real_type    =  double;
   using complex_type = std::complex<real_type>;
 
-  const size_t npts = 10000;
+  const size_t npts = 1000;
 
   const real_type kappa  = 1;
-  const real_type beta   = 0.0;
+  const real_type beta   = 0.2;
 
 
   const auto imag_lim = std::abs(beta);
