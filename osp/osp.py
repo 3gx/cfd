@@ -236,7 +236,7 @@ if True:
   npts = 1000;
   kappa=1;
   beta = 0.5;
-  beta= 0.3;
+  beta= 0.5;
 
   imag_lim = beta;
   l1 = 1j*np.linspace(0,imag_lim,50);

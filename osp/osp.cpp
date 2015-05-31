@@ -154,6 +154,8 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     }
   };
 
+#if 1
+  const auto n_ineq = h_space.size();
   nlopt::mfunc func_ineq = [](
       unsigned m, double *result,
       unsigned n, const double *x,
@@ -196,6 +198,53 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       }
     }
   };
+#else
+  const auto n_ineq = 1;
+  nlopt::mfunc func_ineq = [](
+      unsigned m, double *result,
+      unsigned n, const double *x,
+      double *grad, /* NULL if not needed */
+      void *func_data)
+  {
+    assert(func_data);
+    const auto &data = *reinterpret_cast<func_ineq_data_type*>(func_data);
+    const auto& cmat = *data.cmat_ptr;
+    const auto s = data.s;
+    assert(m == 1);
+    assert(n == s+2);
+    using std::conj;
+    using std::real;
+
+    real_type fmax = 0;
+    real_type res  = 0;
+    int       imax = 0;
+    for (size_t i = 0; i < m; i++)
+    {
+      const auto g = 
+        std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
+      const auto f = real(g*conj(g)) - 1;
+      if (f > fmax)
+      {
+        fmax = f;
+        res =  f - x[n-1];
+        imax = i;
+      }
+    }
+    result[0] = res;
+
+    if (grad)
+    {
+      const auto g = 
+        std::inner_product(x, x+n-1, cmat.begin() + imax*n,complex_type{0});
+      for (size_t j = 0; j < s+1; j++)
+      {
+        const auto df = cmat[imax*n+j]*conj(g);
+        grad[j] = real(df + conj(df));
+      }
+      grad[s+1] = -1;
+    }
+  };
+#endif
 
 
 
@@ -214,7 +263,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   opt.add_inequality_mconstraint(
       func_ineq, 
       &func_ineq_data, 
-      std::vector<real_type>(h_space.size(),tol)); 
+      std::vector<real_type>(n_ineq,tol)); 
 
   opt.set_xtol_rel(tol);
 
@@ -255,7 +304,7 @@ void test()
   const size_t npts = 1000;
 
   const real_type kappa  = 1;
-  const real_type beta   = 0.2;
+  const real_type beta   = 0.0;
 
 
   const auto imag_lim = std::abs(beta);
