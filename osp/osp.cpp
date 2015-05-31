@@ -171,7 +171,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
           const auto df = cmat[i*n+j]*conj(g);
           grad[i*n+j] = (df + conj(df)).real();
         }
-        grad[i*n+n-1] = -1;
+        grad[i*n+s+1] = -1;
 
         const auto re = (g*conj(g)).real();
         result[i] = (re-1)-x[n-1];
@@ -195,7 +195,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
   opt.set_min_objective(func,NULL);
 
-  const real_type tol = 1.0e-7;
+  const real_type tol = 1.0e-12;
   opt.add_equality_mconstraint(
       func_eq, 
       &func_eq_data, 
@@ -213,6 +213,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   real_type minf;
   const auto result = opt.optimize(x,minf);
 
+  printf(std::cerr, "result= % \n", result);
   printf(std::cerr, "minf= % \n", minf);
 
   return x;
