@@ -199,7 +199,8 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
 
 
-  nlopt::opt opt(nlopt::LD_SLSQP, s+2);
+  auto method = nlopt::LD_SLSQP;
+  nlopt::opt opt(method, s+2);
 
   opt.set_min_objective(func,NULL);
 
