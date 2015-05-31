@@ -413,7 +413,7 @@ void maximizeHdriver()
 
   const size_t npts = 1000;
   const real_type kappa  = 1;
-  const real_type beta   = 0.2;
+  const real_type beta   = 0.01;
   const auto imag_lim = std::abs(beta);
   const auto l1 = linspace(0.0,imag_lim,npts/2);
   const auto l2 = linspace(-kappa,0.0,npts);
@@ -447,6 +447,7 @@ void maximizeHdriver()
   }
   std::cout << poly.back()  << " };\n";
   std::cout << "h= " << h << std::endl;
+  std::cout << "h/s^2= " << h/(s*s) << std::endl;
 }
 
 int main(int argc, char * argv[])
