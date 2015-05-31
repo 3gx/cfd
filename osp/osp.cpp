@@ -59,40 +59,48 @@ static auto scaled_chebyshev_basis(
 }
 
 template<typename real_type, typename complex_type>
-auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space)
+auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space, const bool recompute_basis = true)
 {
-  auto h_space = ev_space;
-  real_type h_min = 0;
-  real_type h_max = 0;
-  for (auto& h : h_space)
+  static auto h_space = ev_space;
+  static real_type h_min = 0;
+  static real_type h_max = 0;
+
+  if (recompute_basis)
   {
-    h *= h_scale;
-    h_min = std::min(h_min, h.real());
+    for (auto& h : h_space)
+    {
+      h *= h_scale;
+      h_min = std::min(h_min, h.real());
+    }
+    assert(h_min < h_max);
+  }
+  
+  static auto basis = scaled_chebyshev_basis(s,p,h_min,h_max,h_space);
+  if (recompute_basis)
+  {
+    basis = scaled_chebyshev_basis(s,p,h_min,h_max,h_space);
   }
 
-  assert(h_min < h_max);
-  
-  auto basis = scaled_chebyshev_basis(s,p,h_min,h_max,h_space);
+ 
+  static std::vector<real_type> fixed_coeff(p+1);
+  if (recompute_basis)
+  {
+    real_type factorial = 1;
+    for (size_t i = 0; i < p+1; i++)
+    {
+      factorial *= std::max(size_t{1},i);
+      fixed_coeff[i] = 1.0/factorial;
+    }
+  }
 
   using std::get;
-  auto &bmat = get<0>(basis);
-  auto &cmat = get<1>(basis);
-  
-  std::vector<real_type> fixed_coeff(p+1);
-  real_type factorial = 1;
-  for (size_t i = 0; i < p+1; i++)
-  {
-    factorial *= std::max(size_t{1},i);
-    fixed_coeff[i] = 1.0/factorial;
-  }
-
   struct func_eq_data_type
   {
     std::vector<real_type>* bmat_ptr, *coeff_ptr;
     size_t p;
     size_t s;
   } func_eq_data;
-  func_eq_data.bmat_ptr  = &bmat;
+  func_eq_data.bmat_ptr  = &get<0>(basis);
   func_eq_data.coeff_ptr = &fixed_coeff;
   func_eq_data.p         = p;
   func_eq_data.s         = s;
@@ -103,10 +111,9 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     size_t npts;
     size_t s;
   } func_ineq_data;
-  func_ineq_data.cmat_ptr = &cmat;
+  func_ineq_data.cmat_ptr = &get<1>(basis);
   func_ineq_data.npts     = h_space.size();
   func_ineq_data.s        = s;
-
 
   nlopt::func func = [](
       unsigned n, const double *x,
@@ -244,10 +251,10 @@ void test()
   using real_type    =  double;
   using complex_type = std::complex<real_type>;
 
-  const size_t npts = 1000;
+  const size_t npts = 10000;
 
   const real_type kappa  = 1;
-  const real_type beta   = 0.2;
+  const real_type beta   = 0.0;
 
 
   const auto imag_lim = std::abs(beta);
@@ -276,6 +283,16 @@ void test()
     std::cout << x << ", ";
   }
   std::cout << std::endl;
+  {
+    std::cerr << " ----------- \n";
+    const auto res = optimize(p, s, h, ev_space,false);
+    std::cout << "Coefficients: \n";
+    for (auto & x : res)
+    {
+      std::cout << x << ", ";
+    }
+    std::cout << std::endl;
+  }
 }
 
 int main(int argc, char * argv[])
