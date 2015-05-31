@@ -33,7 +33,6 @@ def scaled_chebyshev_basis(s,p,zmin,zmax,z):
 #    c[k+2][:] = (2.0*(k+2)-1)/(k+2)*(m1*z + m0)*c[k+1][:] - (k+2.0-1)/(k+2)*c[k][:]
     c[k+2][:] = 2*(m1*z + m0)*c[k+1][:] - c[k][:]
 
-  print c
   return [b,c]
 
 def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=None):
@@ -171,7 +170,7 @@ def maximizeH(s,p,ev_space):
     return [None, None]
 
 
-if False:
+if True:
   npts = 1000;
 
   ev_space = -np.linspace(0,1,npts);
@@ -187,7 +186,7 @@ if False:
   if True:
     kappa=1;
 #    beta =5.0;
-    beta = 0.5;
+    beta = 0.2;
 
     imag_lim = beta;
     l1 = 1j*np.linspace(0,imag_lim,npts/2);
