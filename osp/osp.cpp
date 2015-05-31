@@ -77,28 +77,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   using std::get;
   auto &bmat = get<0>(basis);
   auto &cmat = get<1>(basis);
-
-  struct func_eq_data_type
-  {
-    std::vector<real_type>* bmat_ptr;
-    size_t p;
-    size_t s;
-  } func_eq_data;
-  struct func_ineq_data_type
-  {
-    std::vector<complex_type> *cmat_ptr;
-    size_t npts;
-    size_t s;
-  } func_ineq_data;
-
-  func_eq_data.bmat_ptr = &bmat;
-  func_eq_data.p        = p;
-  func_eq_data.s        = s;
-
-  func_ineq_data.cmat_ptr = &cmat;
-  func_ineq_data.npts     = h_space.size();
-  func_ineq_data.s        = s;
-
+  
   std::vector<real_type> fixed_coeff(p+1);
   real_type factorial = 1;
   for (size_t i = 0; i < p+1; i++)
@@ -106,6 +85,28 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     factorial *= std::max(size_t{1},i);
     fixed_coeff[i] = 1.0/factorial;
   }
+
+  struct func_eq_data_type
+  {
+    std::vector<real_type>* bmat_ptr, *coeff_ptr;
+    size_t p;
+    size_t s;
+  } func_eq_data;
+  func_eq_data.bmat_ptr  = &bmat;
+  func_eq_data.coeff_ptr = &fixed_coeff;
+  func_eq_data.p         = p;
+  func_eq_data.s         = s;
+
+  struct func_ineq_data_type
+  {
+    std::vector<complex_type> *cmat_ptr;
+    size_t npts;
+    size_t s;
+  } func_ineq_data;
+  func_ineq_data.cmat_ptr = &cmat;
+  func_ineq_data.npts     = h_space.size();
+  func_ineq_data.s        = s;
+
 
   nlopt::func func = [](
       unsigned n, const double *x,
@@ -127,19 +128,21 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       void *func_data)
   {
     assert(func_data);
-    const auto &data = *reinterpret_cast<func_eq_data_type*>(func_data);
-    const auto& bmat = *data.bmat_ptr;
+    const auto &data  = *reinterpret_cast<func_eq_data_type*>(func_data);
+    const auto& bmat  = *data.bmat_ptr;
+    const auto& coeff = *data.coeff_ptr;
     const auto s = data.s;
     const auto p = data.p;
     assert(m == p+1);
     assert(n == s+2);
+    assert(m*n == bmat.size());
     if (grad)
     {
       std::copy(bmat.begin(), bmat.end(), grad);
     }
     for (size_t i = 0; i < m; i++)
     {
-      result[i] = 
+      result[i] = -coeff[i] +
         std::inner_product(x, x+n-1, bmat.begin() + i*n, 0);
     }
   };
@@ -168,8 +171,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
           const auto df = cmat[i*n+j]*conj(g);
           grad[i*n+j] = (df + conj(df)).real();
         }
-        for (size_t j = s+1; j < s+2; j++)
-          grad[i*n+j] = -1;
+        grad[i*n+n-1] = -1;
 
         const auto re = (g*conj(g)).real();
         result[i] = (re-1)-x[n-1];
