@@ -59,38 +59,28 @@ static auto scaled_chebyshev_basis(
 }
 
 template<typename real_type, typename complex_type>
-auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space, const bool recompute_basis = true)
+auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space)
 {
-  static auto h_space = ev_space;
-  static real_type h_min = 0;
-  static real_type h_max = 0;
+  auto h_space = ev_space;
+  real_type h_min = 0;
+  real_type h_max = 0;
 
-  if (recompute_basis)
+  for (auto& h : h_space)
   {
-    for (auto& h : h_space)
-    {
-      h *= h_scale;
-      h_min = std::min(h_min, h.real());
-    }
-    assert(h_min < h_max);
+    h *= h_scale;
+    h_min = std::min(h_min, h.real());
   }
+  assert(h_min < h_max);
   
-  static auto basis = scaled_chebyshev_basis(s,p,h_min,h_max,h_space);
-  if (recompute_basis)
-  {
-    basis = scaled_chebyshev_basis(s,p,h_min,h_max,h_space);
-  }
+  auto basis = scaled_chebyshev_basis(s,p,h_min,h_max,h_space);
 
  
-  static std::vector<real_type> fixed_coeff(p+1);
-  if (recompute_basis)
+  std::vector<real_type> fixed_coeff(p+1);
+  real_type factorial = 1;
+  for (size_t i = 0; i < p+1; i++)
   {
-    real_type factorial = 1;
-    for (size_t i = 0; i < p+1; i++)
-    {
-      factorial *= std::max(size_t{1},i);
-      fixed_coeff[i] = 1.0/factorial;
-    }
+    factorial *= std::max(size_t{1},i);
+    fixed_coeff[i] = 1.0/factorial;
   }
 
   using std::get;
@@ -215,14 +205,14 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     using std::conj;
     using std::real;
 
-    real_type fmax = 0;
+    real_type fmax = -1;
     real_type res  = 0;
     int       imax = 0;
-    for (size_t i = 0; i < m; i++)
+    for (size_t i = 0; i < data.npts; i++)
     {
       const auto g = 
         std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
-      const auto f = real(g*conj(g)) - 1;
+      const auto f = real(g*conj(g))-1;
       if (f > fmax)
       {
         fmax = f;
@@ -253,7 +243,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
   opt.set_min_objective(func,NULL);
 
-  const real_type tol = 1.0e-12;
+  const real_type tol = 1.0e-14;
   opt.add_equality_mconstraint(
       func_eq, 
       &func_eq_data, 
@@ -265,7 +255,8 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       &func_ineq_data, 
       std::vector<real_type>(n_ineq,tol)); 
 
-  opt.set_xtol_rel(tol);
+  opt.set_xtol_abs(tol);
+//  opt.set_ftol_abs(1.0e-14);
 
 
   real_type minf;
@@ -304,7 +295,7 @@ void test()
   const size_t npts = 1000;
 
   const real_type kappa  = 1;
-  const real_type beta   = 0.0;
+  const real_type beta   = 0.5;
 
 
   const auto imag_lim = std::abs(beta);
@@ -335,7 +326,7 @@ void test()
   std::cout << std::endl;
   {
     std::cerr << " ----------- \n";
-    const auto res = optimize(p, s, h, ev_space,false);
+    const auto res = optimize(p, s, h, ev_space);
     std::cout << "Coefficients: \n";
     for (auto & x : res)
     {
