@@ -86,7 +86,8 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   } func_eq_data;
   struct func_ineq_data_type
   {
-    std::vector<complex_type> *cmat_ptr, *z_ptr;
+    std::vector<complex_type> *cmat_ptr;
+    size_t npts;
     size_t s;
   } func_ineq_data;
 
@@ -95,7 +96,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   func_eq_data.s        = s;
 
   func_ineq_data.cmat_ptr = &cmat;
-  func_ineq_data.z_ptr    = &h_space;
+  func_ineq_data.npts     = h_space.size();
   func_ineq_data.s        = s;
 
   std::vector<real_type> fixed_coeff(p+1);
@@ -152,9 +153,8 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     assert(func_data);
     const auto &data = *reinterpret_cast<func_ineq_data_type*>(func_data);
     const auto& cmat = *data.cmat_ptr;
-    const auto&    z = *data.z_ptr;
     const auto s = data.s;
-    assert(m == z.size());
+    assert(m == data.npts);
     assert(n == s+2);
     using std::conj;
     if (grad)
