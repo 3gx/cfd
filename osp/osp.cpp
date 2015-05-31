@@ -7,6 +7,8 @@
 #include <cassert>
 #include "common.h"
 
+using std::get;
+
 
 template<typename real_type, typename complex_type>
 static auto scaled_chebyshev_basis(
@@ -59,7 +61,7 @@ static auto scaled_chebyshev_basis(
 }
 
 template<typename real_type, typename complex_type>
-auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space)
+auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space, const bool verbose = true, const bool verbose_exception = true)
 {
   auto h_space = ev_space;
   real_type h_min = 0;
@@ -243,7 +245,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
   opt.set_min_objective(func,NULL);
 
-  const real_type tol = 1.0e-14;
+  const real_type tol = 1.0e-13;
   opt.add_equality_mconstraint(
       func_eq, 
       &func_eq_data, 
@@ -267,13 +269,19 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
   }
   catch (std::exception &e)
   {
-    printf(std::cerr, " Exception caught: % \n", e.what());
+    if (verbose_exception)
+      printf(std::cerr, " Exception caught: % \n", e.what());
   }
 
-  printf(std::cerr, "result= % \n", result);
-  printf(std::cerr, "minf= % \n", minf);
+  if (verbose)
+  {
+    printf(std::cerr, "result= % \n", result);
+    printf(std::cerr, "minf= % \n", minf);
+  }
 
-  return std::vector<real_type>(x.begin(), x.end()-1);
+  return std::make_tuple(
+      std::vector<real_type>(x.begin(), x.end()-1),
+      minf);
 }
 
 template<typename real_type>
@@ -284,6 +292,86 @@ std::vector<real_type> linspace(const real_type a, const real_type b, const size
   for (auto& x : res)
     x = a + (b-a)*x/(n-1); 
   return res;
+}
+
+auto maximizeH(const size_t p, const size_t s)
+{
+  using namespace std::literals;
+  using real_type    =  double;
+  using complex_type = std::complex<real_type>;
+
+  const size_t npts = 1000;
+  const real_type kappa  = 1;
+  const real_type beta   = 0.2;
+
+  const auto imag_lim = std::abs(beta);
+  const auto l1 = linspace(0.0,imag_lim,npts/2);
+  const auto l2 = linspace(-kappa,0.0,npts);
+
+  std::vector<complex_type> ev_space;
+  if (imag_lim > 0)
+    for (auto& x : l1)
+      ev_space.emplace_back(1i*x);
+  for (auto& x : l2)
+    ev_space.emplace_back(1i*imag_lim + x);
+  if (imag_lim > 0)
+    for (auto &x : l1)
+      ev_space.emplace_back(-kappa + 1i*x);
+
+  real_type h_min = 0; 
+  real_type h_max = 2.01*s*s*std::abs(kappa);
+
+//  const auto max_iter = 1280;
+  const auto max_steps = 1000;
+  const auto tol_bisect = 0.001;
+
+//  printf(std::cerr, "max_iter= % \n", max_iter);
+  printf(std::cerr, "npts= % \n", npts);
+  printf(std::cerr, "p= % \n", p);
+  printf(std::cerr, "s= % \n", s);
+  printf(std::cerr, "kappa= % \n", kappa);
+  printf(std::cerr, "beta= % \n",  beta);
+  printf(std::cerr, "max_step= % \n", max_steps);
+  printf(std::cerr, "tol_bisct= % \n", tol_bisect);
+
+  bool converged = false;
+  auto h = h_min;
+  for (auto step = 0; step < max_steps; step++)
+  {
+    if ((h_max-h_min < tol_bisect*h_min) or (h_max < tol_bisect))
+    {
+      if (converged)
+        break;
+      else
+        h = h_min;
+    }
+    else
+    {
+      h = 0.25*h_max + 0.75*h_min;
+    }
+
+    const auto& res = optimize(p, s, h, ev_space, false, false);
+    printf(std::cerr, "step= %  h_min= %  h_max= %  -- h= %  val= % \n",
+        step, h_min, h_max, h, get<1>(res));
+
+    if (std::abs(get<1>(res)) < 1.0e-12)
+    {
+      converged = true;
+      h_min = h;
+    }
+    else
+    {
+      converged = false;
+      h_max = h;
+    }
+  }
+
+  assert(converged);
+  const auto& res = optimize(p, s, h, ev_space);
+  printf(std::cerr, "step= %  h_min= %  h_max= %  -- h= %  val= % \n",
+      -1, h_min, h_max, h, get<1>(res));
+
+  return std::make_tuple(get<0>(res), h);
 }
 
 void test()
@@ -299,7 +387,7 @@ void test()
 
 
   const auto imag_lim = std::abs(beta);
-  const auto l1 = linspace(0.0,imag_lim,50);
+  const auto l1 = linspace(0.0,imag_lim,npts);
   const auto l2 = linspace(-kappa,0.0,npts);
 
   std::vector<complex_type> ev_space;
@@ -317,7 +405,7 @@ void test()
   real_type h = 35.58;
 
 
-  const auto res = optimize(p, s, h, ev_space);
+  const auto res = std::get<0>(optimize(p, s, h, ev_space));
   std::cout << "Coefficients: \n";
   for (auto & x : res)
   {
@@ -326,7 +414,7 @@ void test()
   std::cout << std::endl;
   {
     std::cerr << " ----------- \n";
-    const auto res = optimize(p, s, h, ev_space);
+    const auto res = std::get<0>(optimize(p, s, h, ev_space));
     std::cout << "Coefficients: \n";
     for (auto & x : res)
     {
@@ -338,6 +426,21 @@ void test()
 
 int main(int argc, char * argv[])
 {
+#if 0
   test();
+#else
+  const auto s = 30;
+  const auto p = 8;
+  const auto res = maximizeH(p,s);
+  std::cout << "coeff = { \n";
+  const auto & poly = get<0>(res);
+  const auto & h    = get<1>(res);
+  for (size_t i = 0; i < poly.size() -1 ; i++)
+  {
+    std::cout << std::setprecision(16) << poly[i] << ", ";
+  }
+  std::cout << poly.back()  << " };\n";
+  std::cout << "h= " << h << std::endl;
+#endif
   return 0;
 }

@@ -202,7 +202,7 @@ if True:
   if True:
     kappa=1;
 #    beta =5.0;
-    beta = 0.5;
+    beta = 0.2;
 
     imag_lim = beta;
     l1 = 1j*np.linspace(0,imag_lim,npts/2);
@@ -215,6 +215,7 @@ if True:
   p = 8;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
+  print "kappa= %g  beta= %g" % (kappa, beta)
 
   [poly, h] = maximizeH(s,p,ev_space);
   if h != None:
@@ -236,7 +237,7 @@ if True:
   npts = 1000;
   kappa=1;
   beta = 0.5;
-  beta= 0.5;
+  beta= 0.2;
 
   imag_lim = beta;
   l1 = 1j*np.linspace(0,imag_lim,50);
