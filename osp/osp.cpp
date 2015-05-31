@@ -408,12 +408,19 @@ void maximizeHdriver()
   using real_type    =  double;
   using complex_type = std::complex<real_type>;
 
-  const int s = 30;
-  const int p = 8;
+  int s = 30;
+  int p = 8;
 
-  const size_t npts = 1000;
-  const real_type kappa  = 1;
-  const real_type beta   = 0.01;
+  size_t npts = 1000;
+  real_type kappa  = 1;
+  real_type beta   = 0.01;
+
+
+#if 0
+  beta = 0.5;
+  s    = 12;
+#endif
+
   const auto imag_lim = std::abs(beta);
   const auto l1 = linspace(0.0,imag_lim,npts/2);
   const auto l2 = linspace(-kappa,0.0,npts);
