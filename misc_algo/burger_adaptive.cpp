@@ -1160,8 +1160,8 @@ class ODESolverT
       }
       else
       {
-        const int nstage = static_cast<int>(1+2*std::sqrt(_pde.cfl()));  /* stiffff */
-        iterateOPT(u0, nstage);
+        const int nstage = static_cast<int>(1+1*std::sqrt(_pde.cfl()));  /* stiffff */
+        iterateWP(u0, nstage);
         if (verbose)
         {
           printf(std::cerr, " nstage= % \n", nstage);
@@ -1571,7 +1571,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 4;
+  constexpr auto ORDER = 8;
   using PDE = PDEBurger<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
@@ -1613,6 +1613,8 @@ int main(int argc, char * argv[])
             kstep, solver.time(), solver.pde().dt(), solver.pde().cfl(), ORDER,
             solver.pde().cost(), (mass-mass0)/mass0, tend);
       }
+//      if (kstep > 45)
+//        solver.pde().set_cfl(1000);
       solver.update(verbose_iter);
       kstep++;
     }
