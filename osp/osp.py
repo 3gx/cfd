@@ -55,7 +55,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   def cfunc1_jac(x,J):
     return J;
 
-  if True:
+  if False:
     def cfunc2(x,c):
       g = np.dot(x[:-1],c);
       f = np.real(g*np.conj(g)) - 1
@@ -236,7 +236,7 @@ if True:
   npts = 1000;
   kappa=1;
   beta = 0.5;
-  beta= 0.5;
+  beta= 0.3;
 
   imag_lim = beta;
   l1 = 1j*np.linspace(0,imag_lim,50);
