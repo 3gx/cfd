@@ -186,7 +186,7 @@ def maximizeH(s,p,ev_space):
     return [None, None]
 
 
-if False:
+if True:
   npts = 1000;
 
   ev_space = -np.linspace(0,1,npts);
@@ -202,12 +202,12 @@ if False:
   if True:
     kappa=1;
 #    beta =5.0;
-    beta = 0.2;
+    beta = 0.5;
 
     imag_lim = beta;
     l1 = 1j*np.linspace(0,imag_lim,npts/2);
     l2 = 1j*imag_lim + np.linspace(-kappa,0,npts);
-    l3 = -kappa + 1j*np.linspace(0,imag_lim,npts/2);
+    l3 = -kappa + l1 #1j*np.linspace(0,imag_lim,npts/2);
     ev_space = np.concatenate((l1,l2,l3));
 
 
