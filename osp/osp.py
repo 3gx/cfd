@@ -95,8 +95,8 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     'fun' : lambda x: cfunc1(x,b,fixed_coefficients),
     'jac' : lambda x: cfunc1_jac(x,J1)},
     {'type': 'ineq',
-    'fun' : lambda x: cfunc2(x,c),
-    'jac' : lambda x: cfunc2_jac(x,J2)})
+    'fun' : lambda x: cfunc2(x,c)})
+  #  'jac' : lambda x: cfunc2_jac(x,J2)})
     
   res=optimize.minimize(func, x0, constraints=cons, jac=func_jac,
       method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
