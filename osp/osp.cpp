@@ -146,8 +146,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     }
   };
 
-#if 1
-  const auto n_ineq = h_space.size();
+  auto n_ineq = h_space.size();
   nlopt::mfunc func_ineq = [](
       unsigned m, double *result,
       unsigned n, const double *x,
@@ -190,53 +189,54 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       }
     }
   };
-#else
-  const auto n_ineq = 1;
-  nlopt::mfunc func_ineq = [](
-      unsigned m, double *result,
-      unsigned n, const double *x,
-      double *grad, /* NULL if not needed */
-      void *func_data)
+  if (0)
   {
-    assert(func_data);
-    const auto &data = *reinterpret_cast<func_ineq_data_type*>(func_data);
-    const auto& cmat = *data.cmat_ptr;
-    const auto s = data.s;
-    assert(m == 1);
-    assert(n == s+2);
-    using std::conj;
-    using std::real;
-
-    real_type fmax = -1;
-    real_type res  = 0;
-    int       imax = 0;
-    for (size_t i = 0; i < data.npts; i++)
+    n_ineq = 1;
+    func_ineq = [](
+        unsigned m, double *result,
+        unsigned n, const double *x,
+        double *grad, /* NULL if not needed */
+        void *func_data)
     {
-      const auto g = 
-        std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
-      const auto f = real(g*conj(g))-1;
-      if (f > fmax)
-      {
-        fmax = f;
-        res =  f - x[n-1];
-        imax = i;
-      }
-    }
-    result[0] = res;
+      assert(func_data);
+      const auto &data = *reinterpret_cast<func_ineq_data_type*>(func_data);
+      const auto& cmat = *data.cmat_ptr;
+      const auto s = data.s;
+      assert(m == 1);
+      assert(n == s+2);
+      using std::conj;
+      using std::real;
 
-    if (grad)
-    {
-      const auto g = 
-        std::inner_product(x, x+n-1, cmat.begin() + imax*n,complex_type{0});
-      for (size_t j = 0; j < s+1; j++)
+      real_type fmax = -1;
+      real_type res  = 0;
+      int       imax = 0;
+      for (size_t i = 0; i < data.npts; i++)
       {
-        const auto df = cmat[imax*n+j]*conj(g);
-        grad[j] = real(df + conj(df));
+        const auto g = 
+          std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
+        const auto f = real(g*conj(g))-1;
+        if (f > fmax)
+        {
+          fmax = f;
+          res =  f - x[n-1];
+          imax = i;
+        }
       }
-      grad[s+1] = -1;
-    }
-  };
-#endif
+      result[0] = res;
+
+      if (grad)
+      {
+        const auto g = 
+          std::inner_product(x, x+n-1, cmat.begin() + imax*n,complex_type{0});
+        for (size_t j = 0; j < s+1; j++)
+        {
+          const auto df = cmat[imax*n+j]*conj(g);
+          grad[j] = real(df + conj(df));
+        }
+        grad[s+1] = -1;
+      }
+    };
+  }
 
 
 
@@ -302,7 +302,7 @@ auto maximizeH(const size_t p, const size_t s, const std::vector<complex_type>& 
   real_type h_max = 0;
   for (auto &x : ev_space)
     h_max = std::max(h_max, std::abs(std::real(x)));
-  h_max *= 2.01*s*s; 
+  h_max *= 2.01*s*s/p;
 
 //  const auto max_iter = 1280;
   const auto max_steps = 1000;
@@ -314,6 +314,7 @@ auto maximizeH(const size_t p, const size_t s, const std::vector<complex_type>& 
 
   bool converged = false;
   auto h = h_min;
+  printf(std::cerr, " -- begin-loop -- \n");
   for (auto step = 0; step < max_steps; step++)
   {
     if ((h_max-h_min < tol_bisect*h_min) or (h_max < tol_bisect))
@@ -411,10 +412,11 @@ void maximizeHdriver()
   int s = 30;
   int p = 8;
 
-  size_t npts = 1000;
+  size_t npts = 10000;
   real_type kappa  = 1;
   real_type beta   = 0.01;
 
+  s = 300;
 
 #if 0
   beta = 0.5;
@@ -456,6 +458,7 @@ void maximizeHdriver()
   std::cout << "h= " << h << std::endl;
   std::cout << "h/s^2= " << h/(s*s) << std::endl;
 }
+
 
 int main(int argc, char * argv[])
 {
