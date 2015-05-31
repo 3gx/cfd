@@ -294,43 +294,21 @@ std::vector<real_type> linspace(const real_type a, const real_type b, const size
   return res;
 }
 
-auto maximizeH(const size_t p, const size_t s)
+template<typename real_type, typename complex_type>
+auto maximizeH(const size_t p, const size_t s, const std::vector<complex_type>& ev_space)
 {
-  using namespace std::literals;
-  using real_type    =  double;
-  using complex_type = std::complex<real_type>;
-
-  const size_t npts = 1000;
-  const real_type kappa  = 1;
-  const real_type beta   = 0.2;
-
-  const auto imag_lim = std::abs(beta);
-  const auto l1 = linspace(0.0,imag_lim,npts/2);
-  const auto l2 = linspace(-kappa,0.0,npts);
-
-  std::vector<complex_type> ev_space;
-  if (imag_lim > 0)
-    for (auto& x : l1)
-      ev_space.emplace_back(1i*x);
-  for (auto& x : l2)
-    ev_space.emplace_back(1i*imag_lim + x);
-  if (imag_lim > 0)
-    for (auto &x : l1)
-      ev_space.emplace_back(-kappa + 1i*x);
 
   real_type h_min = 0; 
-  real_type h_max = 2.01*s*s*std::abs(kappa);
+  real_type h_max = 0;
+  for (auto &x : ev_space)
+    h_max = std::max(h_max, std::abs(std::real(x)));
+  h_max *= 2.01*s*s; 
 
 //  const auto max_iter = 1280;
   const auto max_steps = 1000;
   const auto tol_bisect = 0.001;
 
 //  printf(std::cerr, "max_iter= % \n", max_iter);
-  printf(std::cerr, "npts= % \n", npts);
-  printf(std::cerr, "p= % \n", p);
-  printf(std::cerr, "s= % \n", s);
-  printf(std::cerr, "kappa= % \n", kappa);
-  printf(std::cerr, "beta= % \n",  beta);
   printf(std::cerr, "max_step= % \n", max_steps);
   printf(std::cerr, "tol_bisct= % \n", tol_bisect);
 
@@ -424,14 +402,42 @@ void test()
   }
 }
 
-int main(int argc, char * argv[])
+void maximizeHdriver()
 {
-#if 0
-  test();
-#else
-  const auto s = 30;
-  const auto p = 8;
-  const auto res = maximizeH(p,s);
+  using namespace std::literals;
+  using real_type    =  double;
+  using complex_type = std::complex<real_type>;
+
+  const int s = 30;
+  const int p = 8;
+
+  const size_t npts = 1000;
+  const real_type kappa  = 1;
+  const real_type beta   = 0.2;
+  const auto imag_lim = std::abs(beta);
+  const auto l1 = linspace(0.0,imag_lim,npts/2);
+  const auto l2 = linspace(-kappa,0.0,npts);
+
+  std::vector<complex_type> ev_space;
+  if (imag_lim > 0)
+    for (auto& x : l1)
+      ev_space.emplace_back(1i*x);
+  for (auto& x : l2)
+    ev_space.emplace_back(1i*imag_lim + x);
+  if (imag_lim > 0)
+    for (auto &x : l1)
+      ev_space.emplace_back(-kappa + 1i*x);
+  
+  printf(std::cerr, "npts= % \n", npts);
+  printf(std::cerr, "p= % \n", p);
+  printf(std::cerr, "s= % \n", s);
+  printf(std::cerr, "kappa= % \n", kappa);
+  printf(std::cerr, "beta= % \n",  beta);
+
+
+  const auto res = maximizeH<real_type,complex_type>(p,s,ev_space);
+
+
   std::cout << "coeff = { \n";
   const auto & poly = get<0>(res);
   const auto & h    = get<1>(res);
@@ -441,6 +447,14 @@ int main(int argc, char * argv[])
   }
   std::cout << poly.back()  << " };\n";
   std::cout << "h= " << h << std::endl;
+}
+
+int main(int argc, char * argv[])
+{
+#if 0
+  test();
+#else
+  maximizeHdriver();
 #endif
   return 0;
 }
