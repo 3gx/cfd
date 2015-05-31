@@ -212,12 +212,20 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
 
   real_type minf;
-  const auto result = opt.optimize(x,minf);
+  decltype(opt.optimize(x,minf)) result;
+  try
+  {
+    result = opt.optimize(x,minf);
+  }
+  catch (std::exception &e)
+  {
+    printf(std::cerr, " Exception caught: % \n", e.what());
+  }
 
   printf(std::cerr, "result= % \n", result);
   printf(std::cerr, "minf= % \n", minf);
 
-  return x;
+  return std::vector<real_type>(x.begin(), x.end()-1);
 }
 
 template<typename real_type>
@@ -239,7 +247,7 @@ void test()
   const size_t npts = 1000;
 
   const real_type kappa  = 1;
-  const real_type beta   = 0;
+  const real_type beta   = 0.2;
 
 
   const auto imag_lim = std::abs(beta);
@@ -254,7 +262,7 @@ void test()
     ev_space.emplace_back(1i*imag_lim + x);
   if (imag_lim > 0)
     for (auto &x : l1)
-      ev_space.emplace_back(1i*x - kappa);
+      ev_space.emplace_back(-kappa + 1i*x);
 
   size_t p = 4;
   size_t s = 30;
