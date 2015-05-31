@@ -106,15 +106,17 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     fixed_coeff[i] = 1.0/factorial;
   }
 
-  auto func = [](const std::vector<real_type> &x,
-      std::vector<real_type> &grad, void*)
+  nlopt::func func = [](
+      unsigned n, const double *x,
+      double *grad,
+      void *func_data)
   {
-    if (!grad.empty())
+    if (grad)
     {
-      std::fill(grad.begin(), grad.end(), 0);
-      grad.back() = 1;
+      std::fill(grad, grad+n, 0.0);
+      grad[n-1] = 1;
     }
-    return x.back();
+    return x[n-1];
   };
 
   nlopt::mfunc func_eq = [](
@@ -137,7 +139,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     for (size_t i = 0; i < m; i++)
     {
       result[i] = 
-        std::inner_product(x, x+n-1, bmat.begin() + i*(s+2), 0);
+        std::inner_product(x, x+n-1, bmat.begin() + i*n, 0);
     }
   };
 
@@ -160,27 +162,29 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       for (size_t i = 0; i < m; i++)
       {
         const auto g = 
-          std::inner_product(x, x+n-1, cmat.begin() + i*(s+2),complex_type{0});
+          std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
         for (size_t j = 0; j < s+1; j++)
         {
-          auto df = cmat[i*(s+2)+j]*conj(g);
-          grad[i*(s+2)+j] = (df + conj(df)).real();
+          const auto df = cmat[i*n+j]*conj(g);
+          grad[i*n+j] = (df + conj(df)).real();
         }
         for (size_t j = s+1; j < s+2; j++)
-          grad[i*(s+2)+j] = 1;
+          grad[i*n+j] = -1;
 
         const auto re = (g*conj(g)).real();
         result[i] = (re-1)-x[n-1];
       }
     }
     else
+    {
       for (size_t i = 0; i < m; i++)
       {
         const auto g = 
-          std::inner_product(x, x+n-1, cmat.begin() + i*(s+2),complex_type{0});
+          std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
         const auto re = (g*conj(g)).real();
         result[i] = (re-1)-x[n-1];
       }
+    }
   };
 
 
@@ -206,6 +210,8 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
   real_type minf;
   const auto result = opt.optimize(x,minf);
+
+  printf(std::cerr, "minf= % \n", minf);
 
   return x;
 }
