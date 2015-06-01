@@ -247,9 +247,23 @@ class ExpansionT<4,T,Real> : public ExpansionBaseT<4,T,Real>
     static constexpr auto preconditioner(const size_t i, const size_t j) 
     {
       constexpr Real preconditioner[N][N] = 
+#if 1
       {
         {0.0869637112843634643,0,0,0},{0.1881181174998680717,0.1630362887156365357,0,0},{0.1671919219741887732,0.3539530060337439665,0.1630362887156365357,0},{0.1774825722545226118,0.3134451147418683468,0.3526767575162718646,0.0869637112843634643}
       };
+#elif 0
+      {{1.23820570546308,        0.0435721636000418 ,    -0.000486175467185443,       -0.0199070028624342},
+        {0.320368347561852,          1.07209649247126,        -0.174373275450885,        0.0955052732714805},
+        {0.127195932913811,        0.0752785144046837,         0.870710506338274,        -0.142726895038651},
+        {-0.0323010492552337,       -0.0407401261942433  ,     0.00618044986718299,          1.20931432024193}
+      };
+#elif 1
+      {{
+         1.25993475126055,        0.0325437434303357,        0.0152472795386084,       -0.0184961446428906},
+        {0.392190251675951,          1.18462610385652 ,       -0.189284146314087 ,       0.0929511705326147},
+        {  0.350343677082929 ,        0.100974584071431     ,     1.00140245314956,        -0.180456211802294},{
+                                                                                                                 -0.0687475610125093  ,     -0.0676592390968315  ,    -0.00941067356535225  ,        1.28561619543084}};
+#endif
       return preconditioner[i][j];
     }
     static constexpr auto maxAbsMEV() 
@@ -259,7 +273,14 @@ class ExpansionT<4,T,Real> : public ExpansionBaseT<4,T,Real>
     }
     static constexpr auto maxAbsPEV() 
     { 
+#if 1
       constexpr Real maxAbsPEV{0.17};
+#elif 0
+      constexpr Real maxAbsPEV{1.5};
+#elif 1
+      constexpr Real maxAbsPEV{1.25};
+#endif
+
       return maxAbsPEV; 
     }
 #if 0
@@ -1279,6 +1300,7 @@ class ODESolverT
       /* interoplate _x for 1st fine step */
       for (auto i : range_iterator{0,u0.size()})
       {
+        const auto h = _pde.dt();
         for (auto k : expansionRange())
         {
           _x[k][i] = 0;
@@ -1286,10 +1308,8 @@ class ODESolverT
             _x[k][i] += Expansion::prolongateMatrix0(k,l)*x_coarse[l][i];
         }
         _y0[i] = 0;
-#if 0
         for (auto k : expansionRange())
-          _y0[i] += Expansion::oneVec(k)*_x[k][i];
-#endif
+          _y0[i] += Expansion::weight_half(k)*h*_rhs_pde[k][i];
       }
 
       _pde.set_cfl(0.5*cfl0);
@@ -1571,7 +1591,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 8;
+  constexpr auto ORDER = 4;
   using PDE = PDEBurger<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
