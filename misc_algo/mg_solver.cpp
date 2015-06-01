@@ -646,7 +646,7 @@ class ODESolverT
       }
 
     template<size_t ORDER>
-      void smoother(const int n_smooth_iter, const Vector &u0)
+      void smoother_OPT(const int n_smooth_iter, const Vector &u0)
       {
         const auto n = n_smooth_iter;
 
@@ -707,8 +707,62 @@ class ODESolverT
           _x[k] = res[k];
       }
 
+    template<size_t ORDER>
+      void smoother_WP(const int n_smooth_iter, const Vector &u0)
+      {
+        const auto n = n_smooth_iter;
+        using std::get;
 
-    template<size_t ORDER_OLD,size_t ORDER_NEW>
+        const Real omega = omegaCFL/(Expansion<ORDER>::maxAbsPEV()*(Expansion<ORDER>::maxAbsMEV() + _pde.AbsEV()));
+
+        static decltype(_x) y0, y1,tmp;
+        y0  = _x;
+
+        rhs<ORDER>(u0);
+        static auto res = _x;
+
+        auto scale = Real{1}/(2*n+1);
+
+        for (auto k : expansionRange<ORDER>())
+        {
+          for (auto v : make_zip_iterator(_x[k], _rhs[k],res[k]))
+          {
+            auto&   x = get<0>(v);
+            auto& rhs = get<1>(v);
+            auto& r = get<2>(v);
+            r = (3*x + 4.0*omega*rhs)*scale;
+            x = x + 2.0*omega*rhs;
+          }
+          y1[k] = _x[k];
+        }
+
+
+
+        for (int i = 2; i <= n; i++)
+        {
+          rhs<ORDER>(u0);
+          for (auto k : expansionRange<ORDER>())
+          {
+            for (auto v : make_zip_iterator(_x[k], y1[k], y0[k], _rhs[k],res[k]))
+            {
+              auto&   x = get<0>(v);
+              auto&  y1 = get<1>(v);
+              auto&  y0 = get<2>(v);
+              auto& rhs = get<3>(v);
+              x = 2*y1 - y0 + 4*omega*rhs;
+              auto& r = get<4>(v);
+              r += 2*scale*x;
+            }
+            y0[k] = y1[k];
+            y1[k] = _x[k];
+          }
+        }
+        for (auto k : expansionRange<ORDER>())
+          _x[k] = res[k];
+      }
+
+
+    template<size_t ORDER_OLD,size_t ORDER_NEW, bool TYPE = true>
       void solve_system_mg(const size_t n_smooth_iter, const Vector &u0)
       {
         if (_verbose)
@@ -760,7 +814,11 @@ class ODESolverT
         Real err = 0;
         for (auto iter : range_iterator{n_iter})
         {
-          smoother<ORDER_NEW>(n_smooth_iter, u0);
+          if (TYPE)
+            smoother_OPT<ORDER_NEW>(n_smooth_iter, u0);
+          else
+            smoother_WP<ORDER_NEW>(n_smooth_iter, u0);
+
           {
             using std::get;
 
