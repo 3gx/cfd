@@ -24,6 +24,7 @@ class ExpansionBaseT
     static constexpr auto maxAbsPEV();
 
     static constexpr auto weight(const size_t i);
+    static constexpr auto node(const size_t i);
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j);
 };
@@ -59,6 +60,10 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     static constexpr auto weight(const size_t i) 
     {
       return Real{1};
+    }
+    static constexpr auto node(const size_t i) 
+    {
+      return Real{0.5};
     }
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j)
@@ -107,8 +112,13 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
 
     static constexpr auto weight(const size_t i)  
     { 
-      constexpr Real weight[] = {0.5,0.5};
+      constexpr Real weight[N] = {0.5,0.5};
       return weight[i];
+    }
+    static constexpr auto node(const size_t i)  
+    { 
+      constexpr Real node[N] = {0.211324865405187118,0.788675134594812882};
+      return node[i];
     }
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j)
@@ -157,8 +167,13 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
 
     static constexpr auto weight(const size_t i)  
     { 
-      constexpr Real weight[] = {0.2777777777777778,0.4444444444444444,0.2777777777777778};
+      constexpr Real weight[N] = {0.2777777777777778,0.4444444444444444,0.2777777777777778};
       return weight[i];
+    }
+    static constexpr auto node(const size_t i)  
+    { 
+      constexpr Real node[N] = {0.112701665379258311,0.500000000000000000,0.887298334620741689};
+      return node[i];
     }
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j)
@@ -207,8 +222,13 @@ class ExpansionT<4,T,Real> : public ExpansionBaseT<4,T,Real>
 
     static constexpr auto weight(const size_t i)  
     { 
-      constexpr Real weight[] = {0.17392742256872748,0.32607257743127305,0.3260725774312732,0.17392742256872748};
+      constexpr Real weight[N] = {0.17392742256872748,0.32607257743127305,0.3260725774312732,0.17392742256872748};
       return weight[i];
+    }
+    static constexpr auto node(const size_t i)  
+    { 
+      constexpr Real node[N] = {0.0694318442029737124,0.330009478207571868,0.669990521792428132,0.930568155797026288};
+      return node[i];
     }
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j)
@@ -267,6 +287,7 @@ class ODESolverT
         _rhs[k].resize(_pde.resolution());
         _rhs_pde[k].resize(_pde.resolution());
         std::fill(_x[k].begin(), _x[k].end(), 0);
+        std::fill(_rhs_pde[k].begin(), _rhs_pde[k].end(), 0);
       }
       _err = _err_pre = -1;
       _cfl = _cfl_pre = -1;
@@ -405,13 +426,12 @@ class ODESolverT
               x[k] += weight * _x[l][i];
             }
           }
-          y0[i] = 0;
           for (auto k : expansionRange<ExpansionNew::size()>())
-          {
             _x[k][i] = x[k];
-            y0[i] += ExpansionNew::weight(k)*_rhs_pde[k][i];
-          }
-          y0[i] *= h;
+
+          y0[i] = 0;
+          for (auto l : expansionRange<ExpansionOld::size()>())
+            y0[i] += ExpansionOld::weight(l)*h*_rhs_pde[l][i];
         }
 
         size_t n_iter = 16;
@@ -425,15 +445,14 @@ class ODESolverT
           smoother<ORDER_NEW>(n_smooth_iter, u0);
           {
             using std::get;
-            auto x = _x;
-            rhs<ORDER_NEW>(u0);
 
             /* compute RHS */
+            auto xtmp = _x;
             for (auto k : expansionRange<ExpansionNew::size()>())
             {
-              for (auto v : make_zip_iterator(x[k], u0))
+              for (auto v : make_zip_iterator(xtmp[k], u0))
                 get<0>(v) += get<1>(v);
-              _pde.compute_rhs(_rhs_pde[k], x[k]);
+              _pde.compute_rhs(_rhs_pde[k], xtmp[k]);
             }
           }
           for (auto i : range_iterator{n})
@@ -441,8 +460,8 @@ class ODESolverT
             auto du0 = y0[i];
             decltype(du0) du1 = 0;
             for (auto k : expansionRange<ExpansionNew::size()>())
-              du1 += ExpansionNew::weight(k)*_rhs_pde[k][i];
-            y0[i] = h*du1;
+              du1 += ExpansionNew::weight(k)*h*_rhs_pde[k][i];
+            y0[i] = du1;
 
             const auto aerr = std::abs(du1-du0);
             const auto ym  = std::max(std::abs(u0[i]+du0), std::abs(u0[i]+du1));
@@ -466,18 +485,14 @@ class ODESolverT
     {
       _verbose = verbose;
       using std::get;
-      const auto& u0 = _pde.state();
+      const auto u0 = _pde.state();
       const auto n = u0.size();
 
       const auto h = _pde.dt();
 
       auto n_smooth_iter = static_cast<size_t>(1+3*std::sqrt(_pde.cfl()));
-
-      for (auto i : range_iterator{n})
-      {
-        _x      [0][i] = u0[i];
-        _rhs_pde[0][i] = 0;
-      }
+      if (_verbose)
+        printf(std::cerr, " n_smooth_iter= % \n", n_smooth_iter);
 
       Vector du_ctrl, du_solv;
       du_ctrl.resize(n);  
@@ -485,23 +500,27 @@ class ODESolverT
 
       static_assert(4 == ORDER_MAX, " Order mismatch ");
 
+      if (_verbose)
+        printf(std::cerr, " ---------- 1->2 \n");
       solve_system_mg<2,1>(n_smooth_iter, u0);
+      if (_verbose)
+        printf(std::cerr, " ---------- 2->3 \n");
       solve_system_mg<3,2>(n_smooth_iter, u0);
       for (auto i : range_iterator{n})
       {
         du_ctrl[i] = 0;
         for (auto k : expansionRange<ORDER_MAX-1>())
-          du_ctrl[i] += Expansion<ORDER_MAX-1>::weight(k)*_rhs_pde[k][i];
-        du_ctrl[i] *= h;
+          du_ctrl[i] += Expansion<ORDER_MAX-1>::weight(k)*h*_rhs_pde[k][i];
       }
 
+      if (_verbose)
+        printf(std::cerr, " ---------- 3->4 \n");
       solve_system_mg<4,3>(n_smooth_iter, u0);
       for (auto i : range_iterator{n})
       {
         du_solv[i] = 0;
         for (auto k : expansionRange<ORDER_MAX>())
-          du_solv[i] += Expansion<ORDER_MAX>::weight(k)*_rhs_pde[k][i];
-        du_solv[i] *= h;
+          du_solv[i] += Expansion<ORDER_MAX>::weight(k)*h*_rhs_pde[k][i];
       }
 
 
@@ -540,6 +559,25 @@ class ODESolverT
         const auto p = Real{1}/(Expansion<ORDER_MAX>::size());
         cfl_scale = 0.8*std::pow(1/_err,p);
       }
+      if (_verbose)
+        printf(std::cerr,"cfl_scale= % \n", cfl_scale);
+
+      const auto cfl0 = _pde.get_cfl();
+      const auto cfl1 = cfl0*cfl_scale;
+      _pde.set_cfl(cfl1);
+      
+      for (auto i : range_iterator{n})
+      {
+        constexpr size_t ORDER0 = 1;
+        for (auto k : expansionRange<ORDER0>())
+        {
+          const auto x = cfl1/cfl0 * Expansion<ORDER0>::node(k);
+          _x[k][i] = du_solv[i]*x;
+        }
+        for (auto k : expansionRange<ORDER0>())
+          _rhs_pde[k][i] = 0;
+      }
+
     }
 };
 

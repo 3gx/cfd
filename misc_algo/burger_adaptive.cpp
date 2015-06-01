@@ -85,6 +85,17 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
       constexpr Real weight[] = {0.5,0.5};
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)  
+    { 
+      constexpr Real weight[] = {0.4665063509461097,0.03349364905389034};
+      return weight[i];
+    }
+    static constexpr auto prolongateMatrix0(const size_t i, const size_t j)
+    {
+      constexpr Real matrix[N][N] = 
+      {{1.183012701892219323382,-0.183012701892219323382},{0.683012701892219323382,0.316987298107780676618}};
+      return matrix[i][j];
+    }
     static constexpr auto preconditioner(const size_t i, const size_t j) 
     {
       constexpr Real preconditioner[N][N] = 
@@ -108,6 +119,12 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
     {
       constexpr Real vec[N] = 
       {-0.366025403784438646764,1.366025403784438646764};
+      return vec[i];
+    }
+    static constexpr auto nodeVec(const size_t i)
+    {
+      constexpr Real vec[N] =
+      {0.211324865405187118,0.788675134594812882};
       return vec[i];
     }
 };
@@ -1591,7 +1608,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 4;
+  constexpr auto ORDER = 2;
   using PDE = PDEBurger<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
