@@ -306,6 +306,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
       std::cerr << std::abs(res-fixed_coeff[i])/fixed_coeff[i] << " ";
     }
     std::cerr << std::endl;
+    std::cerr << " ===================================== \n";
 
 
   }
