@@ -247,6 +247,82 @@ class ExpansionT<4,T,Real> : public ExpansionBaseT<4,T,Real>
       }
 };
 template<typename T, typename Real>
+class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
+{
+  protected:
+    static constexpr size_t N = 5;
+    using base_type = ExpansionBaseT<N,T,Real>;
+
+  public:
+    static constexpr auto matrix(const size_t i, const size_t j) 
+    { 
+      constexpr Real matrix[N][N] = 
+      {
+        {11.18330013267037774,3.13131216201181084,-0.758731795980807391,0.239101223353686050,-0.0543147605653389237},
+        {-9.44759960151614989,2.81669986732962226,2.21788633227481812,-0.557122620293797301,0.118357949604667387},
+        {6.42011650355933662,-6.22012045466975167,2.00000000000000000,1.86599528883177949,-0.315991337721364445},
+        {-8.01592078481097030,6.19052235495304182,-7.39311627638238017,2.81669986732962226,1.55003676630984697},
+        {22.4209150259060944,-16.1933902399992350,15.4154432215698509,-19.0856011786573598,11.18330013267037774}
+      };
+      return matrix[i][j]; 
+    }
+    static constexpr auto maxAbsMEV() 
+    {
+      constexpr Real maxAbsMEV{8.6};
+      return maxAbsMEV;
+    }
+    static constexpr auto preconditioner(const size_t i, const size_t j) 
+    {
+      constexpr Real preconditioner[N][N] = 
+      {
+        {0.0592317212640472719,0,0,0,0},
+        {0.128151005670045283,0.119657167624841617,0,0,0},
+        {0.1137762880042246025,0.260004651680641519,0.142222222222222222,0,0},
+        {0.121232436926864147,0.228996054578999877,0.309036559064086645,0.119657167624841617,0},
+        {0.1168753295602285452,0.244908128910495419,0.273190043625801489,0.258884699608759272,0.0592317212640472719}
+      };
+      return preconditioner[i][j];
+    }
+    static constexpr auto maxAbsPEV() 
+    { 
+      constexpr Real maxAbsPEV{0.15};
+      return maxAbsPEV; 
+    }
+
+    static constexpr auto weight(const size_t i)  
+    { 
+      constexpr Real weight[N] =
+      {
+        0.11846344252809503,
+        0.2393143352496833,
+        0.28444444444444444,
+        0.23931433524968349,
+        0.1184634425280951
+      };
+      return weight[i];
+    }
+    static constexpr auto node(const size_t i)  
+    { 
+      constexpr Real node[N] = {0.0469100770306680036,0.230765344947158454,0.500000000000000000,0.769234655052841546,0.953089922969331996};
+      return node[i];
+    }
+    template<size_t ORDER>
+      static constexpr auto prolongate(const size_t i, const size_t j)
+      {
+        static_assert(6==ORDER || 7==ORDER, " Pronlogation order is not supported");
+        if (6==ORDER)
+        {
+          constexpr Real matrix[6][N]={{1.13893085681645019777,-0.21522509329330665173,0.11765878765365128281,-0.057649393219534367543,0.016284842042739538701},{0.174920193735091690440,0.98872192203863736418,-0.237460403881069401988,0.101156921896816548177,-0.027338633789476200814},{-0.072959537243763693175,0.46001867145844468644,0.74790078978113712745,-0.177504436580858772501,0.042544512585040651789},{0.042544512585040651789,-0.177504436580858772501,0.74790078978113712745,0.46001867145844468644,-0.072959537243763693175},{-0.027338633789476200814,0.101156921896816548177,-0.237460403881069401988,0.98872192203863736418,0.174920193735091690440},{0.016284842042739538701,-0.057649393219534367543,0.11765878765365128281,-0.21522509329330665173,1.13893085681645019777}};
+          return matrix[i][j];
+        }
+        else if (7==ORDER)
+        {
+          constexpr Real matrix[7][N]={{1.23293139187926606368,-0.36502898488802090147,0.20433426000800412366,-0.100764511494549110558,0.028527844495299824674},{0.364017066156523892597,0.83590791919108568654,-0.296160457335118513964,0.132610128183963825203,-0.036374656196454890377},{-0.076438912307116058844,0.81669399401294315353,0.345295804642875552215,-0.114700513771969879026,0.0291496274232672321267},{0,0,1.00000000000000000000,0,0},{0.0291496274232672321267,-0.114700513771969879026,0.345295804642875552215,0.81669399401294315353,-0.076438912307116058844},{-0.036374656196454890377,0.132610128183963825203,-0.296160457335118513964,0.83590791919108568654,0.364017066156523892597},{0.028527844495299824674,-0.100764511494549110558,0.20433426000800412366,-0.36502898488802090147,1.23293139187926606368}};
+          return matrix[i][j];
+        }
+      }
+};
+template<typename T, typename Real>
 class ExpansionT<6,T,Real> : public ExpansionBaseT<6,T,Real>
 {
   protected:
@@ -449,7 +525,7 @@ class ODESolverT
       _err = _err_pre = -1;
       _cfl = _cfl_pre = -1;
 
-      const Real tol = 1.0e-10;
+      const Real tol = 1.0e-12;
       _atol = tol;
       _rtol = tol;
     };
@@ -561,6 +637,8 @@ class ODESolverT
     template<size_t ORDER_OLD,size_t ORDER_NEW>
       void solve_system_mg(const size_t n_smooth_iter, const Vector &u0)
       {
+        if (_verbose)
+          printf(std::cerr, " ------ % -> % \n", ORDER_OLD, ORDER_NEW);
         const auto n = u0.size();
         const auto h = _pde.dt();
 
@@ -647,7 +725,7 @@ class ODESolverT
 
       const auto h = _pde.dt();
 
-      auto n_smooth_iter = static_cast<size_t>(1+3*std::sqrt(_pde.cfl()));
+      auto n_smooth_iter = static_cast<size_t>(1+4*std::sqrt(_pde.cfl()));
       if (_verbose)
         printf(std::cerr, " n_smooth_iter= % \n", n_smooth_iter);
 
@@ -656,34 +734,24 @@ class ODESolverT
       du_solv.resize(n);
 
       static_assert(4 == ORDER_MAX || 8 == ORDER_MAX, " Order mismatch ");
-
-      if (_verbose)
-        printf(std::cerr, " ---------- 1->2 \n");
-      solve_system_mg<1,2>(n_smooth_iter, u0);
-
-      if (_verbose)
-        printf(std::cerr, " ---------- 2->3 \n");
-      solve_system_mg<2,3>(n_smooth_iter, u0);
-
       if (4 == ORDER_MAX)
+      {
+        solve_system_mg<1,2>(n_smooth_iter, u0);
+        solve_system_mg<2,3>(n_smooth_iter, u0);
         for (auto i : range_iterator{n})
         {
           du_ctrl[i] = 0;
           for (auto k : expansionRange<ORDER_MAX-1>())
             du_ctrl[i] += Expansion<ORDER_MAX-1>::weight(k)*h*_rhs_pde[k][i];
         }
-
-      if (_verbose)
-        printf(std::cerr, " ---------- 3->4 \n");
-      solve_system_mg<3,4>(n_smooth_iter, u0);
-
-      if (8 == ORDER_MAX)
+        solve_system_mg<3,4>(n_smooth_iter, u0);
+      }
+      else if (8 == ORDER_MAX)
       {
-        if (_verbose)
-          printf(std::cerr, " ---------- 4->6 \n");
-        solve_system_mg<4,6>(n_smooth_iter, u0);
-        if (_verbose)
-          printf(std::cerr, " ---------- 6->7 \n");
+        solve_system_mg<1,2>(n_smooth_iter, u0);
+        solve_system_mg<2,3>(n_smooth_iter, u0);
+        solve_system_mg<3,5>(n_smooth_iter, u0);
+        solve_system_mg<5,6>(n_smooth_iter, u0);
         solve_system_mg<6,7>(n_smooth_iter, u0);
         for (auto i : range_iterator{n})
         {
@@ -691,8 +759,6 @@ class ODESolverT
           for (auto k : expansionRange<ORDER_MAX-1>())
             du_ctrl[i] += Expansion<ORDER_MAX-1>::weight(k)*h*_rhs_pde[k][i];
         }
-        if (_verbose)
-          printf(std::cerr, " ---------- 7->8 \n");
         solve_system_mg<7,8>(n_smooth_iter, u0);
       }
 
