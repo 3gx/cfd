@@ -474,8 +474,9 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
     }
     static constexpr auto weight_half(const size_t i)
     {
-      assert(0);
-      return Real{1};
+      constexpr Real weight[N] =
+      {0.06633292861768417,0.13359576922388383,0.20770188076596852,0.10448979591836771,-0.016786855513409416,0.006256926520754824,-0.0015904455332495793};
+      return weight[i];
     }
     static constexpr auto node(const size_t i)  
     { 
@@ -485,9 +486,14 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
-        static_assert(8==ORDER , " Pronlogation order is not supported");
+        static_assert(N == ORDER || 8==ORDER , " Pronlogation order is not supported");
         if (N == ORDER)
         {
+          constexpr Real matrix[N][N] = 
+          {
+            {1.26456599983916812566,-0.43234534056732839735,0.28195038322772238642,-0.18835192783047360857,0.11616036592589388227,-0.058707057505859117182,0.016727576910876728749},{0.42109278607973913381,0.79921466637368048938,-0.35358713521420274638,0.21611611605426510718,-0.128770565134950087797,0.064061427783256400240,-0.0181272959417882964250},{-0.045835148885397256768,0.91504833621469057431,0.18927447399255919105,-0.091573017089823911897,0.050713212378911497386,-0.024458203653981845121,0.0068303470430417510342},{-0.039817436193590984945,0.231802523127790484963,0.94641623008848683648,-0.204017857142857142857,0.098371864929076236398,-0.045095555299286550475,0.0123402304903811204335},{0.028074588343309993459,-0.128950219890518757533,0.83865263648751860443,0.35150041090653656033,-0.129770111565080330169,0.055181913285116808573,-0.0146892175668828790900},{0.0236298249953582552825,-0.099063291911618084239,0.34901105360735571686,0.85515214425013626248,-0.180422155391203671529,0.069658396009964208262,-0.0179659715599926871149},{0.0048012954939119962954,-0.019389837104433031921,0.058094207358141521295,0.99418078765695046114,-0.051239127713317722200,0.0181032418161813167151,-0.0045505675074345413282}
+          };
+          return matrix[i][j];
           return static_cast<Real>(i==j);
         }
         else if (8==ORDER)
@@ -874,7 +880,7 @@ class ODESolverT
       du_ctrl.resize(n);  
       du_solv.resize(n);
 
-      static_assert(4 == ORDER_MAX || 8 == ORDER_MAX, " Order mismatch ");
+      static_assert(4 == ORDER_MAX || 7 == ORDER_MAX || 8 == ORDER_MAX, " Order mismatch ");
       if (4 == ORDER_MAX)
       {
         solve_system_mg<1,2>(n_smooth_iter, u0);
@@ -886,6 +892,20 @@ class ODESolverT
             du_ctrl[i] += Expansion<ORDER_MAX-1>::weight(k)*h*_rhs_pde[k][i];
         }
         solve_system_mg<3,4>(n_smooth_iter, u0);
+      }
+      else if (7 == ORDER_MAX)
+      {
+        solve_system_mg<1,2>(n_smooth_iter, u0);
+        solve_system_mg<2,3>(n_smooth_iter, u0);
+        solve_system_mg<3,5>(n_smooth_iter, u0);
+        solve_system_mg<5,6>(n_smooth_iter, u0);
+        for (auto i : range_iterator{n})
+        {
+          du_ctrl[i] = 0;
+          for (auto k : expansionRange<ORDER_MAX-1>())
+            du_ctrl[i] += Expansion<ORDER_MAX-1>::weight(k)*h*_rhs_pde[k][i];
+        }
+        solve_system_mg<6,7>(n_smooth_iter, u0);
       }
       else if (8 == ORDER_MAX)
       {
@@ -1164,7 +1184,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 4;
+  constexpr auto ORDER = 7;
   using PDE = PDEBurger<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
