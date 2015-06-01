@@ -341,7 +341,7 @@ auto maximizeH(const size_t p, const size_t s, const real_type beta_p, const std
 
 //  const auto max_iter = 1280;
   const auto max_steps = 1000;
-  const auto tol_bisect = 0.001;
+  const auto tol_bisect = 0.01;
 
 //  printf(std::cerr, "max_iter= % \n", max_iter);
   printf(std::cerr, "max_step= % \n", max_steps);
@@ -475,7 +475,7 @@ void maximizeHdriver()
   beta_p = 1.0;
 #else
   beta_p = 0.3;
-  beta   = 1;
+  beta   = 1.0;
 #endif
 
 
