@@ -61,7 +61,7 @@ static auto scaled_chebyshev_basis(
 }
 
 template<typename real_type, typename complex_type>
-auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space, const bool verbose = true, const bool verbose_exception = true, const bool sanity_check = true)
+auto optimize(const size_t p, const size_t s, const real_type beta_p, const real_type h_scale, const std::vector<complex_type> &ev_space, const bool verbose = true, const bool verbose_exception = true, const bool sanity_check = true)
 {
   auto h_space = ev_space;
   real_type h_min = 0;
@@ -72,7 +72,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     using namespace std::literals;
     const auto h0 = h;
     h = h0*h_scale;
-    h = h0.real()*h_scale + 1i*h0.imag()*std::sqrt(h_scale);
+    h = h0.real()*h_scale + 1i*h0.imag()*std::pow(h_scale,beta_p);
     h_min = std::min(h_min, h.real());
   }
   assert(h_min < h_max);
@@ -330,7 +330,7 @@ std::vector<real_type> linspace(const real_type a, const real_type b, const size
 }
 
 template<typename real_type, typename complex_type>
-auto maximizeH(const size_t p, const size_t s, const std::vector<complex_type>& ev_space)
+auto maximizeH(const size_t p, const size_t s, const real_type beta_p, const std::vector<complex_type>& ev_space)
 {
 
   real_type h_min = 0; 
@@ -364,7 +364,7 @@ auto maximizeH(const size_t p, const size_t s, const std::vector<complex_type>& 
       h = 0.25*h_max + 0.75*h_min;
     }
 
-    const auto& res = optimize(p, s, h, ev_space, false, false,false);
+    const auto& res = optimize(p, s, beta_p, h, ev_space, false, false,false);
     printf(std::cerr, "step= %  h_min= %  h_max= %  -- h= %  val= % \n",
         step, h_min, h_max, h, get<1>(res));
 
@@ -381,7 +381,7 @@ auto maximizeH(const size_t p, const size_t s, const std::vector<complex_type>& 
   }
 
   assert(converged);
-  const auto& res = optimize(p, s, h, ev_space);
+  const auto& res = optimize(p, s, beta_p, h, ev_space);
   printf(std::cerr, "step= %  h_min= %  h_max= %  -- h= %  val= % \n",
       -1, h_min, h_max, h, get<1>(res));
 
@@ -398,6 +398,7 @@ void test()
 
   const real_type kappa  = 1;
   const real_type beta   = 0.5;
+  const real_type beta_p = 0.25;
 
 
   const auto imag_lim = std::abs(beta);
@@ -419,7 +420,7 @@ void test()
   real_type h = 35.58;
 
 
-  const auto res = std::get<0>(optimize(p, s, h, ev_space));
+  const auto res = std::get<0>(optimize(p, s, beta_p, h, ev_space));
   std::cout << "Coefficients: \n";
   for (auto & x : res)
   {
@@ -428,7 +429,7 @@ void test()
   std::cout << std::endl;
   {
     std::cerr << " ----------- \n";
-    const auto res = std::get<0>(optimize(p, s, h, ev_space));
+    const auto res = std::get<0>(optimize(p, s, beta_p, h, ev_space));
     std::cout << "Coefficients: \n";
     for (auto & x : res)
     {
@@ -450,12 +451,16 @@ void maximizeHdriver()
   size_t npts = 1000;
   real_type kappa  = 1;
   real_type beta   = 1; //1/10;
+  real_type beta_p = 0.25;
   beta = 1.0/10;
   beta = 1.0e-14;
-  beta= 1;
+  beta= 0.1;
 
+  beta_p = 0.25;
   s = 100;
 //  s = std::min(s,std::max(p,static_cast<int>(std::sqrt(1.0/beta/0.15))+1));
+//
+  beta = 1.0;
 
 
 #if 0
@@ -482,9 +487,10 @@ void maximizeHdriver()
   printf(std::cerr, "s= % \n", s);
   printf(std::cerr, "kappa= % \n", kappa);
   printf(std::cerr, "beta= % \n",  beta);
+  printf(std::cerr, "beta_p= % \n",  beta_p);
 
 
-  const auto res = maximizeH<real_type,complex_type>(p,s,ev_space);
+  const auto res = maximizeH<real_type,complex_type>(p,s,beta_p,ev_space);
 
 
   std::cout << "coeff = { \n";
@@ -497,8 +503,8 @@ void maximizeHdriver()
   std::cout << poly.back()  << " };\n";
   std::cout << "h= " << h << std::endl;
   std::cout << "h/s^2= " << h/(s*s) << std::endl;
-  std::cout << "h_imag= " << std::sqrt(h)*beta << std::endl;
-  std::cout << "h_imag/s= " << std::sqrt(h)*beta/s << std::endl;
+  std::cout << "h_imag= " << std::pow(h,beta_p)*beta << std::endl;
+  std::cout << "h_imag/s= " << std::pow(h,beta_p)*beta/s << std::endl;
 }
 
 
