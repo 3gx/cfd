@@ -18,7 +18,7 @@ static auto scaled_chebyshev_basis(
     const std::vector<complex_type>& z)
 {
   const auto m1 = 2/(zmax - zmin);
-  const auto m0 = -(1 + zmin*m1);
+  const auto m0 = -(1 + 0.000 + zmin*m1);
 
   std::vector<real_type> _b((s+2)*(p+1),0);
   {
@@ -447,12 +447,14 @@ void maximizeHdriver()
   int s = 30;
   int p = 8;
 
-  size_t npts = 10000;
+  size_t npts = 1000;
   real_type kappa  = 1;
-  real_type beta   = 0.001; //1/10;
+  real_type beta   = 0.01; //1/10;
   beta = 1.0/10;
+  beta = 1.0e-14;
+  beta= 0.009;
 
-  s = 300;
+  s = 30;
   s = std::min(s,std::max(p,static_cast<int>(std::sqrt(1.0/beta/0.15))+1));
 
 
