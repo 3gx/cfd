@@ -24,6 +24,7 @@ class ExpansionBaseT
     static constexpr auto maxAbsPEV();
 
     static constexpr auto weight(const size_t i);
+    static constexpr auto weight_half(const size_t i);
     static constexpr auto node(const size_t i);
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j);
@@ -61,6 +62,11 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
     {
       return Real{1};
     }
+    static constexpr auto weight_half(const size_t i)
+    {
+      assert(0);
+      return Real{1};
+    }
     static constexpr auto node(const size_t i) 
     {
       return Real{0.5};
@@ -69,7 +75,11 @@ class ExpansionT<1,T,Real> : public ExpansionBaseT<1,T,Real>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
         static_assert(2 == ORDER || 3 == ORDER, " Pronlogation order is not supported");
-        if (2 == ORDER)
+        if (N == ORDER)
+        {
+          return static_cast<Real>(i==j);
+        }
+        else if (2 == ORDER)
         {
           constexpr Real matrix[2][N]={{1},{1}};
           return matrix[i][j];
@@ -115,6 +125,11 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
       constexpr Real weight[N] = {0.5,0.5};
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)
+    {
+      assert(0);
+      return Real{1};
+    }
     static constexpr auto node(const size_t i)  
     { 
       constexpr Real node[N] = {0.211324865405187118,0.788675134594812882};
@@ -124,7 +139,11 @@ class ExpansionT<2,T,Real> : public ExpansionBaseT<2,T,Real>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
         static_assert(3 == ORDER || 4 == ORDER, " Pronlogation order is not supported");
-        if (3 == ORDER)
+        if (N == ORDER)
+        {
+          return static_cast<Real>(i==j);
+        }
+        else if (3 == ORDER)
         {
           constexpr Real matrix[3][N]={{1.170820393249936908923,-0.170820393249936908923},{0.500000000000000000000,0.500000000000000000000},{-0.170820393249936908923,1.170820393249936908923}};
           return matrix[i][j];
@@ -170,6 +189,11 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       constexpr Real weight[N] = {0.2777777777777778,0.4444444444444444,0.2777777777777778};
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)
+    {
+      assert(0);
+      return Real{1};
+    }
     static constexpr auto node(const size_t i)  
     { 
       constexpr Real node[N] = {0.112701665379258311,0.500000000000000000,0.887298334620741689};
@@ -179,7 +203,11 @@ class ExpansionT<3,T,Real> : public ExpansionBaseT<3,T,Real>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
         static_assert(4 == ORDER || 5 == ORDER, " Pronlogation order is not supported");
-        if (4 == ORDER)
+        if (N == ORDER)
+        {
+          return static_cast<Real>(i==j);
+        }
+        else if (4 == ORDER)
         {
           constexpr Real matrix[4][N]={{1.173824221557882097734,-0.235926245243015346149,0.062102023685133248415},{0.315779411635934322717,0.807354816671586774721,-0.123134228307521097438},{-0.123134228307521097438,0.807354816671586774721,0.315779411635934322717},{0.062102023685133248415,-0.235926245243015346149,1.173824221557882097734}};
           return matrix[i][j];
@@ -225,6 +253,12 @@ class ExpansionT<4,T,Real> : public ExpansionBaseT<4,T,Real>
       constexpr Real weight[N] = {0.17392742256872748,0.32607257743127305,0.3260725774312732,0.17392742256872748};
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)  
+    { 
+      constexpr Real weight[] =
+      {0.1761059379386620,0.3049159394838622,0.02115663794741092,-0.002178515369935093};
+      return weight[i];
+    }
     static constexpr auto node(const size_t i)  
     { 
       constexpr Real node[N] = {0.0694318442029737124,0.330009478207571868,0.669990521792428132,0.930568155797026288};
@@ -233,8 +267,17 @@ class ExpansionT<4,T,Real> : public ExpansionBaseT<4,T,Real>
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
-        static_assert(5==ORDER || 6==ORDER, " Pronlogation order is not supported");
-        if (5==ORDER)
+        static_assert(N==ORDER||5==ORDER || 6==ORDER, " Pronlogation order is not supported");
+        if (N == ORDER)
+        {
+          constexpr Real matrix[N][N] = 
+          {
+            {1.24706002059021446916,-0.37134646293290967052,0.172612312282314955982,-0.048325869939619754622},{0.473360762073713481246,0.69446086758875954880,-0.226915961206226974307,0.059094331543753944264},{-0.007381463003215998440,0.99585142579386540219,0.014821400117421237263,-0.0032913629080706410102},{-0.095609594648018673259,0.70865608285499706932,0.468295800089416859158,-0.081342288296395255222}
+          };
+          return matrix[i][j];
+          return static_cast<Real>(i==j);
+        }
+        else if (5==ORDER)
         {
           constexpr Real matrix[5][N]={{1.15665233447960049451,-0.23306848457062838863,0.105895713739470568226,-0.029479563648442674104},{0.226361866637914228271,0.93205208186650974176,-0.210599724002141635027,0.052185775497717664992},{-0.092326598440728820911,0.592326598440728820911,0.592326598440728820911,-0.092326598440728820911},{0.052185775497717664992,-0.210599724002141635027,0.93205208186650974176,0.226361866637914228271},{-0.029479563648442674104,0.105895713739470568226,-0.23306848457062838863,1.15665233447960049451}};
           return matrix[i][j];
@@ -301,6 +344,11 @@ class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
       };
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)
+    {
+      assert(0);
+      return Real{1};
+    }
     static constexpr auto node(const size_t i)  
     { 
       constexpr Real node[N] = {0.0469100770306680036,0.230765344947158454,0.500000000000000000,0.769234655052841546,0.953089922969331996};
@@ -310,7 +358,11 @@ class ExpansionT<5,T,Real> : public ExpansionBaseT<5,T,Real>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
         static_assert(6==ORDER || 7==ORDER, " Pronlogation order is not supported");
-        if (6==ORDER)
+        if (N == ORDER)
+        {
+          return static_cast<Real>(i==j);
+        }
+        else if (6==ORDER)
         {
           constexpr Real matrix[6][N]={{1.13893085681645019777,-0.21522509329330665173,0.11765878765365128281,-0.057649393219534367543,0.016284842042739538701},{0.174920193735091690440,0.98872192203863736418,-0.237460403881069401988,0.101156921896816548177,-0.027338633789476200814},{-0.072959537243763693175,0.46001867145844468644,0.74790078978113712745,-0.177504436580858772501,0.042544512585040651789},{0.042544512585040651789,-0.177504436580858772501,0.74790078978113712745,0.46001867145844468644,-0.072959537243763693175},{-0.027338633789476200814,0.101156921896816548177,-0.237460403881069401988,0.98872192203863736418,0.174920193735091690440},{0.016284842042739538701,-0.057649393219534367543,0.11765878765365128281,-0.21522509329330665173,1.13893085681645019777}};
           return matrix[i][j];
@@ -356,6 +408,11 @@ class ExpansionT<6,T,Real> : public ExpansionBaseT<6,T,Real>
       constexpr Real weight[N] = {0.08566224618958558,0.18038078652406941,0.23395696728634574,0.2339569672863455,0.1803807865240694,0.0856622461895856};
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)
+    {
+      assert(0);
+      return Real{1};
+    }
     static constexpr auto node(const size_t i)  
     { 
       constexpr Real node[N] = {0.0337652428984239861,0.169395306766867743,0.380690406958401546,0.619309593041598454,0.830604693233132257,0.966234757101576014};
@@ -365,7 +422,11 @@ class ExpansionT<6,T,Real> : public ExpansionBaseT<6,T,Real>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
         static_assert(7 == ORDER || 8==ORDER , " Pronlogation order is not supported");
-        if (8==ORDER)
+        if (N == ORDER)
+        {
+          return static_cast<Real>(i==j);
+        }
+        else if (8==ORDER)
         {
           constexpr Real matrix[8][N]={{1.2123234054623749459,-0.3398325104596944063,0.20762458113598606564,-0.12497742976428808870,0.06268104496578014909,-0.017819091340158665590},{0.30114498455171639951,0.90981981467510605944,-0.32557494616630780944,0.175493801603982138991,-0.084535006330491990878,0.023651351665995202375},{-0.078567615249208809356,0.71012814196288668962,0.49505923000084064385,-0.185878090697565371951,0.081187027842311063063,-0.0219286938592642152157},{0.016010396527596768376,-0.075640250077693814488,0.96543610387910536064,0.126233070636759027634,-0.042786073038554527321,0.0107467520727871851641},{0.0107467520727871851641,-0.042786073038554527321,0.126233070636759027634,0.96543610387910536064,-0.075640250077693814488,0.016010396527596768376},{-0.021928693859264215216,0.08118702784231106306,-0.18587809069756537195,0.49505923000084064384,0.71012814196288668962,-0.07856761524920880936},{0.023651351665995202376,-0.08453500633049199088,0.17549380160398213899,-0.32557494616630780944,0.9098198146751060594,0.30114498455171639951},{-0.017819091340158665590,0.062681044965780149092,-0.12497742976428808870,0.20762458113598606563,-0.33983251045969440634,1.21232340546237494591}};
           return matrix[i][j];
@@ -411,6 +472,11 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
       constexpr Real weight[N] = {0.06474248308443512, 0.1398526957446387, 0.19091502525255918, 0.20897959183673512, 0.1909150252525592, 0.13985269574463888, 0.06474248308443513};
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)
+    {
+      assert(0);
+      return Real{1};
+    }
     static constexpr auto node(const size_t i)  
     { 
       constexpr Real node[N] = {0.0254460438286207377,0.129234407200302780,0.297077424311301417,0.500000000000000000,0.702922575688698583,0.870765592799697220,0.974553956171379262};
@@ -420,7 +486,11 @@ class ExpansionT<7,T,Real> : public ExpansionBaseT<7,T,Real>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
         static_assert(8==ORDER , " Pronlogation order is not supported");
-        if (8==ORDER)
+        if (N == ORDER)
+        {
+          return static_cast<Real>(i==j);
+        }
+        else if (8==ORDER)
         {
           constexpr Real matrix[8][N]={{1.1109764149740766555,-0.1777969288609955349,0.1116515579714447392,-0.07379620075760972588,0.04531368772400935322,-0.02285470615610564788,0.006506175105180160662},{0.119110236177449917140,1.03107393717281695193,-0.23151265182871470898,0.130013891533531084042,-0.075242583452459995331,0.036957904549612781124,-0.0104007341522360299254},{-0.050802380548726304847,0.31191120843947840758,0.89591714590041723546,-0.23357673335979253852,0.115130395585113660308,-0.053172105475361454533,0.0145924694588709945482},{0.030201104248416676361,-0.129725199899249985583,0.51809795025873322081,0.71911630754113613762,-0.195544510376441069161,0.078272281438027707195,-0.0204179332106226872421},{-0.0204179332106226872421,0.078272281438027707195,-0.195544510376441069161,0.71911630754113613762,0.51809795025873322081,-0.129725199899249985583,0.030201104248416676361},{0.014592469458870994548,-0.05317210547536145453,0.11513039558511366031,-0.23357673335979253852,0.8959171459004172355,0.31191120843947840758,-0.05080238054872630485},{-0.010400734152236029925,0.03695790454961278112,-0.07524258345245999533,0.13001389153353108404,-0.23151265182871470898,1.0310739371728169519,0.11911023617744991714},{0.006506175105180160662,-0.022854706156105647880,0.045313687724009353217,-0.07379620075760972588,0.11165155797144473924,-0.17779692886099553488,1.11097641497407665552}};
           return matrix[i][j];
@@ -461,23 +531,27 @@ class ExpansionT<8,T,Real> : public ExpansionBaseT<8,T,Real>
       constexpr Real weight[N] = {0.050614268145188344,0.11119051722668769,0.15685332293894347,0.18134189168918116,0.18134189168918102,0.15685332293894338,0.11119051722668757,0.05061426814518831};
       return weight[i];
     }
+    static constexpr auto weight_half(const size_t i)  
+    { 
+      constexpr Real weight[] =
+      {0.05073647053793456,0.1106371236279321,0.1587799218056337,0.1697302482589022,0.01161164343027877,-0.001926598866690093,0.000553393598755149,-0.0001222023927464280};
+      return weight[i];
+    }
     static constexpr auto node(const size_t i)  
     { 
       constexpr Real node[N] = {0.0337652428984239861,0.169395306766867743,0.380690406958401546,0.619309593041598454,0.830604693233132257,0.966234757101576014};
       return node[i];
     }
-#if 0
     template<size_t ORDER>
       static constexpr auto prolongate(const size_t i, const size_t j)
       {
-        static_assert(8==ORDER , " Pronlogation order is not supported");
-        if (8==ORDER)
+        static_assert(N==ORDER , " Pronlogation order is not supported");
+        if (N==ORDER)
         {
-          constexpr Real matrix[8][N]={{1.2123234054623749459,-0.3398325104596944063,0.20762458113598606564,-0.12497742976428808870,0.06268104496578014909,-0.017819091340158665590},{0.30114498455171639951,0.90981981467510605944,-0.32557494616630780944,0.175493801603982138991,-0.084535006330491990878,0.023651351665995202375},{-0.078567615249208809356,0.71012814196288668962,0.49505923000084064385,-0.185878090697565371951,0.081187027842311063063,-0.0219286938592642152157},{0.016010396527596768376,-0.075640250077693814488,0.96543610387910536064,0.126233070636759027634,-0.042786073038554527321,0.0107467520727871851641},{0.0107467520727871851641,-0.042786073038554527321,0.126233070636759027634,0.96543610387910536064,-0.075640250077693814488,0.016010396527596768376},{-0.021928693859264215216,0.08118702784231106306,-0.18587809069756537195,0.49505923000084064384,0.71012814196288668962,-0.07856761524920880936},{0.023651351665995202376,-0.08453500633049199088,0.17549380160398213899,-0.32557494616630780944,0.9098198146751060594,0.30114498455171639951},{-0.017819091340158665590,0.062681044965780149092,-0.12497742976428808870,0.20762458113598606563,-0.33983251045969440634,1.21232340546237494591}};
+          constexpr Real matrix[N][N]={{1.2123234054623749459,-0.3398325104596944063,0.20762458113598606564,-0.12497742976428808870,0.06268104496578014909,-0.017819091340158665590},{0.30114498455171639951,0.90981981467510605944,-0.32557494616630780944,0.175493801603982138991,-0.084535006330491990878,0.023651351665995202375},{-0.078567615249208809356,0.71012814196288668962,0.49505923000084064385,-0.185878090697565371951,0.081187027842311063063,-0.0219286938592642152157},{0.016010396527596768376,-0.075640250077693814488,0.96543610387910536064,0.126233070636759027634,-0.042786073038554527321,0.0107467520727871851641},{0.0107467520727871851641,-0.042786073038554527321,0.126233070636759027634,0.96543610387910536064,-0.075640250077693814488,0.016010396527596768376},{-0.021928693859264215216,0.08118702784231106306,-0.18587809069756537195,0.49505923000084064384,0.71012814196288668962,-0.07856761524920880936},{0.023651351665995202376,-0.08453500633049199088,0.17549380160398213899,-0.32557494616630780944,0.9098198146751060594,0.30114498455171639951},{-0.017819091340158665590,0.062681044965780149092,-0.12497742976428808870,0.20762458113598606563,-0.33983251045969440634,1.21232340546237494591}};
           return matrix[i][j];
         }
       }
-#endif
 };
 
 template<size_t ORDER_MAX, typename PDE>
@@ -665,8 +739,17 @@ class ODESolverT
             _x[k][i] = x[k];
 
           y0[i] = 0;
-          for (auto l : expansionRange<ExpansionOld::size()>())
-            y0[i] += ExpansionOld::weight(l)*h*_rhs_pde[l][i];
+          if (ORDER_OLD != ORDER_NEW)
+          {
+            for (auto l : expansionRange<ExpansionOld::size()>())
+              y0[i] += ExpansionOld::weight(l)*h*_rhs_pde[l][i];
+          }
+          else
+          {
+            for (auto k : expansionRange<ExpansionNew::size()>())
+              y0[i] += ExpansionNew::weight_half(k)*2.0*h*_rhs_pde[k][i];
+          }
+
         }
 
         size_t n_iter = 16;
@@ -768,6 +851,31 @@ class ODESolverT
         for (auto k : expansionRange<ORDER_MAX>())
           du_solv[i] += Expansion<ORDER_MAX>::weight(k)*h*_rhs_pde[k][i];
       }
+      auto du0 = du_solv;
+
+      if (1)
+      {
+        for (auto i : range_iterator{n})
+        {
+          du_solv[i] = 0;
+          for (auto k : expansionRange<ORDER_MAX>())
+            du_solv[i] += Expansion<ORDER_MAX>::weight_half(k)*h*_rhs_pde[k][i];
+        }
+
+        const auto cfl0 = _pde.get_cfl();
+        _pde.set_cfl(0.5*cfl0);
+        solve_system_mg<ORDER_MAX,ORDER_MAX>(n_smooth_iter,u0);
+        const auto h = _pde.dt();
+        for (auto i : range_iterator{n})
+        {
+          du_ctrl[i] = 0;
+          for (auto k : expansionRange<ORDER_MAX>())
+            du_ctrl[i] += Expansion<ORDER_MAX>::weight(k)*h*_rhs_pde[k][i];
+        }
+
+        _pde.set_cfl(cfl0);
+
+      }
 
 
       Real err = 0;
@@ -787,7 +895,7 @@ class ODESolverT
       _cfl_pre  = _cfl;
       _cfl      = _pde.get_cfl();
 
-      _pde.update(du_solv);
+      _pde.update(du0);
       _time += _pde.dt();
 
       if (_verbose)
@@ -998,7 +1106,7 @@ int main(int argc, char * argv[])
   
 
 
-  constexpr auto ORDER = 8;
+  constexpr auto ORDER = 4;
   using PDE = PDEBurger<Real>;
   using Solver = ODESolverT<ORDER,PDE>;
 
