@@ -468,7 +468,7 @@ void maximizeHdriver()
 
   s      = 110;
   real_type zeta = 1.0/std::sqrt(0.15);
-  real_type stiff_kappa = 1000;
+  real_type stiff_kappa = 10000;
   s = std::max(p,static_cast<int>(zeta*std::sqrt(stiff_kappa) + 1));
 #if 1 /* basic */
   beta = 1.0/stiff_kappa;
