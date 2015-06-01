@@ -61,7 +61,7 @@ static auto scaled_chebyshev_basis(
 }
 
 template<typename real_type, typename complex_type>
-auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space, const bool verbose = true, const bool verbose_exception = true)
+auto optimize(const size_t p, const size_t s, const real_type h_scale, const std::vector<complex_type> &ev_space, const bool verbose = true, const bool verbose_exception = true, const bool sanity_check = true)
 {
   auto h_space = ev_space;
   real_type h_min = 0;
@@ -279,6 +279,37 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     printf(std::cerr, "minf= % \n", minf);
   }
 
+  if (sanity_check)
+  {
+    const auto &poly = x;
+    const auto &bmat = get<0>(basis);
+    std::cerr << "fixed_coeff_comp= " << std::setprecision(16);
+    for (int i = 0; i < p+1; i++)
+    {
+      const auto res = std::inner_product(poly.begin(), poly.end()-1, bmat.begin() + i*(s+2), 0.0);
+      std::cerr << res << " ";
+    }
+    std::cerr << std::endl;
+    
+    std::cerr << "fixed_coeff_gold= " ;
+    for (int i = 0; i < p+1; i++)
+    {
+      const auto res = fixed_coeff[i];
+      std::cerr << res << " ";
+    }
+    std::cerr << std::endl;
+    
+    std::cerr << "fixed_coeff_diff= " ;
+    for (int i = 0; i < p+1; i++)
+    {
+      const auto res = std::inner_product(poly.begin(), poly.end()-1, bmat.begin() + i*(s+2), 0.0);
+      std::cerr << std::abs(res-fixed_coeff[i])/fixed_coeff[i] << " ";
+    }
+    std::cerr << std::endl;
+
+
+  }
+
   return std::make_tuple(
       std::vector<real_type>(x.begin(), x.end()-1),
       minf);
@@ -329,7 +360,7 @@ auto maximizeH(const size_t p, const size_t s, const std::vector<complex_type>& 
       h = 0.25*h_max + 0.75*h_min;
     }
 
-    const auto& res = optimize(p, s, h, ev_space, false, false);
+    const auto& res = optimize(p, s, h, ev_space, false, false,false);
     printf(std::cerr, "step= %  h_min= %  h_max= %  -- h= %  val= % \n",
         step, h_min, h_max, h, get<1>(res));
 
@@ -412,11 +443,11 @@ void maximizeHdriver()
   int s = 30;
   int p = 8;
 
-  size_t npts = 10000;
+  size_t npts = 1000;
   real_type kappa  = 1;
-  real_type beta   = 0.01;
+  real_type beta   = 0.00;
 
-  s = 300;
+  s = 30;
 
 #if 0
   beta = 0.5;
