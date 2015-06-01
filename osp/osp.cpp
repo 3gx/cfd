@@ -69,7 +69,10 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
 
   for (auto& h : h_space)
   {
-    h *= h_scale;
+    using namespace std::literals;
+    const auto h0 = h;
+    h = h0*h_scale;
+//    h = h0.real()*h_scale + 1i*h0.imag();
     h_min = std::min(h_min, h.real());
   }
   assert(h_min < h_max);
@@ -444,11 +447,14 @@ void maximizeHdriver()
   int s = 30;
   int p = 8;
 
-  size_t npts = 1000;
+  size_t npts = 10000;
   real_type kappa  = 1;
-  real_type beta   = 0.00;
+  real_type beta   = 0.001; //1/10;
+  beta = 1.0/10;
 
-  s = 30;
+  s = 300;
+  s = std::min(s,std::max(p,static_cast<int>(std::sqrt(1.0/beta/0.15))+1));
+
 
 #if 0
   beta = 0.5;
