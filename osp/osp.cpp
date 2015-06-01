@@ -72,7 +72,7 @@ auto optimize(const size_t p, const size_t s, const real_type h_scale, const std
     using namespace std::literals;
     const auto h0 = h;
     h = h0*h_scale;
-//    h = h0.real()*h_scale + 1i*h0.imag();
+    h = h0.real()*h_scale + 1i*h0.imag()*std::sqrt(h_scale);
     h_min = std::min(h_min, h.real());
   }
   assert(h_min < h_max);
@@ -449,13 +449,13 @@ void maximizeHdriver()
 
   size_t npts = 1000;
   real_type kappa  = 1;
-  real_type beta   = 0.01; //1/10;
+  real_type beta   = 1; //1/10;
   beta = 1.0/10;
   beta = 1.0e-14;
-  beta= 0.009;
+  beta= 1;
 
-  s = 30;
-  s = std::min(s,std::max(p,static_cast<int>(std::sqrt(1.0/beta/0.15))+1));
+  s = 100;
+//  s = std::min(s,std::max(p,static_cast<int>(std::sqrt(1.0/beta/0.15))+1));
 
 
 #if 0
@@ -497,6 +497,8 @@ void maximizeHdriver()
   std::cout << poly.back()  << " };\n";
   std::cout << "h= " << h << std::endl;
   std::cout << "h/s^2= " << h/(s*s) << std::endl;
+  std::cout << "h_imag= " << std::sqrt(h)*beta << std::endl;
+  std::cout << "h_imag/s= " << std::sqrt(h)*beta/s << std::endl;
 }
 
 
