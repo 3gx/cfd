@@ -246,7 +246,27 @@ dT_{p}=dT_{h}=\beta^{\frac{1}{1-\gamma}}\kappa^{\epsilon}dt_{h}
 
 \end_inset
 
- Corollary 
+ Corollary: for 
+\begin_inset Formula $\epsilon=0$
+\end_inset
+
+, we obtains 
+\begin_inset Formula 
+\[
+s=\sqrt{\beta^{\frac{1}{1-\gamma}}\frac{\kappa}{\alpha(s)}}
+\]
+
+\end_inset
+
+ 
+\begin_inset Formula 
+\[
+dT_{p}=dT_{h}=\beta^{\frac{1}{1-\gamma}}dt_{h}
+\]
+
+\end_inset
+
+ Since 
 \end_layout
 
 \begin_layout Bibliography
