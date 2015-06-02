@@ -483,8 +483,8 @@ void maximizeHdriver()
   real_type epsilon = 0.2;
   real_type gamma = 0.5;
   stiff_kappa = 1000;
-
   gamma = 0.5;
+
 
   beta_p = gamma;
   beta = 1.0*std::pow(stiff_kappa, -gamma+epsilon*(1-gamma));
