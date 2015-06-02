@@ -1,0 +1,224 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize letterpaper
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Optimal stability polynomial - integrator
+\end_layout
+
+\begin_layout Abstract
+Just list of formulas not to forget
+\end_layout
+
+\begin_layout Section
+Building stability polynomials
+\end_layout
+
+\begin_layout Subsection
+Optimal time-stepping
+\end_layout
+
+\begin_layout Standard
+We consider the following super-time-stepping scheme with the following
+ constraints
+\begin_inset Formula 
+\[
+dT_{p}=h_{p}(s)\,dt_{p}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+dT_{h}=\beta\kappa^{-\epsilon}h_{p}^{\gamma}(s)\,dt_{h}
+\]
+
+\end_inset
+
+ where 
+\begin_inset Formula 
+\[
+\kappa=\frac{dt_{h}}{dt_{p}}\gg1
+\]
+
+\end_inset
+
+ is a stiffness parameter, which describe by how much parabolic timestep
+ (
+\begin_inset Formula $dt_{p}$
+\end_inset
+
+) is smaller than hyperbolic step (
+\begin_inset Formula $dt_{h}$
+\end_inset
+
+).
+ 
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "faleichik01"
+
+\end_inset
+
+Faleichik, B.
+ , Bondar, I.
+ and Byl, V., 
+\begin_inset Quotes eld
+\end_inset
+
+Generalized Picard iterations: A class of iterated Runge-Kutta methods for
+ stiff problems
+\begin_inset Quotes erd
+\end_inset
+
+, Journal of Computational and Applied Mathematics 262 (2014) 37-50
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "alexiadisRKC1"
+
+\end_inset
+
+Alexiades, V., Amiez, G., Gremaud, P.
+ A., 
+\begin_inset Quotes eld
+\end_inset
+
+Super-time-stepping acceleration of explicit schemes for parabolic problems
+\begin_inset Quotes erd
+\end_inset
+
+, Commun.
+ Numer.
+ Methods Eng.
+ 12 (1) (1996) 31-42
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "balsaraRKL1"
+
+\end_inset
+
+Meyer, C.
+ D, Balsara, D.
+ S., Aslam, T.
+ D., 
+\begin_inset Quotes eld
+\end_inset
+
+A stabilized Runge-Kutta-Legendre method for explicit super-time-stepping
+ of parabolic and mixed equations
+\begin_inset Quotes erd
+\end_inset
+
+, Journal of Computational Physics 257 (2014) 594-626
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "balsaraRKL2"
+
+\end_inset
+
+Meyer, C.
+ D, Balsara, D.
+ S., Aslam, T.
+ D.,
+\begin_inset Quotes erd
+\end_inset
+
+A second-order accurate Super TimeStepping formulation for anisotropic thermal
+ conduction
+\begin_inset Quotes erd
+\end_inset
+
+, Mon.
+ Not.
+ R.
+ Astron.
+ Soc.
+ 442, 2102-2115 (2012)
+\end_layout
+
+\end_body
+\end_document
