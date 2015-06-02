@@ -483,7 +483,7 @@ void maximizeHdriver()
   real_type epsilon = 0.2;
   real_type gamma = 1.0;
   real_type _beta = 1;
-  stiff_kappa = 200;
+  stiff_kappa = 100;
   gamma = 1.0;
   p=8;
 
