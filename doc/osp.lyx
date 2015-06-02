@@ -102,7 +102,7 @@ dT_{p}=h_{p}(s)\,dt_{p}
 
 \begin_inset Formula 
 \[
-dT_{h}=\beta\kappa^{-\epsilon}h_{p}^{\gamma}(s)\,dt_{h}
+dT_{h}=\beta\kappa^{-\zeta}h_{p}^{\gamma}(s)\,dt_{h}
 \]
 
 \end_inset
@@ -128,96 +128,135 @@ dT_{h}=\beta\kappa^{-\epsilon}h_{p}^{\gamma}(s)\,dt_{h}
  
 \end_layout
 
-\begin_layout Bibliography
-\begin_inset CommandInset bibitem
-LatexCommand bibitem
-key "faleichik01"
+\begin_layout Standard
+We have two basic constraints
+\begin_inset Formula 
+\[
+dT_{p}=dT_{h}
+\]
 
 \end_inset
 
-Faleichik, B.
- , Bondar, I.
- and Byl, V., 
-\begin_inset Quotes eld
+and
+\begin_inset Formula 
+\[
+dT_{p}=n\,dt_{h}
+\]
+
 \end_inset
 
-Generalized Picard iterations: A class of iterated Runge-Kutta methods for
- stiff problems
-\begin_inset Quotes erd
+ where 
+\begin_inset Formula $n>1$
 \end_inset
 
-, Journal of Computational and Applied Mathematics 262 (2014) 37-50
+.
+ From first constraint we have
+\begin_inset Formula 
+\[
+h_{p}(s)=\beta^{\frac{1}{1-\gamma}}\kappa^{\frac{1-\zeta}{1-\gamma}}
+\]
+
+\end_inset
+
+ and from second
+\begin_inset Formula 
+\[
+h_{p}(s)=n\kappa
+\]
+
+\end_inset
+
+ We write 
+\begin_inset Formula $1+\epsilon=\frac{1-\zeta}{1-\gamma}$
+\end_inset
+
+, so that 
+\begin_inset Formula $\zeta=-\epsilon+\gamma(1-\epsilon)$
+\end_inset
+
+ and we have
+\begin_inset Formula 
+\[
+h_{p}(s)=\beta^{\frac{1}{1-\gamma}}\kappa^{1+\epsilon}
+\]
+
+\end_inset
+
+ and 
+\begin_inset Formula 
+\[
+n=\beta^{\frac{1}{1-\gamma}}\kappa^{\epsilon}
+\]
+
+\end_inset
+
+ Hence we have 
+\begin_inset Formula 
+\[
+dT_{p}=h_{p}(s)\,dt_{p}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+dT_{h}=\beta\kappa^{-\epsilon+\gamma(1-\epsilon)}h_{p}^{\gamma}(s)\,dt_{h}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+h_{p}(s)=\beta^{\frac{1}{1-\gamma}}\kappa^{1+\epsilon}
+\]
+
+\end_inset
+
+We write 
+\begin_inset Formula $h_{p}(s)=\alpha(s)s^{2}$
+\end_inset
+
+, and given stiffness ratio 
+\begin_inset Formula $\kappa=\frac{dt_{h}}{dt_{p}}$
+\end_inset
+
+ , we set number of stages 
+\begin_inset Formula $s$
+\end_inset
+
+
+\begin_inset Formula 
+\[
+s=\sqrt{\frac{\beta^{\frac{1}{1-\gamma}}\kappa^{1+\epsilon}}{\alpha(s)}}
+\]
+
+\end_inset
+
+ Then after these 
+\begin_inset Formula $s$
+\end_inset
+
+- stages of super-time-step, we would have performance a step 
+\begin_inset Formula 
+\[
+dT_{p}=dT_{h}=\beta^{\frac{1}{1-\gamma}}\kappa^{\epsilon}dt_{h}
+\]
+
+\end_inset
+
+ Corollary 
 \end_layout
 
 \begin_layout Bibliography
 \begin_inset CommandInset bibitem
 LatexCommand bibitem
-key "alexiadisRKC1"
+key "key-1"
 
 \end_inset
 
-Alexiades, V., Amiez, G., Gremaud, P.
- A., 
-\begin_inset Quotes eld
-\end_inset
-
-Super-time-stepping acceleration of explicit schemes for parabolic problems
-\begin_inset Quotes erd
-\end_inset
-
-, Commun.
- Numer.
- Methods Eng.
- 12 (1) (1996) 31-42
-\end_layout
-
-\begin_layout Bibliography
-\begin_inset CommandInset bibitem
-LatexCommand bibitem
-key "balsaraRKL1"
-
-\end_inset
-
-Meyer, C.
- D, Balsara, D.
- S., Aslam, T.
- D., 
-\begin_inset Quotes eld
-\end_inset
-
-A stabilized Runge-Kutta-Legendre method for explicit super-time-stepping
- of parabolic and mixed equations
-\begin_inset Quotes erd
-\end_inset
-
-, Journal of Computational Physics 257 (2014) 594-626
-\end_layout
-
-\begin_layout Bibliography
-\begin_inset CommandInset bibitem
-LatexCommand bibitem
-key "balsaraRKL2"
-
-\end_inset
-
-Meyer, C.
- D, Balsara, D.
- S., Aslam, T.
- D.,
-\begin_inset Quotes erd
-\end_inset
-
-A second-order accurate Super TimeStepping formulation for anisotropic thermal
- conduction
-\begin_inset Quotes erd
-\end_inset
-
-, Mon.
- Not.
- R.
- Astron.
- Soc.
- 442, 2102-2115 (2012)
+ddfdf
 \end_layout
 
 \end_body
