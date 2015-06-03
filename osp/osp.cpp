@@ -88,6 +88,18 @@ auto optimize(const size_t p, const size_t s, const real_type beta_p, const real
     fixed_coeff[i] = 1.0/factorial;
   }
 
+#if 0
+  {
+    auto b = [&](const size_t _s, const size_t _p) -> real_type&
+    {
+      return get<0>(basis)[_p*(s+2) + _s];
+    };
+    for (size_t j = 0; j < p+1; j++)
+      for (size_t k = 0; k < s+2; k++)
+        b(k,j) *= 1.0/fixed_coeff[j];
+  }
+#endif
+
   using std::get;
   struct func_eq_data_type
   {
@@ -144,8 +156,7 @@ auto optimize(const size_t p, const size_t s, const real_type beta_p, const real
     }
     for (size_t i = 0; i < m; i++)
     {
-      result[i] = -coeff[i] +
-        std::inner_product(x, x+n-1, bmat.begin() + i*n, 0.0);
+      result[i] = -coeff[i] + std::inner_product(x, x+n-1, bmat.begin() + i*n, 0.0);
     }
   };
 
@@ -483,7 +494,7 @@ void maximizeHdriver()
   real_type epsilon = 0.2;
   real_type gamma = 0.0;
   real_type _beta = 1;
-  stiff_kappa = 100;
+  stiff_kappa = 1000;
   p=8;
 
 //  gamma = 0.5;
