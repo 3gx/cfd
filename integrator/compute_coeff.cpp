@@ -393,7 +393,7 @@ static auto maximizeHdriver(int order, int stiffness, int npoints)
   auto stiff_kappa = stiffness;
 
   auto beta   = 1.0/0.95; 
-  auto alpha_s = 0.15;
+  auto alpha_s = 0.11;
   auto s = std::max(p,static_cast<int>(std::sqrt(beta*stiff_kappa/alpha_s) + 1));
 
   /*  build eigen-value space */
@@ -437,12 +437,47 @@ static auto maximizeHdriver(int order, int stiffness, int npoints)
   return std::make_tuple(h,std::move(get<2>(res)));
 }
 
+static void order8()
+{
+  auto node = [](const int i) 
+  {
+    static const double nodes[8] = {
+      -0.960289856497536231684,
+      -0.7966664774136267395916,
+      -0.5255324099163289858177,
+      -0.1834346424956498049395,
+      0.1834346424956498049395,
+      0.525532409916328985818,
+      0.796666477413626739592,
+      0.9602898564975362316836
+    };
+    return  (nodes[i]+1)*0.5;
+  };
+}
+
+void order4()
+{
+  auto node = [](const int i) 
+  {
+    const double nodes[4] = {-0.8611363115940525752239, -0.3399810435848562648027, 0.3399810435848562648027,0.8611363115940525752239};
+    return  (nodes[i]+1)*0.5;
+  };
+}
+
+void order2()
+{
+  auto node = [](const int i) 
+  {
+    const double nodes[2] = {-0.5773502691896257645091, 0.5773502691896257645091};
+    return  (nodes[i]+1)*0.5;
+  };
+}
 
 int main(int argc, char * argv[])
 {
   using std::get;
   const auto order = 8;
-  const auto stiffness = 50;
+  const auto stiffness = 20;
   const auto npts = 1000;
   auto res = maximizeHdriver(order,stiffness,npts);
 
