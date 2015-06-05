@@ -122,7 +122,7 @@ class OptimizerT
 
   public:
 
-    void optimize(const real_type h_real , const real_type h_imag = 1)
+    void optimize(const real_type h_real , const real_type h_imag = 1, const std::vector<real_type> x_guess = std::vector<real_type>())
     {
       rescale_ev(h_real, h_imag);
       scaled_chebyshev_basis();
@@ -250,9 +250,17 @@ class OptimizerT
           std::vector<real_type>(_p+1,tol));
 
       std::vector<real_type> &x = _solution;
-
       x.resize(_s+2, 1);
-      std::fill(x.begin(), x.end(), 1);
+
+      if (x_guess.empty())
+      {
+        std::fill(x.begin(), x.end(), 1);
+      }
+      else
+      {
+        std::copy(x_guess.begin(), x_guess.end(), x.begin());
+        x.back() = 0;
+      }
       opt.add_inequality_mconstraint(
           func_ineq, 
           &func_ineq_data, 
@@ -471,7 +479,12 @@ static void order8(const int stiffness, const int npts)
     auto h_try = h_step * node(i);
     assert(h_try > 0);
     assert(h_try < h_step);
-    opt.optimize(h_try);
+    opt.unset_verbose();
+    auto node_im = 1.05; //node(i)*1.1;
+    opt.optimize(h_try, node_im);
+    opt.optimize(h_try,node_im,opt.get_solution());
+    opt.set_verbose();
+    opt.optimize(h_try,node_im,opt.get_solution());
     std::cout << "h= " << h_try << std::endl;
     std::cout << "coeff[" << i<< "] =\n{ \n";
     const auto & poly = opt.get_solution();
@@ -506,7 +519,7 @@ void order2()
 int main(int argc, char * argv[])
 {
   const auto npts = 1000;
-  const auto stiffness = 20;
+  const auto stiffness = 10;
 #if 1
   order8(stiffness,npts);
 #else
