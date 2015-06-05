@@ -381,59 +381,6 @@ auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& e
   return std::make_tuple(opt.get_solution(), h, opt);
 }
 
-#if 0
-void test()
-{
-  using namespace std::literals;
-  using real_type    =  double;
-  using complex_type = std::complex<real_type>;
-
-  const size_t npts = 1000;
-
-  const real_type kappa  = 1;
-  const real_type beta   = 0.5;
-  const real_type beta_p = 0.25;
-
-
-  const auto imag_lim = std::abs(beta);
-  const auto l1 = linspace(0.0,imag_lim,npts);
-  const auto l2 = linspace(-kappa,0.0,npts);
-
-  std::vector<complex_type> ev_space;
-  if (imag_lim > 0)
-    for (auto& x : l1)
-      ev_space.emplace_back(1i*x);
-  for (auto& x : l2)
-    ev_space.emplace_back(1i*imag_lim + x);
-  if (imag_lim > 0)
-    for (auto &x : l1)
-      ev_space.emplace_back(-kappa + 1i*x);
-
-  size_t p = 4;
-  size_t s = 30;
-  real_type h = 35.58;
-
-
-  const auto res = std::get<0>(optimize(p, s, beta_p, h, ev_space));
-  std::cout << "Coefficients: \n";
-  for (auto & x : res)
-  {
-    std::cout << x << ", ";
-  }
-  std::cout << std::endl;
-  {
-    std::cerr << " ----------- \n";
-    const auto res = std::get<0>(optimize(p, s, beta_p, h, ev_space));
-    std::cout << "Coefficients: \n";
-    for (auto & x : res)
-    {
-      std::cout << x << ", ";
-    }
-    std::cout << std::endl;
-  }
-}
-#endif
-
 auto maximizeHdriver(int order, int stiffness, int npoints)
 {
   using std::get;
@@ -488,29 +435,6 @@ auto maximizeHdriver(int order, int stiffness, int npoints)
   std::cout << "h_imag= " << beta << std::endl;
 
   return std::make_tuple(h,std::move(get<2>(res)));
-
-
-#if 0
-  {
-    auto h_try = floor(h*0.95);
-//    h_try *= 0.75;
-    const auto res = maximizeH<real_type,complex_type>(p,s,beta_p,ev_space,h_try);
-
-
-    std::cout << "coeff = { \n";
-    const auto & poly = get<0>(res);
-    const auto & h    = get<1>(res);
-    for (size_t i = 0; i < poly.size() -1 ; i++)
-    {
-      std::cout << std::setprecision(16) << poly[i] << ", ";
-    }
-    std::cout << poly.back()  << " };\n";
-    std::cout << "h= " << h_try << std::endl;
-    std::cout << "h/s^2= " << h_try/(s*s) << std::endl;
-    std::cout << "h_imag= " << std::pow(h_try,beta_p)*beta << std::endl;
-
-  }
-#endif
 
 }
 
