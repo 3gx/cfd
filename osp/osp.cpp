@@ -341,7 +341,7 @@ std::vector<real_type> linspace(const real_type a, const real_type b, const size
 }
 
 template<typename real_type, typename complex_type>
-auto maximizeH(const size_t p, const size_t s, const real_type beta_p, const std::vector<complex_type>& ev_space)
+auto maximizeH(const size_t p, const size_t s, const real_type beta_p, const std::vector<complex_type>& ev_space, const real_type h_try = -1)
 {
 
   real_type h_min = 0; 
@@ -349,6 +349,9 @@ auto maximizeH(const size_t p, const size_t s, const real_type beta_p, const std
   for (auto &x : ev_space)
     h_max = std::max(h_max, std::abs(std::real(x)));
   h_max *= 2.01*s*s/p;
+
+  if (h_try > 0)
+    h_min = h_max = h_try;
 
 //  const auto max_iter = 1280;
   const auto max_steps = 1000;
@@ -479,7 +482,7 @@ void maximizeHdriver()
 
   s      = 110;
   real_type zeta = 1.0/std::sqrt(0.15);
-  real_type stiff_kappa = 100;
+  real_type stiff_kappa = 10;
   s = std::max(p,static_cast<int>(zeta*std::sqrt(stiff_kappa) + 1));
 //  s *= 3;
 #if 0 /* basic */
@@ -487,7 +490,7 @@ void maximizeHdriver()
   beta = 1.0/stiff_kappa;
 #else
   beta_p = 0.0;
-  beta   = 1.0; //std::pow(stiff_kappa,0.2);
+  beta   = 1.0/0.95; //std::pow(stiff_kappa,0.2);
   s = std::max(p,static_cast<int>(zeta*std::sqrt(beta*stiff_kappa) + 1));
 #endif
 
@@ -567,6 +570,28 @@ void maximizeHdriver()
   std::cout << "h/s^2= " << h/(s*s) << std::endl;
   std::cout << "h_imag= " << std::pow(h,beta_p)*beta << std::endl;
   std::cout << "h_imag/s= " << std::pow(h,beta_p)*beta/s << std::endl;
+
+
+  {
+    auto h_try = floor(h*0.95);
+//    h_try *= 0.75;
+    const auto res = maximizeH<real_type,complex_type>(p,s,beta_p,ev_space,h_try);
+
+
+    std::cout << "coeff = { \n";
+    const auto & poly = get<0>(res);
+    const auto & h    = get<1>(res);
+    for (size_t i = 0; i < poly.size() -1 ; i++)
+    {
+      std::cout << std::setprecision(16) << poly[i] << ", ";
+    }
+    std::cout << poly.back()  << " };\n";
+    std::cout << "h= " << h_try << std::endl;
+    std::cout << "h/s^2= " << h_try/(s*s) << std::endl;
+    std::cout << "h_imag= " << std::pow(h_try,beta_p)*beta << std::endl;
+
+  }
+
 }
 
 
