@@ -437,11 +437,12 @@ static auto maximizeHdriver(int order, int stiffness, int npoints)
   return std::make_tuple(h,std::move(get<2>(res)));
 }
 
-static void order8()
+static void order8(const int stiffness, const int npts)
 {
+  constexpr int order = 8;
   auto node = [](const int i) 
   {
-    static const double nodes[8] = {
+    static const double nodes[order] = {
       -0.960289856497536231684,
       -0.7966664774136267395916,
       -0.5255324099163289858177,
@@ -453,6 +454,35 @@ static void order8()
     };
     return  (nodes[i]+1)*0.5;
   };
+
+  using std::get;
+  auto res = maximizeHdriver(order,stiffness,npts);
+  const auto& h_max  = get<0>(res);
+  auto& opt = get<1>(res);
+
+  const auto h_step  = h_max*0.95;
+  opt.set_verbose();
+  std::cout << std::endl;
+  std::cout << std::endl;
+  std::cout << std::endl;
+  std::cout << "h_step= " << h_step << std::endl;
+  for (int i = 0; i < order; i++)
+  {
+    auto h_try = h_step * node(i);
+    assert(h_try > 0);
+    assert(h_try < h_step);
+    opt.optimize(h_try);
+    std::cout << "h= " << h_try << std::endl;
+    std::cout << "coeff[" << i<< "] =\n{ \n";
+    const auto & poly = opt.get_solution();
+    const auto & h    = h_try;
+    for (size_t i = 0; i < poly.size() -1 ; i++)
+    {
+      std::cout << std::setprecision(16) << poly[i] << ", ";
+    }
+    std::cout << poly.back()  << " };\n\n";
+//    std::cout << "h/s^2= " << h_try/(opt.get_s()*opt.get_s()) << std::endl;
+  }
 }
 
 void order4()
@@ -475,10 +505,14 @@ void order2()
 
 int main(int argc, char * argv[])
 {
-  using std::get;
-  const auto order = 8;
-  const auto stiffness = 20;
   const auto npts = 1000;
+  const auto stiffness = 20;
+#if 1
+  order8(stiffness,npts);
+#else
+  const auto order = 8;
+
+  using std::get;
   auto res = maximizeHdriver(order,stiffness,npts);
 
   auto& h_max = get<0>(res);
@@ -491,6 +525,7 @@ int main(int argc, char * argv[])
     opt.set_verbose();
     opt.optimize(h_try);
 
+    std::cout << "h= " << h_try << std::endl;
     std::cout << "coeff = { \n";
     const auto & poly = opt.get_solution();
     const auto & h    = h_try;
@@ -498,9 +533,8 @@ int main(int argc, char * argv[])
     {
       std::cout << std::setprecision(16) << poly[i] << ", ";
     }
-    std::cout << poly.back()  << " };\n";
-    std::cout << "h= " << h_try << std::endl;
-    std::cout << "h/s^2= " << h_try/(opt.get_s()*opt.get_s()) << std::endl;
+    std::cout << poly.back()  << " };\n\n";
   }
+#endif
   return 0;
 }
