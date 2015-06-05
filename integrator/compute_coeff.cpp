@@ -312,7 +312,7 @@ class OptimizerT
 };
 
 template<typename real_type>
-auto linspace(const real_type a, const real_type b, const size_t n)
+static auto linspace(const real_type a, const real_type b, const size_t n)
 {
   std::vector<real_type> res(n);
   std::iota(res.begin(), res.end(), 0);
@@ -323,7 +323,7 @@ auto linspace(const real_type a, const real_type b, const size_t n)
 
 
 template<typename real_type, typename complex_type>
-auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& ev_space)
+static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& ev_space)
 {
   using Optimizer = OptimizerT<real_type,complex_type>;
 
@@ -381,7 +381,7 @@ auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& e
   return std::make_tuple(opt.get_solution(), h, opt);
 }
 
-auto maximizeHdriver(int order, int stiffness, int npoints)
+static auto maximizeHdriver(int order, int stiffness, int npoints)
 {
   using std::get;
   using namespace std::literals;
@@ -435,7 +435,6 @@ auto maximizeHdriver(int order, int stiffness, int npoints)
   std::cout << "h_imag= " << beta << std::endl;
 
   return std::make_tuple(h,std::move(get<2>(res)));
-
 }
 
 
