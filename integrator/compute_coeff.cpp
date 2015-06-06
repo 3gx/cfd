@@ -400,14 +400,16 @@ static auto maximizeHdriver(int order, double stiffness, int npoints, double bet
   auto npts = npoints;
   auto stiff_kappa = stiffness;
 
-  auto beta   = 1.0/0.95; 
+  auto beta   = beta_scale/0.95; 
   auto alpha_s = 0.15;
-  auto s = std::max(p,static_cast<int>(std::sqrt(beta*stiff_kappa/alpha_s) + 1));
+  auto s = std::max(p,static_cast<int>(std::sqrt(stiff_kappa/alpha_s) + 1));
+#if 0
   if (s < 12)
   {
     alpha_s = 0.07;
-    s = std::max(p,static_cast<int>(std::sqrt(beta*stiff_kappa/alpha_s) + 1));
+    s = std::max(p,static_cast<int>(std::sqrt(stiff_kappa/alpha_s) + 1));
   }
+#endif
 
   /*  build eigen-value space */
 
@@ -485,7 +487,7 @@ static void order8(const int stiffness, const int npts)
     assert(h_try > 0);
     assert(h_try < h_step);
     opt.unset_verbose();
-    auto node_im = node(i)*1.1;
+    auto node_im = node(i)*1.0;
     opt.optimize(h_try, node_im);
     opt.set_verbose();
     opt.optimize(h_try,node_im,opt.get_solution());
@@ -526,9 +528,9 @@ static void order8_1(const int stiffness, const int npts)
     2*nodes[2],
     2*nodes[3],
     2*nodes[4],
-    2*nodes[5],
-    2*nodes[6],
-    2*nodes[7]
+    nodes[5],
+    nodes[6],
+    nodes[7]
   };
 
    using std::get; 
@@ -539,7 +541,7 @@ static void order8_1(const int stiffness, const int npts)
   {
     using std::get;
     const auto kappa = stiffness* std::min(1.0,stiffy[i]);
-    auto res = maximizeHdriver(order,kappa,npts); //,nodes[i]);
+    auto res = maximizeHdriver(order,kappa,npts,nodes[i]);
     auto   h1  = get<0>(res);
     auto   h  = h_base*nodes[i];
 #if 0
