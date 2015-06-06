@@ -464,7 +464,7 @@ static auto minimizeS(
   auto s_max = smax;
 
   auto converged = false;
-  auto s = (s_min + s_max)>>1;
+  auto s = s_max;
   while (1)
   {
     if (s_max - s_min <= 1)
@@ -475,7 +475,12 @@ static auto minimizeS(
         s = s_max;
     }
     else
-      s = (s_min + s_max)>>1;
+    {
+      if (s_max - s_min > 2)
+        s = std::max(s_min,static_cast<decltype(s)>(0.25*s_min + 0.75*s_max+0.5));
+      else
+        s = (s_min + s_max)>>1;
+    }
     opt.set_s(s);
     
     opt.unset_verbose();
@@ -699,7 +704,7 @@ void order2()
 int main(int argc, char * argv[])
 {
   const auto npts = 1000;
-  const auto stiffness = 1000;
+  const auto stiffness = 10000;
 #if 1
   order8_2(stiffness,npts);
 #else
