@@ -331,7 +331,7 @@ static auto linspace(const real_type a, const real_type b, const size_t n)
 
 
 template<typename real_type, typename complex_type>
-static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& ev_space)
+static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& ev_space, const bool final_verbose = true)
 {
   using Optimizer = OptimizerT<real_type,complex_type>;
 
@@ -389,7 +389,7 @@ static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_t
   return std::make_tuple(opt.get_solution(), h, opt);
 }
 
-static auto maximizeHdriver(int order, int stiffness, int npoints)
+static auto maximizeHdriver(int order, double stiffness, int npoints, double beta_scale = 1.0)
 {
   using std::get;
   using namespace std::literals;
@@ -401,8 +401,13 @@ static auto maximizeHdriver(int order, int stiffness, int npoints)
   auto stiff_kappa = stiffness;
 
   auto beta   = 1.0/0.95; 
-  auto alpha_s = 0.11;
+  auto alpha_s = 0.15;
   auto s = std::max(p,static_cast<int>(std::sqrt(beta*stiff_kappa/alpha_s) + 1));
+  if (s < 12)
+  {
+    alpha_s = 0.07;
+    s = std::max(p,static_cast<int>(std::sqrt(beta*stiff_kappa/alpha_s) + 1));
+  }
 
   /*  build eigen-value space */
 
@@ -480,9 +485,8 @@ static void order8(const int stiffness, const int npts)
     assert(h_try > 0);
     assert(h_try < h_step);
     opt.unset_verbose();
-    auto node_im = 1.05; //node(i)*1.1;
+    auto node_im = node(i)*1.1;
     opt.optimize(h_try, node_im);
-    opt.optimize(h_try,node_im,opt.get_solution());
     opt.set_verbose();
     opt.optimize(h_try,node_im,opt.get_solution());
     std::cout << "h= " << h_try << std::endl;
@@ -495,6 +499,74 @@ static void order8(const int stiffness, const int npts)
     }
     std::cout << poly.back()  << " };\n\n";
 //    std::cout << "h/s^2= " << h_try/(opt.get_s()*opt.get_s()) << std::endl;
+  }
+}
+
+static void order8_1(const int stiffness, const int npts)
+{
+  constexpr int order = 8;
+  const double nodes_[order] = {
+    -0.960289856497536231684,
+    -0.7966664774136267395916,
+    -0.5255324099163289858177,
+    -0.1834346424956498049395,
+    0.1834346424956498049395,
+    0.525532409916328985818,
+    0.796666477413626739592,
+    0.9602898564975362316836
+  };
+  std::vector<double> nodes;
+  for (auto x : nodes_)
+    nodes.push_back((1+x)/2);
+  
+  const double stiffy[order] = 
+  {
+    2*nodes[0],
+    2*nodes[1],
+    2*nodes[2],
+    2*nodes[3],
+    2*nodes[4],
+    2*nodes[5],
+    2*nodes[6],
+    2*nodes[7]
+  };
+
+   using std::get; 
+  const auto res_base  = maximizeHdriver(order,stiffness,npts);
+  const auto  h_base   = get<0>(res_base);
+
+  for (int i = 0; i < order; i++)
+  {
+    using std::get;
+    const auto kappa = stiffness* std::min(1.0,stiffy[i]);
+    auto res = maximizeHdriver(order,kappa,npts); //,nodes[i]);
+    auto   h1  = get<0>(res);
+    auto   h  = h_base*nodes[i];
+#if 0
+    int  dstiff =1;
+    while (h > h1)
+    {
+      dstiff++;
+      res = maximizeHdriver(order,stiffness*nodes[i]+dstiff,npts,nodes[i]);
+      h1 = get<0>(res);
+      auto& opt = get<1>(res);
+      printf(std::cout, "step= %  node= % h= % h1= % s= % \n", i, nodes[i], h, h1, opt.get_s());
+    }
+#endif
+    auto& opt = get<1>(res);
+    printf(std::cout, "------------------------\n");
+    printf(std::cout, "step= %  node= % h= % h1= % s= % \n", i, nodes[i], h, h1, opt.get_s());
+    assert(h < h1);
+    opt.optimize(h,1,opt.get_solution());
+
+    std::cout << "h= " << h<< std::endl;
+    std::cout << "coeff[" << i<< "] =\n{ \n";
+    const auto & poly = opt.get_solution();
+    for (size_t i = 0; i < poly.size() -1 ; i++)
+    {
+      std::cout << std::setprecision(16) << poly[i] << ", ";
+    }
+    std::cout << poly.back()  << " };\n\n";
   }
 }
 
@@ -519,9 +591,9 @@ void order2()
 int main(int argc, char * argv[])
 {
   const auto npts = 1000;
-  const auto stiffness = 10;
+  const auto stiffness = 1000;
 #if 1
-  order8(stiffness,npts);
+  order8_1(stiffness,npts);
 #else
   const auto order = 8;
 
