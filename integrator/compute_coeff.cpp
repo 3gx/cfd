@@ -7,9 +7,11 @@
 #include <cassert>
 #include "common.h"
 
-template<typename real_type, typename complex_type>
+template<typename Real, typename Complex>
 class OptimizerT
 {
+  using real_type = Real;
+  using complex_type = Complex;
   private:
     size_t _s;   /* number of stages */
     size_t _p;   /* order            */
@@ -331,7 +333,7 @@ static auto linspace(const real_type a, const real_type b, const size_t n)
 
 
 template<typename real_type, typename complex_type>
-static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& ev_space, const bool final_verbose = true)
+static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& ev_space)
 {
   using Optimizer = OptimizerT<real_type,complex_type>;
 
@@ -383,8 +385,8 @@ static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_t
   assert(converged);
   opt.set_verbose();
   opt.optimize(h);
-  printf(std::cerr, "step= %  h_min= %  h_max= %  -- h= %  val= % \n",
-      -1, h_min, h_max, h, opt.get_fmin());
+  printf(std::cerr, "solution:  h_min= %  h_max= %  -- h= %  val= % \n",
+       h_min, h_max, h, opt.get_fmin());
 
   return std::make_tuple(opt.get_solution(), h, opt);
 }
@@ -452,6 +454,59 @@ static auto maximizeHdriver(int order, double stiffness, int npoints, double bet
   return std::make_tuple(h,std::move(get<2>(res)));
 }
 
+template<typename Optimizer>
+static auto minimizeS(
+    Optimizer &opt, 
+    const size_t smax,
+    const double h_real, const double h_imag)
+{
+  auto s_min = opt.get_p() + 1;
+  auto s_max = smax;
+
+  auto converged = false;
+  auto s = (s_min + s_max)>>1;
+  while (1)
+  {
+    if (s_max - s_min <= 1)
+    {
+      if (converged)
+        break;
+      else
+        s = s_max;
+    }
+    else
+      s = (s_min + s_max)>>1;
+    opt.set_s(s);
+    
+    opt.unset_verbose();
+    opt.optimize(h_real, h_imag);
+    printf(std::cerr, " s_min= %  s_max= %  -- s= %  val= % \n",
+        s_min, s_max, s, opt.get_fmin());
+
+    if (opt.get_fmin() < 1.0e-12) 
+    {
+      converged = true;
+      s_max = s;
+    }
+    else
+    {
+      converged = false;
+      s_min = s;
+    }
+  }
+
+  s = std::min(smax, static_cast<decltype(s)>(s*1.05));
+  assert(converged);
+  opt.set_verbose();
+  opt.set_s(s);
+  opt.optimize(h_real, h_imag);
+  printf(std::cerr, " solution: s_min= %  s_max= %  -- s= %  val= % \n",
+       s_min, s_max, s, opt.get_fmin());
+
+  return s;
+}
+
+
 static void order8(const int stiffness, const int npts)
 {
   constexpr int order = 8;
@@ -504,6 +559,7 @@ static void order8(const int stiffness, const int npts)
   }
 }
 
+#if 0
 static void order8_1(const int stiffness, const int npts)
 {
   constexpr int order = 8;
@@ -571,6 +627,7 @@ static void order8_1(const int stiffness, const int npts)
     std::cout << poly.back()  << " };\n\n";
   }
 }
+#endif
 
 static void order8_2(const int stiffness, const int npts)
 {
@@ -594,17 +651,17 @@ static void order8_2(const int stiffness, const int npts)
     0.796666477413626739592,
     0.9602898564975362316836
   };
-  std::vector<double> nodes, stiff_scale;
+  std::vector<double> nodes;
   for (auto x : nodes_)
   {
     x = (1+x)/2;
     nodes.push_back(x);
-    stiff_scale.push_back(std::min(1.0,1.3*std::sqrt(x)));
   }
-  
+ 
+  const auto smax = opt.get_s();
   for (int i = 0; i < order; i++)
   {
-    auto s = std::max(order+1,static_cast<int>(s_base*stiff_scale[i]));
+    auto s = minimizeS(opt, smax, h_base*nodes[i], nodes[i]);
     auto h = h_base*nodes[i];
     opt.set_s(s);
     opt.optimize(h, nodes[i]);
