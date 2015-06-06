@@ -599,7 +599,7 @@ static void order8_2(const int stiffness, const int npts)
   {
     x = (1+x)/2;
     nodes.push_back(x);
-    stiff_scale.push_back(std::min(1.0,2*std::sqrt(x)));
+    stiff_scale.push_back(std::min(1.0,1.3*std::sqrt(x)));
   }
   
   for (int i = 0; i < order; i++)
