@@ -572,6 +572,52 @@ static void order8_1(const int stiffness, const int npts)
   }
 }
 
+static void order8_2(const int stiffness, const int npts)
+{
+  using std::get; 
+
+  auto res= maximizeHdriver(order,stiffness,npts);
+  const auto h_base = get<0>(res_base);
+  auto& opt = get<1>(res);
+  const auto s_base = opt.get_s();
+
+
+  constexpr int order = 8;
+  const double nodes_[order] = {
+    -0.960289856497536231684,
+    -0.7966664774136267395916,
+    -0.5255324099163289858177,
+    -0.1834346424956498049395,
+    0.1834346424956498049395,
+    0.525532409916328985818,
+    0.796666477413626739592,
+    0.9602898564975362316836
+  };
+  std::vector<double> nodes, stiff_scale;
+  for (auto x : nodes_)
+  {
+    x = (1+x)/2;
+    nodes.push_back(x);
+    stiff_scale.push_back(std::sqrt(x));
+  }
+  
+  for (int i = 0; i < order; i++)
+  {
+    auto s = std::min(order+1,static_cast<int>(s*stiff_scale));
+    auto h = h_base*nodes[i];
+    opt.set_s(s);
+    opt.optimize(h, nodes[i]);
+    std::cout << "s= " << s << "  h= " << h<< std::endl;
+    std::cout << "coeff[" << i<< "] =\n{ \n";
+    const auto & poly = opt.get_solution();
+    for (size_t i = 0; i < poly.size() -1 ; i++)
+    {
+      std::cout << std::setprecision(16) << poly[i] << ", ";
+    }
+    std::cout << poly.back()  << " };\n\n";
+  }
+}
+
 void order4()
 {
   auto node = [](const int i) 
@@ -595,7 +641,7 @@ int main(int argc, char * argv[])
   const auto npts = 1000;
   const auto stiffness = 1000;
 #if 1
-  order8_1(stiffness,npts);
+  order8_2(stiffness,npts);
 #else
   const auto order = 8;
 
