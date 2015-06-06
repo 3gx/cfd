@@ -576,13 +576,14 @@ static void order8_2(const int stiffness, const int npts)
 {
   using std::get; 
 
+  constexpr int order = 8;
+
+
   auto res= maximizeHdriver(order,stiffness,npts);
-  const auto h_base = get<0>(res_base);
+  const auto h_base = get<0>(res);
   auto& opt = get<1>(res);
   const auto s_base = opt.get_s();
 
-
-  constexpr int order = 8;
   const double nodes_[order] = {
     -0.960289856497536231684,
     -0.7966664774136267395916,
@@ -598,16 +599,18 @@ static void order8_2(const int stiffness, const int npts)
   {
     x = (1+x)/2;
     nodes.push_back(x);
-    stiff_scale.push_back(std::sqrt(x));
+    stiff_scale.push_back(std::min(1.0,2*std::sqrt(x)));
   }
   
   for (int i = 0; i < order; i++)
   {
-    auto s = std::min(order+1,static_cast<int>(s*stiff_scale));
+    auto s = std::max(order+1,static_cast<int>(s_base*stiff_scale[i]));
     auto h = h_base*nodes[i];
     opt.set_s(s);
     opt.optimize(h, nodes[i]);
-    std::cout << "s= " << s << "  h= " << h<< std::endl;
+    printf(std::cout, "------------------------\n");
+    std::cerr << "s= " << s << " node= " << nodes[i] <<  std::endl;
+    std::cout << " h= " << h<<  std::endl;
     std::cout << "coeff[" << i<< "] =\n{ \n";
     const auto & poly = opt.get_solution();
     for (size_t i = 0; i < poly.size() -1 ; i++)
