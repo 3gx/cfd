@@ -268,7 +268,10 @@ class OptimizerT
           &func_ineq_data, 
           std::vector<real_type>(n_ineq,tol)); 
 
+//      opt.set_xtol_rel(1.0e-20);
       opt.set_xtol_abs(tol);
+//     opt.set_ftol_abs(tol);
+//      opt.set_ftol_rel(tol);
 
       real_type& minf = _fmin;
       decltype(opt.optimize(x,minf)) result;
