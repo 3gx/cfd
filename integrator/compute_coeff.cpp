@@ -634,8 +634,9 @@ static void order8_1(const int stiffness, const int npts)
 }
 #endif
 
-static void order8_2(const int stiffness, const int npts)
+static auto order8_2(const int stiffness, const int npts)
 {
+  std::vector<std::vector<double>> coeff;
   using std::get; 
 
   constexpr int order = 8;
@@ -646,36 +647,33 @@ static void order8_2(const int stiffness, const int npts)
   auto& opt = get<1>(res);
   const auto s_base = opt.get_s();
 
-  const double nodes_[order] = {
-    -0.960289856497536231684,
-    -0.7966664774136267395916,
-    -0.5255324099163289858177,
-    -0.1834346424956498049395,
-    0.1834346424956498049395,
-    0.525532409916328985818,
-    0.796666477413626739592,
-    0.9602898564975362316836
-  };
-  std::vector<double> nodes;
-  for (auto x : nodes_)
+  const double nodes8_[8] = {-0.960289856497536231684, -0.7966664774136267395916, -0.5255324099163289858177, -0.1834346424956498049395, 0.1834346424956498049395, 0.525532409916328985818, 0.796666477413626739592, 0.9602898564975362316836};
+  const double nodes7_[7] = {-0.9491079123427585245262,-0.7415311855993944398639,-0.4058451513773971669066,0,0.4058451513773971669066,0.7415311855993944398639,0.9491079123427585245262};
+  std::vector<double> nodes8, nodes7;
+  for (auto x : nodes8_)
   {
     x = (1+x)/2;
-    nodes.push_back(x);
+    nodes8.push_back(x);
+  }
+  for (auto x : nodes7_)
+  {
+    x = (1+x)/2;
+    nodes7.push_back(x);
   }
  
   const auto smax = opt.get_s();
   for (int i = 0; i < order; i++)
   {
-    auto s = minimizeS(opt, smax, h_base*nodes[i], nodes[i]);
-    auto h = h_base*nodes[i];
+    auto s = minimizeS(opt, smax, h_base*nodes8[i], nodes8[i]);
+    auto h = h_base*nodes8[i];
     opt.set_s(s);
-    opt.optimize(h, nodes[i]);
+    opt.optimize(h, nodes8[i]);
     printf(std::cout, "------------------------\n");
-    std::cerr << "s= " << s << " node= " << nodes[i] <<  std::endl;
+    std::cerr << "s= " << s << " node= " << nodes8[i] <<  std::endl;
     std::cout << " h= " << h<<  std::endl;
     std::cout << "coeff[" << i<< "] =\n{ \n";
     const auto & poly = opt.get_solution();
-    for (size_t i = 0; i < poly.size() -1 ; i++)
+    for (size_t i = 0; i < poly.size()-1; i++)
     {
       std::cout << std::setprecision(16) << poly[i] << ", ";
     }
@@ -685,11 +683,20 @@ static void order8_2(const int stiffness, const int npts)
 
 void order4()
 {
-  auto node = [](const int i) 
+  const double nodes4_[4] = {-0.8611363115940525752239, -0.3399810435848562648027, 0.3399810435848562648027,0.8611363115940525752239};
+  const double nodes3_[3] = {-0.7745966692414833770359, 0, 0.7745966692414833770359};
+  std::vector<double> nodes4, nodes3;
+  for (auto x : nodes4_)
   {
-    const double nodes[4] = {-0.8611363115940525752239, -0.3399810435848562648027, 0.3399810435848562648027,0.8611363115940525752239};
-    return  (nodes[i]+1)*0.5;
-  };
+    x = (1+x)/2;
+    nodes4.push_back(x);
+  }
+  for (auto x : nodes3_)
+  {
+    x = (1+x)/2;
+    nodes3.push_back(x);
+  }
+ 
 }
 
 void order2()
@@ -704,7 +711,7 @@ void order2()
 int main(int argc, char * argv[])
 {
   const auto npts = 1000;
-  const auto stiffness = 10000;
+  const auto stiffness = 100;
 #if 1
   order8_2(stiffness,npts);
 #else
