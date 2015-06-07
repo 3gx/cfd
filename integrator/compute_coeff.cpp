@@ -456,8 +456,8 @@ static auto maximizeHdriver(int order, int stages, int npoints)
   }
   std::cout << poly.back()  << " };\n";
 #endif
-  std::cout << "h= " << h << std::endl;
-  std::cout << "h/s^2= " << h/(s*s) << std::endl;
+  std::cerr << "h= " << h << std::endl;
+  std::cerr << "h/s^2= " << h/(s*s) << std::endl;
 //  std::cout << "h_imag= " << beta << std::endl;
 
   return std::make_tuple(h,std::move(get<2>(res)));
@@ -582,7 +582,7 @@ static auto order8(const int stages, const int npts)
     const auto & poly = opt.get_solution();
     coeff.push_back(poly);
   }
-  printf(std::cout, "---------------------------\n");
+  printf(std::cerr, "---------------------------\n");
 
   return std::make_tuple(h_base, coeff);
 }
@@ -638,5 +638,18 @@ int main(int argc, char * argv[])
   printf(std::cerr, " min_stages= %  max_stages= %\n", min_stages, max_stages);
   printf(std::cerr, " -------------- \n");
   auto res = compute_coeff(order8, min_stages, max_stages);
+ 
+ 
+  using std::cout;
+  using std::endl;
+  using std::get;
+  cout << std::setprecision(16);
+  cout << "static const double h_base = {\n";
+  for (const auto& x : res)
+  {
+    const auto h = get<0>(x);
+    cout << h << ", " << endl;
+  }
+  cout << "}; " << endl;
   return 0;
 }
