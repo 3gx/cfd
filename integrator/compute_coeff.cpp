@@ -124,7 +124,7 @@ class OptimizerT
 
   public:
 
-    void optimize(const real_type h_real , const real_type h_imag = 1, const std::vector<real_type> x_guess = std::vector<real_type>())
+    auto optimize(const real_type h_real , const real_type h_imag = 1, const std::vector<real_type> x_guess = std::vector<real_type>())
     {
       rescale_ev(h_real, h_imag);
       scaled_chebyshev_basis();
@@ -284,7 +284,7 @@ class OptimizerT
 
       if (_verbose)
       {
-        printf(std::cerr, "result= % \n", result);
+//        printf(std::cerr, "result= % \n", result);
         printf(std::cerr, "minf= % \n", minf);
       }
 
@@ -292,6 +292,7 @@ class OptimizerT
       {
         const auto &poly = x;
         const auto &bmat = _bmat;
+#if 0
         std::cerr << "fixed_coeff_comp= " << std::setprecision(16);
         for (int i = 0; i < _p+1; i++)
         {
@@ -307,7 +308,7 @@ class OptimizerT
           std::cerr << res << " ";
         }
         std::cerr << std::endl;
-
+#endif
         std::cerr << "fixed_coeff_diff= " ;
         for (int i = 0; i < _p+1; i++)
         {
@@ -315,8 +316,21 @@ class OptimizerT
           std::cerr << std::abs(res-fixed_coeff[i])/fixed_coeff[i] << " ";
         }
         std::cerr << std::endl;
-        std::cerr << " ===================================== \n";
+//        std::cerr << " ===================================== \n";
       }
+      real_type norm = 0;
+      {
+        const auto &poly = x;
+        const auto &bmat = _bmat;
+        for (int i = 0; i < _p+1; i++)
+        {
+          const auto res = std::inner_product(poly.begin(), poly.end()-1, bmat.begin() + i*(_s+2), 0.0);
+          const auto f = (res-fixed_coeff[i])/fixed_coeff[i];
+          norm += f*f;
+        }
+        norm = std::sqrt(norm/(_p+1));
+      }
+      return norm;
 
     }
 };
@@ -485,8 +499,7 @@ static auto minimizeS(
     
     opt.unset_verbose();
     opt.optimize(h_real, h_imag);
-    printf(std::cerr, " s_min= %  s_max= %  -- s= %  val= % \n",
-        s_min, s_max, s, opt.get_fmin());
+//    printf(std::cerr, " s_min= %  s_max= %  -- s= %  val= % \n", s_min, s_max, s, opt.get_fmin());
 
     if (opt.get_fmin() < 1.0e-12) 
     {
@@ -502,11 +515,12 @@ static auto minimizeS(
 
   s = std::min(smax, static_cast<decltype(s)>(s*1.05));
   assert(converged);
+  return s;
+
   opt.set_verbose();
   opt.set_s(s);
   opt.optimize(h_real, h_imag);
-  printf(std::cerr, " solution: s_min= %  s_max= %  -- s= %  val= % \n",
-       s_min, s_max, s, opt.get_fmin());
+  printf(std::cerr, " solution: s_min= %  s_max= %  -- s= %  val= % \n",  s_min, s_max, s, opt.get_fmin());
 
   return s;
 }
@@ -639,10 +653,9 @@ static auto order8_2(const int stiffness, const int npts)
   std::vector<std::vector<double>> coeff;
   using std::get; 
 
-  constexpr int order = 8;
 
 
-  auto res= maximizeHdriver(order,stiffness,npts);
+  auto res= maximizeHdriver(8,stiffness,npts);
   const auto h_base = get<0>(res);
   auto& opt = get<1>(res);
   const auto s_base = opt.get_s();
@@ -662,23 +675,40 @@ static auto order8_2(const int stiffness, const int npts)
   }
  
   const auto smax = opt.get_s();
-  for (int i = 0; i < order; i++)
+  for (int i = 0; i < 8; i++)
   {
-    auto s = minimizeS(opt, smax, h_base*nodes8[i], nodes8[i]);
     auto h = h_base*nodes8[i];
+    auto s = minimizeS(opt, smax, h, nodes8[i]);
     opt.set_s(s);
-    opt.optimize(h, nodes8[i]);
-    printf(std::cout, "------------------------\n");
-    std::cerr << "s= " << s << " node= " << nodes8[i] <<  std::endl;
+    opt.unset_verbose();
+    const auto norm = opt.optimize(h, nodes8[i]);
+    printf(std::cerr, " 7: i= %  s= % node= %  fmin= %  norm= %\n", i, s, nodes8[i], opt.get_fmin(), norm);
+    const auto & poly = opt.get_solution();
+    coeff.push_back(poly);
+#if 0
     std::cout << " h= " << h<<  std::endl;
     std::cout << "coeff[" << i<< "] =\n{ \n";
-    const auto & poly = opt.get_solution();
     for (size_t i = 0; i < poly.size()-1; i++)
     {
       std::cout << std::setprecision(16) << poly[i] << ", ";
     }
     std::cout << poly.back()  << " };\n\n";
+#endif
   }
+  std::cerr << " -- Embedded method -- " << std::endl;
+  opt.set_p(7);
+  for (int i = 0; i < 7; i++)
+  {
+    auto h = h_base*nodes7[i];
+    auto s = minimizeS(opt, smax, h, nodes7[i]);
+    opt.set_s(s);
+    opt.unset_verbose();
+    const auto norm = opt.optimize(h, nodes7[i]);
+    printf(std::cerr, " 7: i= %  s= % node= %  fmin= %  norm= %\n", i, s, nodes7[i], opt.get_fmin(), norm);
+    const auto & poly = opt.get_solution();
+    coeff.push_back(poly);
+  }
+  printf(std::cout, "---------------------------\n");
 }
 
 void order4()
