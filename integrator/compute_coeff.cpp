@@ -651,5 +651,28 @@ int main(int argc, char * argv[])
     cout << h << ", " << endl;
   }
   cout << "}; " << endl;
+  cout << "const int sizes = { \n";
+  for (const auto& x : res)
+  {
+    const auto c = get<1>(x);
+    assert(c.size() == 15);
+    cout << "{ ";
+    for (int i = 0; i < 14; i++)
+      cout << c[i].size() << ", ";
+    cout << c.back().size() << "},\n";
+  }
+  cout << "}; " << endl;
+  cout << "const double coeff = { \n";
+  for (const auto& x : res)
+  {
+    const auto c = get<1>(x);
+    assert(c.size() == 15);
+    cout << "{ ";
+    for (int i = 0; i < 15; i++)
+      for (auto &y : c[i])
+        cout << y << ", ";
+    cout << "0 }, \n";
+  }
+  cout << "}; " << endl;
   return 0;
 }
