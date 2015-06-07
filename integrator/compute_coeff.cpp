@@ -631,7 +631,12 @@ static auto compute_coeff(Func func, int stage_min, int stage_max)
 
 int main(int argc, char * argv[])
 {
-  const auto stages = 40;
-  auto res = compute_coeff(order8, 8, stages);
+  assert(argc >= 2);
+  const auto min_stages = atoi(argv[1]);
+  const auto max_stages = atoi(argv[2]);
+  printf(std::cerr, " -------------- \n");
+  printf(std::cerr, " min_stages= %  max_stages= %\n", min_stages, max_stages);
+  printf(std::cerr, " -------------- \n");
+  auto res = compute_coeff(order8, min_stages, max_stages);
   return 0;
 }
