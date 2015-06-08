@@ -233,7 +233,7 @@ if True:
     ev_space = np.concatenate((l1,l2,l3));
 
 
-  s = 8;
+  s = 30;
   p = 4;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
