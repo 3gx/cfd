@@ -848,7 +848,7 @@ static auto minimizeS(
     opt.optimize(h_real, h_imag);
 //    printf(std::cerr, " s_min= %  s_max= %  -- s= %  val= % \n", s_min, s_max, s, opt.get_fmin());
 
-    if (opt.get_fmin() < 1.0e-12) 
+    if (std::abs(opt.get_fmin()) < 1.0e-12) 
     {
       converged = true;
       s_max = s;
@@ -905,8 +905,8 @@ static auto orderN(
   for (int i = 0; i < ORDER; i++)
   {
     auto h = h_base*nodes[i];
-//    auto s = minimizeS(opt, smax, h, nodes[i]);
-    auto s = smax;
+    auto s = minimizeS(opt, smax, h, nodes[i]);
+//    auto s = smax;
     opt.set_s(s);
     opt.unset_verbose();
     const auto norm = opt.optimize(h, nodes[i]);
@@ -919,8 +919,8 @@ static auto orderN(
   for (int i = 0; i < ORDER-1; i++)
   {
     auto h = h_base*nodesC[i];
-//    auto s = minimizeS(opt, smax, h, nodesC[i]);
-    auto s = smax;
+    auto s = minimizeS(opt, smax, h, nodesC[i]);
+//    auto s = smax;
     opt.set_s(s);
     opt.unset_verbose();
     const auto norm = opt.optimize(h, nodesC[i]);
@@ -974,13 +974,13 @@ static auto compute_coeff(Func func, int stage_min, int stage_max)
 
 }
 
-void run_loop(const int min_stages, const int max_stages)
+void run_loop(const int order, const int min_stages, const int max_stages)
 {
   printf(std::cerr, " -------------- \n");
   printf(std::cerr, " min_stages= %  max_stages= %\n", min_stages, max_stages);
   printf(std::cerr, " -------------- \n");
 
-  constexpr int order = 4;
+  assert(order == 4 || order == 8 || order == 2);
   auto func = order4;
   if (order == 2)
     func = order2;
@@ -1002,7 +1002,7 @@ void run_loop(const int min_stages, const int max_stages)
     cout << h << ", " << endl;
   }
   cout << "0}; " << endl;
-#if 0
+#if 1
   cout << "const int total_size = { \n";
   for (const auto& x : res)
   {
@@ -1019,7 +1019,7 @@ void run_loop(const int min_stages, const int max_stages)
   {
     const auto c = get<1>(x);
     cout << " ";
-#if 0
+#if 1
     for (size_t i = 0; i < c.size()-1; i++)
       cout << c[i].size() << ", ";
 #endif
@@ -1050,7 +1050,7 @@ int main(int argc, char * argv[])
   assert(argc >= 2);
   const auto min_stages = atoi(argv[1]);
   const auto max_stages = atoi(argv[2]);
-  run_loop(min_stages, max_stages);
+  run_loop(8, min_stages, max_stages);
 #else
   auto order = 4;
   auto stages = 100;
