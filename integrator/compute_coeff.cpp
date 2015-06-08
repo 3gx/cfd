@@ -994,8 +994,9 @@ void run_loop(const int order, const int min_stages, const int max_stages)
   using std::endl;
   using std::get;
   cout << std::setprecision(16);
-  cout << "static const int order = " << order << ";\n";
-  cout << "static const double h_base = {\n";
+  cout << "const int order = " << order << ";\n";
+  cout << "const int nelements= " << res.size() << endl;
+  cout << "const double h_base = {\n";
   for (const auto& x : res)
   {
     const auto h = get<0>(x);
@@ -1003,16 +1004,16 @@ void run_loop(const int order, const int min_stages, const int max_stages)
   }
   cout << "0}; " << endl;
 #if 1
-  cout << "const int total_size = { \n";
+  cout << "const int offset = { \n";
+  auto sum = 0;
   for (const auto& x : res)
   {
-    auto sum = 0;
+    cout << sum << ", " << endl;
     const auto c = get<1>(x);
     for (const auto &cc : c)
       sum += cc.size();
-    cout << sum << ", " << endl;
   }
-  cout << "0}; " << endl;
+  cout << sum << "}; " << endl;
 #endif
   cout << "const int sizes = { \n";
   for (const auto& x : res)
