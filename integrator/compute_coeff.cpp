@@ -1050,7 +1050,7 @@ int main(int argc, char * argv[])
   assert(argc >= 2);
   const auto min_stages = atoi(argv[1]);
   const auto max_stages = atoi(argv[2]);
-  run_loop(8, min_stages, max_stages);
+  run_loop(4, min_stages, max_stages);
 #else
   auto order = 4;
   auto stages = 100;
