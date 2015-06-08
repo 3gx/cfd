@@ -30,7 +30,7 @@ class OptimizerT
     OptimizerT(size_t s, size_t p, std::vector<complex_type> ev_space) :
       _s(s), _p(p), 
       _ev_space(std::move(ev_space)),
-      _tol(1.0e-13),
+      _tol(1.0e-14),
       _verbose(true)
     {
       rescale_ev(1,1);
@@ -256,7 +256,8 @@ class OptimizerT
 
       if (x_guess.empty())
       {
-        std::fill(x.begin(), x.end(), 1);
+        std::generate(x.begin(), x.end(), [](){ return drand48(); });
+//        std::fill(x.begin(), x.end(), 1);
       }
       else
       {
@@ -603,8 +604,8 @@ class OptimizerL_CMP
 
       if (x_guess.empty())
       {
-//        std::generate(x.begin(), x.end(), [](){ return drand48(); });
-        std::fill(x.begin(), x.end(), 0.5);
+        std::generate(x.begin(), x.end(), [](){ return drand48(); });
+//        std::fill(x.begin(), x.end(), 0.5);
       }
       else
       {
@@ -904,7 +905,8 @@ static auto orderN(
   for (int i = 0; i < ORDER; i++)
   {
     auto h = h_base*nodes[i];
-    auto s = minimizeS(opt, smax, h, nodes[i]);
+//    auto s = minimizeS(opt, smax, h, nodes[i]);
+    auto s = smax;
     opt.set_s(s);
     opt.unset_verbose();
     const auto norm = opt.optimize(h, nodes[i]);
@@ -917,7 +919,8 @@ static auto orderN(
   for (int i = 0; i < ORDER-1; i++)
   {
     auto h = h_base*nodesC[i];
-    auto s = minimizeS(opt, smax, h, nodesC[i]);
+//    auto s = minimizeS(opt, smax, h, nodesC[i]);
+    auto s = smax;
     opt.set_s(s);
     opt.unset_verbose();
     const auto norm = opt.optimize(h, nodesC[i]);
@@ -977,13 +980,21 @@ void run_loop(const int min_stages, const int max_stages)
   printf(std::cerr, " min_stages= %  max_stages= %\n", min_stages, max_stages);
   printf(std::cerr, " -------------- \n");
 
-  auto res = compute_coeff(order4, min_stages, max_stages);
+  constexpr int order = 4;
+  auto func = order4;
+  if (order == 2)
+    func = order2;
+  else if  (order == 8)
+    func = order8;
+
+  auto res = compute_coeff(func, min_stages, max_stages);
  
  
   using std::cout;
   using std::endl;
   using std::get;
   cout << std::setprecision(16);
+  cout << "static const int order = " << order << ";\n";
   cout << "static const double h_base = {\n";
   for (const auto& x : res)
   {
@@ -991,6 +1002,7 @@ void run_loop(const int min_stages, const int max_stages)
     cout << h << ", " << endl;
   }
   cout << "0}; " << endl;
+#if 0
   cout << "const int total_size = { \n";
   for (const auto& x : res)
   {
@@ -1001,13 +1013,16 @@ void run_loop(const int min_stages, const int max_stages)
     cout << sum << ", " << endl;
   }
   cout << "0}; " << endl;
+#endif
   cout << "const int sizes = { \n";
   for (const auto& x : res)
   {
     const auto c = get<1>(x);
     cout << " ";
+#if 0
     for (size_t i = 0; i < c.size()-1; i++)
       cout << c[i].size() << ", ";
+#endif
     cout << c.back().size() << ",\n";
   }
   cout << "0}; " << endl;
@@ -1017,7 +1032,12 @@ void run_loop(const int min_stages, const int max_stages)
     const auto c = get<1>(x);
     for (auto &cc : c)
       for (auto &y : cc)
-        cout << y << ", ";
+      {
+        if (std::abs(y) < 1.0e-14)
+          cout << 0 << ", ";
+        else
+          cout << y << ", ";
+      }
     cout << endl;
   }
   cout << "0}; " << endl;
@@ -1026,7 +1046,7 @@ void run_loop(const int min_stages, const int max_stages)
 int main(int argc, char * argv[])
 {
   using std::get;
-#if 0
+#if 1
   assert(argc >= 2);
   const auto min_stages = atoi(argv[1]);
   const auto max_stages = atoi(argv[2]);
