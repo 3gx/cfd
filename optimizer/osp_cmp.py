@@ -88,13 +88,12 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
       df[-1] = 0.5;
       df = np.real(df + np.conj(df)).T
       grad = np.zeros((k+s+1,s+2))
-      for i in range(0,s+1):
+      for i in range(s+1):
         grad[i] = 0
         grad[i][i] = 1;
       for i in range(k):
         grad[s+1+i] = df[i]
       return grad;
-
 
   m,n = b.shape
   m,k = c.shape
@@ -106,14 +105,21 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
     J2[i][:] = c[i]
   J1 = J1.T
 
-  x0 = np.ones(s+2);
-  cons = ({'type': 'eq',
-    'fun' : lambda x: cfunc1(x,b,fixed_coefficients),
-    'jac' : lambda x: cfunc1_jac(x,J1)},
-    {'type': 'ineq',
-    'fun' : lambda x: cfunc2(x,c),
-    'jac' : lambda x: cfunc2_jac(x,J2,s,k)})
-    
+  x0 = np.random.random(s+2);
+  if True:
+    cons = ({'type': 'eq',
+      'fun' : lambda x: cfunc1(x,b,fixed_coefficients),
+      'jac' : lambda x: cfunc1_jac(x,J1)},
+      {'type': 'ineq',
+      'fun' : lambda x: cfunc2(x,c),
+      'jac' : lambda x: cfunc2_jac(x,J2,s,k)})
+  else:
+    cons = ({'type': 'eq',
+      'fun' : lambda x: cfunc1(x,b,fixed_coefficients),
+      'jac' : lambda x: cfunc1_jac(x,J1)},
+      {'type': 'ineq',
+      'fun' : lambda x: cfunc2(x,c)})
+      
   res=optimize.minimize(func, x0, constraints=cons, jac=func_jac,
       method='SLSQP', options={'disp': verbose, 'maxiter': maxiter}, tol=1e-13)
 
@@ -227,7 +233,7 @@ if True:
     ev_space = np.concatenate((l1,l2,l3));
 
 
-  s = 40;
+  s = 8;
   p = 4;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
