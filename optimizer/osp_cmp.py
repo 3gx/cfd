@@ -221,7 +221,7 @@ if True:
 
 
   s = 40;
-  p = 8;
+  p = 4;
 
   print "npts= %d  s= %d  p= %d " % (npts, s, p)
   print "kappa= %g  beta= %g" % (kappa, beta)
@@ -231,12 +231,17 @@ if True:
     print "------ Polynomial coefficients -------- "
     print "coeff= {"
     for x in poly[:-1]:
-      if abs(x) < 1.0e-14:
-        sys.stdout.write("%.16g," % 0)
-      else:
+      if abs(x) > 1.0e-14:
         sys.stdout.write("%.16g," % x)
+      else:
+        sys.stdout.write("%.16g," % 0)
     sys.stdout.write("%.16g};\n" % poly[-1])
     print "h= %.16g  h/s^2= %g " % (h, h/(s*s))
+    ssum=0;
+    for x in poly:
+      if abs(x) > 1.0e-14:
+        ssum += x
+    print "sum= %.16g " % (ssum)
   else:
     print " ------- Not converged ------ "
 
