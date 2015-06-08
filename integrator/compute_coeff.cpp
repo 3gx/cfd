@@ -520,65 +520,57 @@ static auto minimizeS(
   return s;
 }
 
-
-
-static auto order8(const int stages, const int npts)
+template<size_t ORDER>
+static auto orderN(
+    const int stages, const int npts,
+    const double nodes_[ORDER],
+    const double nodesC_[ORDER-1])
 {
   std::vector<std::vector<double>> coeff;
   using std::get; 
 
 
-
-  auto res= maximizeHdriver(8,stages,npts);
+  auto res= maximizeHdriver(ORDER,stages,npts);
   const auto h_base = get<0>(res);
   auto& opt = get<1>(res);
   const auto s_base = opt.get_s();
 
-  const double nodes8_[8] = {-0.960289856497536231684, -0.7966664774136267395916, -0.5255324099163289858177, -0.1834346424956498049395, 0.1834346424956498049395, 0.525532409916328985818, 0.796666477413626739592, 0.9602898564975362316836};
-  const double nodes7_[7] = {-0.9491079123427585245262,-0.7415311855993944398639,-0.4058451513773971669066,0,0.4058451513773971669066,0.7415311855993944398639,0.9491079123427585245262};
-  std::vector<double> nodes8, nodes7;
-  for (auto x : nodes8_)
+  std::vector<double> nodes, nodesC;
+  for (int i = 0; i < ORDER; i++)
   {
+    auto x= nodes_[i];
     x = (1+x)/2;
-    nodes8.push_back(x);
+    nodes.push_back(x);
   }
-  for (auto x : nodes7_)
+  for (int i = 0; i < ORDER-1; i++)
   {
+    auto x= nodesC_[i];
     x = (1+x)/2;
-    nodes7.push_back(x);
+    nodesC.push_back(x);
   }
  
   const auto smax = opt.get_s();
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < ORDER; i++)
   {
-    auto h = h_base*nodes8[i];
-    auto s = minimizeS(opt, smax, h, nodes8[i]);
+    auto h = h_base*nodes[i];
+    auto s = minimizeS(opt, smax, h, nodes[i]);
     opt.set_s(s);
     opt.unset_verbose();
-    const auto norm = opt.optimize(h, nodes8[i]);
-    printf(std::cerr, " 7: i= %  s= % node= %  fmin= %  norm= %\n", i, s, nodes8[i], opt.get_fmin(), norm);
+    const auto norm = opt.optimize(h, nodes[i]);
+    printf(std::cerr, " %: i= %  s= % node= %  fmin= %  norm= %\n", ORDER, i, s, nodes[i], opt.get_fmin(), norm);
     const auto & poly = opt.get_solution();
     coeff.push_back(poly);
-#if 0
-    std::cout << " h= " << h<<  std::endl;
-    std::cout << "coeff[" << i<< "] =\n{ \n";
-    for (size_t i = 0; i < poly.size()-1; i++)
-    {
-      std::cout << std::setprecision(16) << poly[i] << ", ";
-    }
-    std::cout << poly.back()  << " };\n\n";
-#endif
   }
   std::cerr << " -- Embedded method -- " << std::endl;
-  opt.set_p(7);
-  for (int i = 0; i < 7; i++)
+  opt.set_p(ORDER-1);
+  for (int i = 0; i < ORDER-1; i++)
   {
-    auto h = h_base*nodes7[i];
-    auto s = minimizeS(opt, smax, h, nodes7[i]);
+    auto h = h_base*nodesC[i];
+    auto s = minimizeS(opt, smax, h, nodesC[i]);
     opt.set_s(s);
     opt.unset_verbose();
-    const auto norm = opt.optimize(h, nodes7[i]);
-    printf(std::cerr, " 7: i= %  s= % node= %  fmin= %  norm= %\n", i, s, nodes7[i], opt.get_fmin(), norm);
+    const auto norm = opt.optimize(h, nodesC[i]);
+    printf(std::cerr, " %: i= %  s= % node= %  fmin= %  norm= %\n", ORDER-1,i, s, nodesC[i], opt.get_fmin(), norm);
     const auto & poly = opt.get_solution();
     coeff.push_back(poly);
   }
@@ -587,31 +579,30 @@ static auto order8(const int stages, const int npts)
   return std::make_tuple(h_base, coeff);
 }
 
-static void order4()
+
+static auto order8(const int stages, const int npts)
 {
-  const double nodes4_[4] = {-0.8611363115940525752239, -0.3399810435848562648027, 0.3399810435848562648027,0.8611363115940525752239};
-  const double nodes3_[3] = {-0.7745966692414833770359, 0, 0.7745966692414833770359};
-  std::vector<double> nodes4, nodes3;
-  for (auto x : nodes4_)
-  {
-    x = (1+x)/2;
-    nodes4.push_back(x);
-  }
-  for (auto x : nodes3_)
-  {
-    x = (1+x)/2;
-    nodes3.push_back(x);
-  }
- 
+  assert(stages >= 8);
+  const double nodes [8] = {-0.960289856497536231684, -0.7966664774136267395916, -0.5255324099163289858177, -0.1834346424956498049395, 0.1834346424956498049395, 0.525532409916328985818, 0.796666477413626739592, 0.9602898564975362316836};
+  const double nodesC[7] = {-0.9491079123427585245262,-0.7415311855993944398639,-0.4058451513773971669066,0,0.4058451513773971669066,0.7415311855993944398639,0.9491079123427585245262};
+
+  return orderN<8>(stages, npts, nodes,nodesC);
 }
 
-static void order2()
+static auto order4(const int stages, const int npts)
 {
-  auto node = [](const int i) 
-  {
-    const double nodes[2] = {-0.5773502691896257645091, 0.5773502691896257645091};
-    return  (nodes[i]+1)*0.5;
-  };
+  assert(stages >= 4);
+  const double nodes [4] = {-0.8611363115940525752239, -0.3399810435848562648027, 0.3399810435848562648027, 0.8611363115940525752239}; 
+  const double nodesC[3] = {-0.7745966692414833770359, 0, 0.7745966692414833770359};
+  return orderN<4>(stages, npts, nodes,nodesC);
+}
+
+static auto order2(const int stages, const int npts)
+{
+  assert(stages >= 2);
+  const double nodes [2] = {-0.5773502691896257645091, 0.5773502691896257645091};
+  const double nodesC[1] = {0};
+  return orderN<2>(stages, npts, nodes,nodesC);
 }
 
 template<typename Func>
@@ -637,7 +628,8 @@ int main(int argc, char * argv[])
   printf(std::cerr, " -------------- \n");
   printf(std::cerr, " min_stages= %  max_stages= %\n", min_stages, max_stages);
   printf(std::cerr, " -------------- \n");
-  auto res = compute_coeff(order8, min_stages, max_stages);
+
+  auto res = compute_coeff(order4, min_stages, max_stages);
  
  
   using std::cout;
@@ -655,9 +647,8 @@ int main(int argc, char * argv[])
   for (const auto& x : res)
   {
     const auto c = get<1>(x);
-    assert(c.size() == 15);
     cout << "{ ";
-    for (int i = 0; i < 14; i++)
+    for (size_t i = 0; i < c.size()-1; i++)
       cout << c[i].size() << ", ";
     cout << c.back().size() << "},\n";
   }
@@ -666,10 +657,9 @@ int main(int argc, char * argv[])
   for (const auto& x : res)
   {
     const auto c = get<1>(x);
-    assert(c.size() == 15);
     cout << "{ ";
-    for (int i = 0; i < 15; i++)
-      for (auto &y : c[i])
+    for (auto &cc : c)
+      for (auto &y : cc)
         cout << y << ", ";
     cout << "0 }, \n";
   }
