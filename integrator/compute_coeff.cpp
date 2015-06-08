@@ -642,27 +642,36 @@ int main(int argc, char * argv[])
     const auto h = get<0>(x);
     cout << h << ", " << endl;
   }
-  cout << "}; " << endl;
+  cout << "0}; " << endl;
+  cout << "const int total_size = { \n";
+  for (const auto& x : res)
+  {
+    auto sum = 0;
+    const auto c = get<1>(x);
+    for (const auto &cc : c)
+      sum += cc.size();
+    cout << sum << ", " << endl;
+  }
+  cout << "0}; " << endl;
   cout << "const int sizes = { \n";
   for (const auto& x : res)
   {
     const auto c = get<1>(x);
-    cout << "{ ";
+    cout << " ";
     for (size_t i = 0; i < c.size()-1; i++)
       cout << c[i].size() << ", ";
-    cout << c.back().size() << "},\n";
+    cout << c.back().size() << ",\n";
   }
-  cout << "}; " << endl;
+  cout << "0}; " << endl;
   cout << "const double coeff = { \n";
   for (const auto& x : res)
   {
     const auto c = get<1>(x);
-    cout << "{ ";
     for (auto &cc : c)
       for (auto &y : cc)
         cout << y << ", ";
-    cout << "0 }, \n";
+    cout << endl;
   }
-  cout << "}; " << endl;
+  cout << "0}; " << endl;
   return 0;
 }
