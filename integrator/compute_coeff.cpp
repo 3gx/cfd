@@ -358,7 +358,7 @@ class OptimizerL_CMP
     bool _verbose;
 
   public:
-    OptimizerT(size_t s, size_t p, std::vector<complex_type> ev_space) :
+    OptimizerL_CMP(size_t s, size_t p, std::vector<complex_type> ev_space) :
       _s(s), _p(p), 
       _ev_space(std::move(ev_space)),
       _tol(1.0e-13),
@@ -544,35 +544,45 @@ class OptimizerL_CMP
         const auto &data = *reinterpret_cast<func_ineq_data_type*>(func_data);
         const auto& cmat = *data.cmat_ptr;
         const auto s = data.s;
-        assert(m == data.npts);
+        assert(m == data.npts+s+1);
         assert(n == s+2);
         using std::conj;
         using std::real;
         if (grad)
         {
-          for (size_t i = 0; i < m; i++)
+          for (size_t i = 0; i < s+1; i++)
+          {
+            for (size_t j = 0; j < s+2; j++)
+              grad[i*n+j] = 0;
+            grad[i*n+i] = -1;
+            result[i] = -x[i];
+          }
+          for (size_t i = 0; i < data.npts; i++)
           {
             const auto g = 
               std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
             for (size_t j = 0; j < s+1; j++)
             {
               const auto df = cmat[i*n+j]*conj(g);
-              grad[i*n+j] = real(df + conj(df));
+              grad[(s+1+i)*n+j] = real(df + conj(df));
             }
-            grad[i*n+s+1] = -1;
+            grad[(s+1+i)*n+s+1] = -1;
 
             const auto re = real(g*conj(g));
-            result[i] = (re-1)-x[n-1];
+            result[s+1+i] = (re-1)-x[n-1];
           }
         }
         else
         {
-          for (size_t i = 0; i < m; i++)
+          for (size_t i = 0; i < s+1; i++)
+            result[i] = -x[i];
+
+          for (size_t i = 0; i < data.npts; i++)
           {
             const auto g = 
               std::inner_product(x, x+n-1, cmat.begin() + i*n,complex_type{0});
             const auto re = real(g*conj(g));
-            result[i] = (re-1)-x[n-1];
+            result[s+1+i] = (re-1)-x[n-1];
           }
         }
       };
@@ -593,7 +603,8 @@ class OptimizerL_CMP
 
       if (x_guess.empty())
       {
-        std::fill(x.begin(), x.end(), 1);
+//        std::generate(x.begin(), x.end(), [](){ return drand48(); });
+        std::fill(x.begin(), x.end(), 0.5);
       }
       else
       {
@@ -603,9 +614,9 @@ class OptimizerL_CMP
       opt.add_inequality_mconstraint(
           func_ineq, 
           &func_ineq_data, 
-          std::vector<real_type>(n_ineq,tol)); 
+          std::vector<real_type>(_s+1+n_ineq,tol)); 
 
-//      opt.set_xtol_rel(1.0e-20);
+//      opt.set_xtol_rel(tol);
       opt.set_xtol_abs(tol);
 //     opt.set_ftol_abs(tol);
 //      opt.set_ftol_rel(tol);
@@ -689,7 +700,11 @@ static auto linspace(const real_type a, const real_type b, const size_t n)
 template<typename real_type, typename complex_type>
 static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_type>& ev_space)
 {
+#if 0
   using Optimizer = OptimizerT<real_type,complex_type>;
+#else
+  using Optimizer = OptimizerL_CMP<real_type,complex_type>;
+#endif
 
   Optimizer opt(s,p,ev_space);
 
@@ -724,7 +739,7 @@ static auto maximizeH(const size_t p, const size_t s,const std::vector<complex_t
     printf(std::cerr, "step= %  h_min= %  h_max= %  -- h= %  val= % \n",
         step, h_min, h_max, h, opt.get_fmin());
 
-    if (opt.get_fmin() < 1.0e-12) //std::abs(get<1>(res)) < 1.0e-12)
+    if (std::abs(opt.get_fmin()) < 1.0e-12) //std::abs(get<1>(res)) < 1.0e-12)
     {
       converged = true;
       h_min = h;
@@ -755,8 +770,7 @@ static auto maximizeHdriver(int order, int stages, int npoints)
   auto p = order;
   auto npts = npoints;
 
-  auto beta   = 1.01;
-  auto alpha_s = 0.15;
+  auto beta   = 1.00;
   auto s = stages;
 
   /*  build eigen-value space */
@@ -957,11 +971,8 @@ static auto compute_coeff(Func func, int stage_min, int stage_max)
 
 }
 
-int main(int argc, char * argv[])
+void run_loop(const int min_stages, const int max_stages)
 {
-  assert(argc >= 2);
-  const auto min_stages = atoi(argv[1]);
-  const auto max_stages = atoi(argv[2]);
   printf(std::cerr, " -------------- \n");
   printf(std::cerr, " min_stages= %  max_stages= %\n", min_stages, max_stages);
   printf(std::cerr, " -------------- \n");
@@ -1010,5 +1021,42 @@ int main(int argc, char * argv[])
     cout << endl;
   }
   cout << "0}; " << endl;
+}
+
+int main(int argc, char * argv[])
+{
+  using std::get;
+#if 0
+  assert(argc >= 2);
+  const auto min_stages = atoi(argv[1]);
+  const auto max_stages = atoi(argv[2]);
+  run_loop(min_stages, max_stages);
+#else
+  auto order = 4;
+  auto stages = 100;
+  auto npts = 1000;
+  auto res = maximizeHdriver(order,stages,npts);
+  auto h = get<0>(res);
+  auto &opt = get<1>(res);
+  const auto &poly = opt.get_solution();
+  std::cout << "coeff = { \n";
+  auto sum = 0.0;
+  for (size_t i = 0; i < poly.size() -1 ; i++)
+  {
+    auto x = poly[i];
+    if (std::abs(x) < 1.0e-14) x = 0;
+    std::cout << std::setprecision(16) << x << ", ";
+    sum += x;
+  }
+  {
+    auto x = poly.back();
+    if (std::abs(x) < 1.0e-14) x = 0;
+    sum += x;
+    std::cout << x  << " };\n";
+  }
+  std::cerr << "h= " << h << std::endl;
+  std::cerr << "h/s^2= " << h/(stages*stages) << std::endl;
+  std::cerr << "sum= " << sum << std::endl;
+#endif
   return 0;
 }
