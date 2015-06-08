@@ -995,7 +995,7 @@ void run_loop(const int order, const int min_stages, const int max_stages)
   using std::get;
   cout << std::setprecision(16);
   cout << "const int order = " << order << ";\n";
-  cout << "const int nelements= " << res.size() << endl;
+  cout << "const int nelements= " << res.size() << ";\n";
   cout << "const double h_base = {\n";
   for (const auto& x : res)
   {
