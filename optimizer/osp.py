@@ -39,7 +39,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   if verbose:
     print "============================================="
   hval  = h*np.real(ev_space) + 1j*np.imag(ev_space)
-  hval = h*ev_space;
+#  hval = h*ev_space;
   [b,c] = scaled_chebyshev_basis(s,p,min(np.real(hval)),0,hval)
 
 
@@ -225,6 +225,11 @@ if True:
       sys.stdout.write("%.16g," % x)
     sys.stdout.write("%.16g};\n" % poly[-1])
     print "h= %.16g  h/s^2= %g " % (h, h/(s*s))
+    ssum=0;
+    for x in poly:
+      if abs(x) > 1.0e-14:
+        ssum += x
+    print "sum= %.16g " % (ssum)
   else:
     print " ------- Not converged ------ "
 

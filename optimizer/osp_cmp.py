@@ -39,7 +39,7 @@ def minimizePoly(s,p,h,ev_space,eta,tol,maxiter=128,verbose=False,poly_guess=Non
   if verbose:
     print "============================================="
   hval  = h*np.real(ev_space) + 1j*np.imag(ev_space)
-  hval = h*ev_space;
+#  hval = h*ev_space;
   [b,c] = scaled_chebyshev_basis(s,p,min(np.real(hval)),0,hval)
 
 
@@ -224,7 +224,7 @@ if True:
   if True:
     kappa=1;
 #    beta =5.0;
-    beta = 0.0;
+    beta = 1.0;
 
     imag_lim = beta;
     l1 = 1j*np.linspace(0,imag_lim,npts/2);
