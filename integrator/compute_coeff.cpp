@@ -996,7 +996,7 @@ void run_loop(const int order, const int min_stages, const int max_stages)
   cout << std::setprecision(16);
   cout << "const int order = " << order << ";\n";
   cout << "const int nelements= " << res.size() << ";\n";
-  cout << "const double h_base = {\n";
+  cout << "const double h_base[] = {\n";
   for (const auto& x : res)
   {
     const auto h = get<0>(x);
@@ -1004,7 +1004,7 @@ void run_loop(const int order, const int min_stages, const int max_stages)
   }
   cout << "0}; " << endl;
 #if 1
-  cout << "const int offset = { \n";
+  cout << "const int offset[] = { \n";
   auto sum = 0;
   for (const auto& x : res)
   {
@@ -1015,7 +1015,7 @@ void run_loop(const int order, const int min_stages, const int max_stages)
   }
   cout << sum << "}; " << endl;
 #endif
-  cout << "const int sizes = { \n";
+  cout << "const int sizes[] = { \n";
   for (const auto& x : res)
   {
     const auto c = get<1>(x);
@@ -1027,7 +1027,7 @@ void run_loop(const int order, const int min_stages, const int max_stages)
     cout << c.back().size() << ",\n";
   }
   cout << "0}; " << endl;
-  cout << "const double coeff = { \n";
+  cout << "const double coeff[] = { \n";
   for (const auto& x : res)
   {
     const auto c = get<1>(x);
@@ -1080,11 +1080,11 @@ void single_order(const int order, int min_stages, int max_stages)
   cout << std::setprecision(16);
   cout << "const int order = " << order << ";\n";
   cout << "const int nelements= " << coeff.size() << ";\n";
-  cout << "const double h_base = {\n";
+  cout << "const double h_base[] = {\n";
   for (const auto& h : h_base)
     cout << h << ", " << endl;
   cout << "0}; " << endl;
-  cout << "const int offset = { \n";
+  cout << "const int offset[] = { \n";
 
   auto sum = 0;
   for (const auto& c : coeff)
@@ -1094,7 +1094,7 @@ void single_order(const int order, int min_stages, int max_stages)
     sum += get<0>(c).size()*2;
   }
   cout << sum << "}; " << endl;
-  cout << "const double coeff = { \n";
+  cout << "const double coeff[] = { \n";
   for (const auto& c : coeff)
   {
     auto outx = [](const auto x) 
