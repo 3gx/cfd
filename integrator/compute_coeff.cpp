@@ -605,7 +605,7 @@ class OptimizerL_CMP
       if (x_guess.empty())
       {
         std::generate(x.begin(), x.end(), [](){ return drand48(); });
-//        std::fill(x.begin(), x.end(), 0.5);
+//        std::fill(x.begin(), x.end(), 1);
       }
       else
       {
@@ -1115,6 +1115,7 @@ void single_order(const int order, int min_stages, int max_stages)
 
 int main(int argc, char * argv[])
 {
+  srand48((size_t)argv+1234);
   using std::get;
 #if 1
   assert(argc >= 2);
