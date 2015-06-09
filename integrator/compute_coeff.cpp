@@ -977,7 +977,7 @@ static auto compute_coeff(Func func, int stage_min, int stage_max)
 void run_loop(const int order, const int min_stages, const int max_stages)
 {
   printf(std::cerr, " -------------- \n");
-  printf(std::cerr, " min_stages= %  max_stages= %\n", min_stages, max_stages);
+  printf(std::cerr, " order= %  min_stages= %  max_stages= %\n", order, min_stages, max_stages);
   printf(std::cerr, " -------------- \n");
 
   assert(order == 4 || order == 8 || order == 2);
@@ -1044,10 +1044,84 @@ void run_loop(const int order, const int min_stages, const int max_stages)
   cout << "0}; " << endl;
 }
 
+void single_order(const int order, int min_stages, int max_stages)
+{
+  printf(std::cerr, " -------------- \n");
+  printf(std::cerr, " order= %  min_stages= %  max_stages= %\n", order, min_stages, max_stages);
+  printf(std::cerr, " -------------- \n");
+  
+  using std::get;
+  using vector = std::vector<double>;
+  std::vector<double> h_base;
+  std::vector<std::tuple<vector,vector>> coeff;
+
+  int npts = 1000;
+  for (int s = min_stages; s <= max_stages; s++)
+  {
+    printf(std::cerr, " >>>>>> s= % <<<<<<<<< \n", s);
+    auto res = maximizeHdriver(order,s,npts);
+    const auto h = get<0>(res);
+    auto& opt = get<1>(res);
+    const auto norm1 = opt.optimize(h);
+    const auto fmin1 = opt.get_fmin();
+    h_base.emplace_back(h);
+    auto poly1 = opt.get_solution();
+    opt.set_p(order-1);
+    const auto norm2 = opt.optimize(h);
+    const auto fmin2 = opt.get_fmin();
+    printf(std::cerr,  "s= %: fmin1= %  fmin2= %   norm1= %  norm2= %\n", order, fmin1, fmin2, norm1, norm2);
+    auto poly2 = opt.get_solution();
+    coeff.emplace_back(poly1, poly2);
+  }
+  assert(coeff.size() == h_base.size());
+  using std::cout;
+  using std::endl;
+  using std::get;
+  cout << std::setprecision(16);
+  cout << "const int order = " << order << ";\n";
+  cout << "const int nelements= " << coeff.size() << ";\n";
+  cout << "const double h_base = {\n";
+  for (const auto& h : h_base)
+    cout << h << ", " << endl;
+  cout << "0}; " << endl;
+  cout << "const int offset = { \n";
+
+  auto sum = 0;
+  for (const auto& c : coeff)
+  {
+    cout << sum << ", " << endl;
+    assert(get<0>(c).size() == get<1>(c).size());
+    sum += get<0>(c).size()*2;
+  }
+  cout << sum << "}; " << endl;
+  cout << "const double coeff = { \n";
+  for (const auto& c : coeff)
+  {
+    auto outx = [](const auto x) 
+    {
+      if (std::abs(x) < 1.0e-14)
+        cout << 0 << ", ";
+      else
+        cout << x << ", ";
+    };
+    for (auto &x: get<0>(c))
+      outx(x);
+    for (auto &x: get<1>(c))
+      outx(x);
+    cout << endl;
+  }
+  cout << "0}; " << endl;
+}
+
 int main(int argc, char * argv[])
 {
   using std::get;
 #if 1
+  assert(argc >= 2);
+  const auto min_stages = atoi(argv[1]);
+  const auto max_stages = atoi(argv[2]);
+  single_order(4, min_stages, max_stages);
+#elif 1
   assert(argc >= 2);
   const auto min_stages = atoi(argv[1]);
   const auto max_stages = atoi(argv[2]);
