@@ -910,7 +910,7 @@ static auto orderN(
     opt.set_s(s);
     opt.unset_verbose();
     const auto norm = opt.optimize(h, nodes[i]);
-    printf(std::cerr, " %: i= %  s= % node= %  fmin= %  norm= %\n", ORDER, i, s, nodes[i], opt.get_fmin(), norm);
+    printf(std::cerr, " %: i= %  s= % node= %  fmin= %  norm= %\n", ORDER, i, s, nodes[i], std::abs(opt.get_fmin()), norm);
     const auto & poly = opt.get_solution();
     coeff.push_back(poly);
   }
@@ -924,7 +924,7 @@ static auto orderN(
     opt.set_s(s);
     opt.unset_verbose();
     const auto norm = opt.optimize(h, nodesC[i]);
-    printf(std::cerr, " %: i= %  s= % node= %  fmin= %  norm= %\n", ORDER-1,i, s, nodesC[i], opt.get_fmin(), norm);
+    printf(std::cerr, " %: i= %  s= % node= %  fmin= %  norm= %\n", ORDER-1,i, s, nodesC[i], std::abs(opt.get_fmin()), norm);
     const auto & poly = opt.get_solution();
     coeff.push_back(poly);
   }
@@ -1063,12 +1063,12 @@ void single_order(const int order, int min_stages, int max_stages)
     const auto h = get<0>(res);
     auto& opt = get<1>(res);
     const auto norm1 = opt.optimize(h);
-    const auto fmin1 = opt.get_fmin();
+    const auto fmin1 = std::abs(opt.get_fmin());
     h_base.emplace_back(h);
     auto poly1 = opt.get_solution();
     opt.set_p(order-1);
     const auto norm2 = opt.optimize(h);
-    const auto fmin2 = opt.get_fmin();
+    const auto fmin2 = std::abs(opt.get_fmin());
     printf(std::cerr,  "s= %: fmin1= %  fmin2= %   norm1= %  norm2= %\n", order, fmin1, fmin2, norm1, norm2);
     auto poly2 = opt.get_solution();
     coeff.emplace_back(poly1, poly2);
